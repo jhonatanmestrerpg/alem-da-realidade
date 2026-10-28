@@ -316,6 +316,22 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .tabela th, .tabela td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--linha); vertical-align: top; }
 .tabela th { font: 600 10.5px var(--f-body); letter-spacing: .14em; text-transform: uppercase; color: var(--lua-faint); }
 .rolavel { overflow-x: auto; }
+/* ---------- alinhamento ---------- */
+.grade-al { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.card-al { background: linear-gradient(180deg, color-mix(in srgb, var(--ca) 9%, var(--painel)), var(--painel) 55%); border: 1px solid color-mix(in srgb, var(--ca) 35%, var(--linha)); padding: 14px 16px; display: grid; gap: 8px; align-content: start; }
+.card-al .cab-al { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.card-al h3 { font-size: 24px; color: color-mix(in srgb, var(--ca) 55%, #fff); }
+.card-al .btn { justify-self: start; background: var(--ca); border-color: var(--ca); color: #0b0d14; }
+.al-ativo { display: grid; gap: 14px; }
+.al-topo { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: start; padding: 16px; border: 1px solid color-mix(in srgb, var(--ca) 40%, var(--linha)); background: radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--ca) 18%, transparent), transparent 60%), var(--painel); }
+.al-nome { font-size: clamp(30px, 6vw, 44px); color: color-mix(in srgb, var(--ca) 60%, #fff); text-shadow: 0 0 22px color-mix(in srgb, var(--ca) 45%, transparent); }
+.al-nivel { display: grid; gap: 8px; justify-items: start; }
+.al-pips { display: flex; gap: 6px; }
+.al-pips span { width: 34px; height: 34px; display: grid; place-items: center; font: 700 14px var(--f-mono); border: 1px solid var(--linha-2); color: var(--lua-faint); border-radius: 50%; }
+.al-pips span.on { background: var(--ca); border-color: var(--ca); color: #0b0d14; box-shadow: 0 0 12px color-mix(in srgb, var(--ca) 55%, transparent); }
+.al-hab { border-left: 3px solid var(--ca); }
+.al-hab.bloq { border-left-color: var(--linha-2); }
+
 /* ---------- vetor ---------- */
 .btn-vetor { background: transparent; color: var(--lua); border-color: var(--cv, var(--sangue)); }
 .btn-vetor:hover { background: color-mix(in srgb, var(--cv, #b4333b) 18%, transparent); }
@@ -443,6 +459,7 @@ const ICON_BUSCA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 const ATR = [['forca','Força','FOR'],['destreza','Destreza','DES'],['constituicao','Constituição','CON'],['inteligencia','Inteligência','INT'],['presenca','Presença','PRE']];
 const SIGLA = Object.fromEntries(ATR.map(a => [a[0], a[2]]));
 const ELEMS = ['Guerra','Fome','Peste','Morte','Neutro','Conquista','Karma','Destino','Caos'];
+const elDe = nomeAl => String(nomeAl || '').replace(/ \(.*\)$/, '');
 const elTag = e => `<span class="el ${e ? 'el-' + esc(e) : 'el-x'}">${esc(e || 'Indefinido')}</span>`;
 const iniciais = n => (n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
 const fmtKg = n => (Math.round(n * 10) / 10).toLocaleString('pt-BR') + 'kg';
@@ -805,7 +822,7 @@ ROTAS.novo = async () => {
         atributos: R.atributos, pericias: [...nomes].map(n => ({ nome: n, pontos: R.pericias[n] || 0, atributo: SIS.pericias.find(p => p.nome === n)?.atributo || 'inteligencia' })),
         equipamentos: [], passivas: R.passivas, habilidades: [], rituais: [], aparencia: R.aparencia, personalidade: R.personalidade, historico: R.historico, objetivo: R.objetivo, foto: R.foto, campanhas: [], anotacoes: '' };
       const m = calc(ficha).max; ficha.atual = { ...m };
-      try { const ref = await db.collection('fichas').add(ficha); try { localStorage.removeItem(CH); } catch (x) {} location.hash = 'agente-' + ref.id; }
+      try { const ref = await db.collection('fichas').add(ficha); try { localStorage.removeItem(CH); } catch (x) {} window._abaFicha = 'alinhamento'; location.hash = 'agente-' + ref.id; }
       catch (err) { e.target.disabled = false; e.target.textContent = 'Finalizar agente'; toast(err.code === 'quota_exceeded' ? 'O arquivo está cheio. Apague agentes antigos.' : 'Não deu para salvar: ' + (err.message || err.code)); }
     });
   }
@@ -819,7 +836,8 @@ ROTAS.agente = async id => {
   if (!db) { app.innerHTML = semBanco(); return; }
   app.innerHTML = '<div class="vazio">Abrindo dossiê…</div>';
   const ref = db.doc('fichas/' + id);
-  let F = null, aba = 'pericias', editando = false, mostrarTodas = false, podeEditar = false, ehMestre = false, pendente = false;
+  let F = null, aba = window._abaFicha || 'pericias', editando = false, mostrarTodas = false, podeEditar = false, ehMestre = false, pendente = false;
+  window._abaFicha = null;
   const salvarVitais = debounce(async () => { try { await ref.update({ atual: F.atual }); } catch (e) { toast('Não deu para salvar os vitais.'); } pendente = false; }, 500);
   async function salvar(campos) { try { await ref.update(campos); } catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); } }
 
@@ -887,7 +905,7 @@ ROTAS.agente = async id => {
       </div>
     </section>
 
-    <div class="abas" role="tablist">${[['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['rituais', 'Rituais'], ['inventario', 'Inventário'], ['descricao', 'Descrição']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
+    <div class="abas" role="tablist">${[['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ['inventario', 'Inventário'], ['descricao', 'Descrição']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
     <section id="sec">${secao(K, C, S)}</section>
     </div>`;
     ligarFicha(K);
@@ -930,6 +948,23 @@ ROTAS.agente = async id => {
         <div class="grade-hab">${(F.passivas || []).map((h, i) => cardHab(h, 'passivas', i)).join('') || '<div class="vazio">Nenhuma passiva.</div>'}</div>
         <div class="cab-pagina"><h2>Outras habilidades</h2>${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" id="add-hab">Adicionar do homebrew</button><button class="btn sec mini" id="nova-hab">Nova habilidade</button></div>' : ''}</div>
         <div class="grade-hab">${(F.habilidades || []).map((h, i) => cardHab(h, 'habilidades', i)).join('') || '<div class="vazio">Habilidades de Alinhamento, itens, homebrew ou dadas pelo mestre aparecem aqui.</div>'}</div></div>`;
+    }
+    if (aba === 'alinhamento') {
+      const AL = F.alinhamento?.nome ? SIS.alinhamentos.find(a => a.nome === F.alinhamento.nome) : null;
+      if (!AL) return `<div style="display:grid; gap:14px">
+        <div><h2>Escolha seu alinhamento</h2><p class="dim" style="max-width:70ch">Pelo livro, o alinhamento vem ao Ascender: um ocultista desenha com sangue o símbolo do outro mundo, você pisa nele e a realidade pergunta o que você sacrifica para continuar vivendo pela sua vontade. Ao ascender, você recebe a habilidade do nível 1. Os próximos níveis o mestre libera conforme você se aproxima da entidade.</p></div>
+        <div class="grade-al">${SIS.alinhamentos.map(a => `<article class="card-al" style="--ca:var(--${elDe(a.nome).toLowerCase()})"><div class="cab-al">${elTag(elDe(a.nome))}<h3>${esc(a.nome)}</h3></div><p class="dim">${esc(a.texto)}</p>
+          <p class="faint" style="font-size:13px"><b style="color:var(--ca)">Nível 1.</b> ${esc(a.niveis[0])}</p>${podeEditar ? `<button class="btn mini" data-ascender="${esc(a.nome)}">Ascender a ${esc(elDe(a.nome))}</button>` : ''}</article>`).join('')}</div></div>`;
+      const nv = Math.max(1, Math.min(4, +F.alinhamento.nivel || 1)), el = elDe(AL.nome);
+      const temRit = RIT.some(r => r.elemento === el);
+      return `<div class="al-ativo" style="--ca:var(--${el.toLowerCase()})">
+        <div class="al-topo"><div><span class="rotulo">Alinhamento</span><h2 class="al-nome">${esc(AL.nome)}</h2><p class="dim" style="max-width:62ch">${esc(AL.texto)}</p></div>
+          <div class="al-nivel"><span class="rotulo">Nível</span><div class="al-pips">${[1, 2, 3, 4].map(i => `<span class="${i <= nv ? 'on' : ''}">${i}</span>`).join('')}</div>
+          ${ehMestre ? `<div style="display:flex; gap:6px"><button class="btn mini sec" data-al-nv="-1" ${nv <= 1 ? 'disabled' : ''}>−</button><button class="btn mini ouro" data-al-nv="1" ${nv >= 4 ? 'disabled' : ''}>Subir nível</button></div>` : '<span class="faint" style="font-size:12px">O mestre libera os próximos níveis</span>'}</div></div>
+        <div class="lista">${AL.niveis.map((t, i) => `<article class="hab al-hab ${i < nv ? '' : 'bloq'}"><div class="cab"><span class="nm">${['Primeiro', 'Segundo', 'Terceiro', 'Quarto'][i]} nível</span>${i < nv ? `<span class="tag" style="color:var(--ca); border-color:var(--ca)">Desperto</span>` : `<span class="tag">${CADEADO} Trancado</span>`}</div><p>${esc(t)}</p></article>`).join('')}</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">${temRit && podeEditar ? `<button class="btn sec" id="al-rit">Aprender ritual de ${esc(el)}</button>` : ''}${ehMestre ? '<button class="btn sec" id="al-trocar">Retirar alinhamento</button>' : ''}</div>
+        ${temRit ? `<p class="faint" style="font-size:13px">Fome, Peste, Guerra e Morte são abertos a quem se converte. Neutro só para abençoados pelo Destino ou ocultistas sem lado. Conquista, só para quem é do elemento dele.</p>` : ''}
+      </div>`;
     }
     if (aba === 'rituais') {
       return `<div style="display:grid; gap:14px">${barra}<div class="cab-pagina"><h2>Rituais</h2>${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" id="add-rit">Adicionar ritual</button><button class="btn sec mini" id="novo-rit">Novo ritual</button></div>' : ''}</div>
@@ -1027,6 +1062,14 @@ ROTAS.agente = async id => {
       const todos = [...RIT, ...hb];
       seletor('Rituais', todos, r => `<b>${esc(r.nome)}</b> ${elTag(r.elemento)} <span class="tag">${esc(r.custo || '')}</span><p>${esc(r.efeito)}</p>`, r => add('rituais', { nome: r.nome, elemento: r.elemento, alvo: r.alvo, custo: r.custo, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] })); });
     $('#novo-rit')?.addEventListener('click', () => formRitual(r => add('rituais', r)));
+    $$('[data-ascender]').forEach(b => b.onclick = () => { const nome = b.dataset.ascender;
+      abrirModal(`Ascender a ${elDe(nome)}`, `<p>Você pisa no símbolo do outro mundo e a realidade pergunta pela sua vontade. <b>${esc(F.nome)}</b> recebe o primeiro nível de <b>${esc(nome)}</b>.</p><p class="dim">Depois de escolhido, só o mestre retira ou troca o alinhamento.</p><div style="display:flex; gap:8px"><button class="btn" id="asc-ok">Ascender</button></div>`, (m, fechar) => {
+        m.querySelector('#asc-ok').onclick = async () => { await salvar({ alinhamento: { nome, nivel: 1, desde: Date.now() } }); fechar(); const fx = document.createElement('div'); fx.className = 'fx-vetor'; fx.style.setProperty('--cv', getComputedStyle(document.documentElement).getPropertyValue('--' + elDe(nome).toLowerCase()) || '#b4333b'); document.body.appendChild(fx); setTimeout(() => fx.remove(), 1100); };
+      }); });
+    $$('[data-al-nv]').forEach(b => b.onclick = () => { const nv = Math.max(1, Math.min(4, (+F.alinhamento?.nivel || 1) + +b.dataset.alNv)); salvar({ alinhamento: { ...F.alinhamento, nivel: nv } }); if (+b.dataset.alNv > 0) toast(`${F.nome} despertou o nível ${nv} de ${F.alinhamento.nome}.`); });
+    $('#al-trocar')?.addEventListener('click', () => abrirModal('Retirar alinhamento', `<p>O alinhamento some quando a vontade do personagem muda ou outra entidade se interessa por ele. Retirar <b>${esc(F.alinhamento.nome)}</b> de ${esc(F.nome)}?</p><button class="btn" id="rt-ok">Retirar</button>`, (m, fechar) => { m.querySelector('#rt-ok').onclick = async () => { await salvar({ alinhamento: null }); fechar(); }; }));
+    $('#al-rit')?.addEventListener('click', () => { const el = elDe(F.alinhamento.nome);
+      seletor(`Rituais de ${el}`, RIT.filter(r => r.elemento === el), r => `<b>${esc(r.nome)}</b> <span class="tag">${esc(r.custo || '')}</span><p>${esc(r.efeito)}</p>`, r => add('rituais', { nome: r.nome, elemento: r.elemento, alvo: r.alvo, custo: r.custo, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] })); });
     $('#add-item')?.addEventListener('click', () => seletor('Itens do livro', SIS.itens, it => `<b>${esc(it.nome)}</b> <span class="faint">${esc(it.categoria)}</span> ${it.dano ? `<span class="tag">${esc(it.dano)}${it.mult > 1 ? ' ×' + it.mult : ''}</span>` : ''} ${it.peso ? `<span class="tag">${fmtKg(it.peso)}</span>` : ''}<p>${esc(it.obs || '')}</p>`, it => add('equipamentos', { ...it, qtd: 1 })));
     $('#add-item-hb')?.addEventListener('click', async () => { const hb = await homebrewVisivel('item'); if (!hb.length) return toast('Nenhum item no homebrew ainda.');
       seletor('Itens do homebrew', hb, it => `<b>${esc(it.nome)}</b> ${it.dano ? `<span class="tag">${esc(it.dano)}</span>` : ''}<p>${esc(it.obs || '')}</p>`, it => add('equipamentos', { nome: it.nome, dano: it.dano, mult: +it.mult || 1, peso: +it.peso || 0, pericia: it.pericia, obs: it.obs, qtd: 1 })); });
