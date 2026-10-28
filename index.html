@@ -272,6 +272,21 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .lbl-v { color: #b18ee6; }
 .dado-btn { margin-left: auto; background: none; border: none; color: var(--lua); padding: 2px; }
 .dado-btn:hover { color: var(--ouro); }
+.pop-rol { position: fixed; inset: 0; z-index: 58; background: rgba(5,6,10,.55); display: grid; place-items: center; padding: 16px; animation: popFundo .12s ease-out; }
+.pop-cartao { width: min(360px, 100%); background: #141824; border: 1px solid #6c4fa3; box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(177,142,230,.15) inset; padding: 14px 18px 18px; display: grid; gap: 6px; animation: popCartao .16s cubic-bezier(.2,.9,.3,1.2); }
+.pop-cartao.dano { border-color: var(--ouro); }
+.pop-cartao.nat20 { border-color: var(--sangue-hi); box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 0 30px rgba(196,48,60,.35); }
+.pop-topo { display: flex; justify-content: space-between; align-items: center; }
+.pop-titulo { font: 700 20px var(--f-body); letter-spacing: .02em; text-transform: uppercase; color: var(--lua); }
+.pop-tipo { color: #b18ee6; font-size: 13.5px; }
+.pop-cartao.dano .pop-tipo { color: var(--ouro); }
+.pop-total { font: 700 64px/1 var(--f-mono); text-align: center; padding: 10px 0 4px; color: #fff; }
+.pop-linhas { display: grid; gap: 4px; border-top: 1px solid var(--linha); padding-top: 10px; margin-top: 4px; }
+.pop-linha { display: flex; gap: 10px; align-items: baseline; font-size: 13px; color: var(--lua-dim); }
+.pop-linha .mono:first-of-type { flex: 1; overflow-wrap: anywhere; }
+.pop-linha .melhor { color: var(--fole); font-weight: 700; }
+@keyframes popFundo { from { opacity: 0; } }
+@keyframes popCartao { from { transform: scale(.92); opacity: 0; } }
 .voz-barra { position: fixed; z-index: 40; left: max(16px, env(safe-area-inset-left, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); width: min(300px, calc(100vw - 32px));
   background: #0e1118; border: 1px solid var(--linha-2); box-shadow: 0 12px 40px rgba(0,0,0,.5); padding: 10px 12px; display: flex; gap: 8px; align-items: center; }
 .voz-barra > div:not(.voz-destaque) { flex: 1; }
@@ -1481,10 +1496,10 @@ function fichaAmeacaModal(c, opc = {}) {
         ${sub === 'acoes' ? ((f.ataques || []).length ? `<details class="acao-card" open><summary><span class="acao-tipo">PADRÃO</span> Agredir</summary><div class="acao-corpo">${(f.ataques || []).map(a => {
             const partes = String(a.dano || '').split('+').map(x => x.trim()).filter(Boolean);
             return `<div class="atq"><div class="atq-cab"><b>${esc(a.nome).toUpperCase()}</b>${a.alcance ? `<span class="faint" style="font-size:12px">${esc(a.alcance)}</span>` : ''}${a.vezes > 1 ? `<span class="tag">${a.vezes}x</span>` : ''}
-              ${a.teste ? `<button class="dado-btn" data-am-teste="${esc(a.teste)}" aria-label="Rolar acerto de ${esc(a.nome)}" title="Rolar acerto">${DADO_SVG}</button>` : ''}</div>
+              ${a.teste ? `<button class="dado-btn" data-am-teste="${esc(a.teste)}" data-nome="${esc(a.nome)}" data-quem="${esc(c.nome)}" aria-label="Rolar acerto de ${esc(a.nome)}" title="Rolar acerto">${DADO_SVG}</button>` : ''}</div>
               ${a.teste ? `<div><span class="lbl-v">Teste:</span> <span class="mono">${esc(a.teste)}</span></div>` : ''}
-              ${a.dano ? `<div class="lbl-v">Dano</div>${partes.map(p => `<div class="mono">${esc(p)} ${esc(a.tipo || '')}</div>`).join('')}<button class="btn ouro mini" style="justify-self:start" data-am-dano="${esc(a.dano)}" data-vezes="${a.vezes || 1}">Rolar dano${a.vezes > 1 ? ` ×${a.vezes}` : ''}</button>` : ''}</div>`; }).join('')}</div></details>` : '<div class="vazio">Sem ações.</div>')
-          : poderes.map(t => `<details class="acao-card" open><summary><span class="acao-tipo">${esc(t.acao || 'PODER')}</span> ${esc(t.nome)}</summary><div class="acao-corpo"><p class="dim">${esc(t.texto)}</p>${rolaveis(t.texto).map(x => `<button class="btn ouro mini" style="justify-self:start" data-am-dano="${esc(x)}">Rolar ${esc(x)}</button>`).join('')}</div></details>`).join('') || '<div class="vazio">Sem poderes.</div>'}`;
+              ${a.dano ? `<div class="lbl-v">Dano</div>${partes.map(p => `<div class="mono">${esc(p)} ${esc(a.tipo || '')}</div>`).join('')}<button class="btn ouro mini" style="justify-self:start" data-am-dano="${esc(a.dano)}" data-vezes="${a.vezes || 1}" data-nome="${esc(a.nome)}" data-tipo="${esc(a.tipo || '')}" data-quem="${esc(c.nome)}">Rolar dano${a.vezes > 1 ? ` ×${a.vezes}` : ''}</button>` : ''}</div>`; }).join('')}</div></details>` : '<div class="vazio">Sem ações.</div>')
+          : poderes.map(t => `<details class="acao-card" open><summary><span class="acao-tipo">${esc(t.acao || 'PODER')}</span> ${esc(t.nome)}</summary><div class="acao-corpo"><p class="dim">${esc(t.texto)}</p>${rolaveis(t.texto).map(x => `<button class="btn ouro mini" style="justify-self:start" data-am-dano="${esc(x)}" data-nome="${esc(t.nome)}" data-quem="${esc(c.nome)}">Rolar ${esc(x)}</button>`).join('')}</div></details>`).join('') || '<div class="vazio">Sem poderes.</div>'}`;
       if (aba === 'descricao') corpo = `${c.imagem ? `<img src="${esc(c.imagem)}" alt="${esc(c.nome)}" style="background:#f2efe6; max-height:320px; object-fit:contain; width:100%">` : ''}
         ${c.anotacoes ? `<p class="nota-arthur">“${esc(c.anotacoes)}”</p>` : ''}<p class="dim">${nl(c.descricao)}</p>
         ${c.ponto_fraco ? `<h3>Ponto fraco</h3><p class="dim">${nl(c.ponto_fraco)}</p>` : ''}${c.forma_de_abate ? `<h3>Forma de abate</h3><p class="dim">${nl(c.forma_de_abate)}</p>` : ''}
@@ -1496,7 +1511,7 @@ function fichaAmeacaModal(c, opc = {}) {
       alvo.querySelectorAll('[data-ab]').forEach(b => b.onclick = () => { aba = b.dataset.ab; desenhar(); });
       alvo.querySelectorAll('[data-sub]').forEach(b => b.onclick = () => { sub = b.dataset.sub; desenhar(); });
       alvo.querySelectorAll('[data-hp]').forEach(b => b.onclick = () => { pv = Math.max(0, Math.min(pvMax, pv + +b.dataset.hp)); opc.aoPV?.(pv); desenhar(); });
-      alvo.querySelectorAll('[data-pt]').forEach(b => b.onclick = () => { const [nm, q, md] = b.dataset.pt.split('|'); const r = teste(+q, +md); out(`${nm}: ${r.detalhe} = <b>${r.total}</b>${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`); opc.aoRolar?.(nm, r); });
+      alvo.querySelectorAll('[data-pt]').forEach(b => b.onclick = () => { const [nm, q, md] = b.dataset.pt.split('|'); const r = teste(+q, +md); out(`${nm}: ${r.detalhe} = <b>${r.total}</b>${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`); popRolagem({ quem: c.nome, titulo: nm, tipo: 'Teste', expr: `${q}d20+${md}`, linhas: [{ det: r.detalhe, total: r.total }], total: r.total, nat20: r.nat20 }); opc.aoRolar?.(nm, r); });
       alvo.querySelectorAll('[data-am-teste],[data-am-dano]').forEach(b => { b.dataset.alvo = 'fam-res'; b.onclick = ev => { ev.stopPropagation(); rolarAtaqueAmeaca(b, opc.aoRolar); }; });
       alvo.querySelector('[data-fechar-ir]')?.addEventListener('click', fechar);
     };
@@ -1520,13 +1535,32 @@ function blocoFicha(c, idRes) {
 }
 function rolarAtaqueAmeaca(btn, aoRolar) {
   const expr = btn.dataset.amTeste || btn.dataset.amDano; const ehTeste = !!btn.dataset.amTeste;
-  let r;
-  if (ehTeste) { const m = /^(\d+)d20\s*([+-]\s*\d+)?$/.exec(expr.replace(/\s/g, '')); r = m ? teste(+m[1], +(m[2] || 0)) : rolar(expr); }
-  else { const v = Math.max(1, +btn.dataset.vezes || 1); if (v > 1) { const rs = Array.from({ length: v }, () => rolar(expr)); if (rs.some(x => !x)) return; r = { total: rs.reduce((a, b) => a + b.total, 0), detalhe: rs.map((x, i) => `${i + 1}º ${x.detalhe} = ${x.total}`).join(' · ') }; } else r = rolar(expr); }
+  let r, linhas;
+  if (ehTeste) { const m = /^(\d+)d20\s*([+-]\s*\d+)?$/.exec(expr.replace(/\s/g, '')); r = m ? teste(+m[1], +(m[2] || 0)) : rolar(expr); if (r) linhas = [{ det: r.detalhe, total: r.total }]; }
+  else { const v = Math.max(1, +btn.dataset.vezes || 1); const rs = Array.from({ length: v }, () => rolar(expr)); if (rs.some(x => !x)) return;
+    r = { total: rs.reduce((a, b) => a + b.total, 0), detalhe: rs.map((x, i) => v > 1 ? `${i + 1}º ${x.detalhe} = ${x.total}` : x.detalhe).join(' · ') };
+    linhas = rs.map((x, i) => ({ rot: v > 1 ? `${i + 1}º golpe` : '', det: x.detalhe, total: x.total })); }
   if (!r) return;
   const out = document.getElementById(btn.dataset.alvo);
   if (out) out.innerHTML = `${ehTeste ? 'Acerto' : 'Dano'} ${esc(expr)} → ${r.detalhe} = <b>${r.total}</b>${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`;
+  popRolagem({ quem: btn.dataset.quem || '', titulo: btn.dataset.nome || (ehTeste ? 'Acerto' : 'Dano'), tipo: ehTeste ? 'Acerto' : `Dano${btn.dataset.tipo ? ' · ' + btn.dataset.tipo : ''}`, expr: expr + (+btn.dataset.vezes > 1 && !ehTeste ? ` ×${btn.dataset.vezes}` : ''), linhas, total: r.total, nat20: r.nat20, dano: !ehTeste });
   aoRolar?.(`${ehTeste ? 'Acerto' : 'Dano'} ${expr}`, r);
+}
+// janela de resultado por cima de tudo (não fecha o modal de baixo)
+function popRolagem(o) {
+  document.querySelector('.pop-rol')?.remove();
+  const el = document.createElement('div'); el.className = 'pop-rol'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Resultado da rolagem');
+  el.innerHTML = `<div class="pop-cartao ${o.dano ? 'dano' : ''} ${o.nat20 ? 'nat20' : ''}">
+    <div class="pop-topo">${o.quem ? `<span class="rotulo">${esc(o.quem)}</span>` : '<span></span>'}<button class="btn-x" data-fechar-pop aria-label="Fechar">×</button></div>
+    <div class="pop-titulo">${esc(o.titulo)}</div><div class="pop-tipo">${esc(o.tipo || '')} <span class="mono faint">${esc(o.expr || '')}</span></div>
+    <div class="pop-total">${esc(o.total)}</div>${o.nat20 ? '<div class="critico" style="text-align:center">20 natural</div>' : ''}
+    ${(o.linhas || []).length ? `<div class="pop-linhas">${o.linhas.map(l => `<div class="pop-linha">${l.rot ? `<span class="rotulo">${esc(l.rot)}</span>` : ''}<span class="mono">${l.det}</span>${o.linhas.length > 1 ? `<b class="mono">${esc(l.total)}</b>` : ''}</div>`).join('')}</div>` : ''}
+  </div>`;
+  const fechar = () => { el.remove(); document.removeEventListener('keydown', tecla, true); };
+  const tecla = e => { if (e.key === 'Escape') { e.stopPropagation(); fechar(); } };
+  el.addEventListener('click', e => { if (e.target === el || e.target.closest('[data-fechar-pop]')) fechar(); });
+  document.addEventListener('keydown', tecla, true);
+  document.body.appendChild(el);
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-am-teste],[data-am-dano]'); if (b && !b.closest('#escudo') && !b.closest('#fam')) rolarAtaqueAmeaca(b); });
 ROTAS.ameaca = async id => {
