@@ -315,6 +315,24 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .tabela th, .tabela td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--linha); vertical-align: top; }
 .tabela th { font: 600 10.5px var(--f-body); letter-spacing: .14em; text-transform: uppercase; color: var(--lua-faint); }
 .rolavel { overflow-x: auto; }
+/* ---------- vetor ---------- */
+.btn-vetor { background: transparent; color: var(--lua); border-color: var(--cv, var(--sangue)); }
+.btn-vetor:hover { background: color-mix(in srgb, var(--cv, #b4333b) 18%, transparent); }
+.btn-vetor.ativo { background: var(--cv, var(--sangue)); color: #fff; }
+.btn-vetor:disabled { opacity: .55; border-color: var(--linha-2); color: var(--lua-dim); }
+.tag-vetor { color: var(--cv, var(--sangue-hi)); border-color: color-mix(in srgb, var(--cv, #b4333b) 60%, transparent); }
+#ficha.vestido { --sangue: var(--cv); --sangue-hi: color-mix(in srgb, var(--cv) 70%, #fff); }
+#ficha.vestido .retrato.vetor { border-color: var(--cv); box-shadow: 0 0 0 2px var(--cv), 0 0 40px color-mix(in srgb, var(--cv) 55%, transparent); animation: pulsoVetor 3s ease-in-out infinite; }
+@keyframes pulsoVetor { 50% { box-shadow: 0 0 0 2px var(--cv), 0 0 70px color-mix(in srgb, var(--cv) 75%, transparent); } }
+#ficha.vestido .nome-vetor { color: color-mix(in srgb, var(--cv) 55%, #fff); text-shadow: 0 0 24px color-mix(in srgb, var(--cv) 60%, transparent); letter-spacing: .02em; }
+#ficha.vestido .caixa, #ficha.vestido .per, #ficha.vestido .hab, #ficha.vestido .item { border-color: color-mix(in srgb, var(--cv) 30%, transparent); }
+.titulo-vetor { color: color-mix(in srgb, var(--cv, #b4333b) 60%, #fff); }
+.hab-vetor { border-color: color-mix(in srgb, var(--cv, #b4333b) 45%, transparent); background: linear-gradient(180deg, color-mix(in srgb, var(--cv, #b4333b) 10%, var(--painel)), var(--painel)); }
+.fx-vetor { position: fixed; inset: 0; z-index: 70; pointer-events: none; background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--cv) 80%, #000), #000 70%); animation: fxVetor 1.05s ease forwards; }
+.fx-vetor.sair { background: radial-gradient(circle at 50% 40%, #1a1d28, #000 70%); }
+@keyframes fxVetor { 0% { opacity: 0; } 30% { opacity: .95; } 42% { opacity: .55; } 50% { opacity: .9; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .fx-vetor { display: none; } }
+
 /* ---------- celular ---------- */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 button, a, input, select, textarea { touch-action: manipulation; }
@@ -418,6 +436,7 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const nl = s => esc(s).replace(/\n/g, '<br>');
 const app = $('#app');
+const CADEADO = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 const DADO_SVG = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2 21 7v10l-9 5-9-5V7z"/><path d="M12 2 7 10h10zM3 7l4 3-4 7M21 7l-4 3 4 7M7 10l5 12 5-12"/></svg>';
 const ICON_BUSCA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>';
 const ATR = [['forca','Força','FOR'],['destreza','Destreza','DES'],['constituicao','Constituição','CON'],['inteligencia','Inteligência','INT'],['presenca','Presença','PRE']];
@@ -448,9 +467,13 @@ function pontosAtributo(nivel) { let p = 12; if (nivel >= 4) p += 2; if (nivel >
 function qtdPassivas(nivel) { return [2, 6, 9, 11].filter(x => nivel >= x).length; }
 
 /* ---------- regras de cálculo ---------- */
+const vetorLiberado = f => !!(f?.vetor?.liberado);
+const vetorAtivo = f => vetorLiberado(f) && !!f.vetorVestido;
+const fotoEf = f => (vetorAtivo(f) && f.vetor.foto) || f?.foto || '';
 function calc(f) {
   const C = classe(f.classe) || { pv: 0, ps: 0, pst: 0 };
   const A = f.atributos || {}, N = +f.nivel || 1;
+  const VB = vetorAtivo(f) ? 5 * N : 0;
   const pt = n => (f.pericias || []).find(p => p.nome === n)?.pontos || 0;
   const vig = pt('Vigor'), vtd = pt('Vontade');
   const max = {
@@ -458,25 +481,31 @@ function calc(f) {
     ps:  5 + (C.ps + (A.inteligencia || 0)) * N + vtd * 5,
     pst: 5 + (C.pst + (A.constituicao || 0)) * N + vig * 2,
   };
+  if (VB) { max.pv += VB; max.ps += VB; max.pst += VB; }
   const form = {
     pv: `8 + (${C.pv} + ${A.constituicao || 0}) × ${N}${vig ? ` + ${vig * 5} Vigor` : ''}`,
     ps: `5 + (${C.ps} + ${A.inteligencia || 0}) × ${N}${vtd ? ` + ${vtd * 5} Vontade` : ''}`,
     pst: `5 + (${C.pst} + ${A.constituicao || 0}) × ${N}${vig ? ` + ${vig * 2} Vigor` : ''}`,
   };
+  if (VB) for (const k in form) form[k] += ` + ${VB} Vetor`;
   const eq = f.equipamentos || [];
   const bruto = eq.reduce((s, i) => s + (+i.peso || 0) * (+i.qtd || 1), 0);
   const alivio = eq.reduce((s, i) => s + (+i.alivio || 0), 0);
   const carga = Math.max(0, bruto - alivio);
   const cc = ((A.forca || 0) + (A.constituicao || 0)) * 2;
   const rd = eq.reduce((s, i) => s + (+i.rd || 0), 0);
-  return { max, form, carga, cc, rd, mov: 5 + (A.destreza || 0), pat: patente(N) };
+  return { max, form, carga, cc, rd, mov: 5 + (A.destreza || 0), pat: patente(N), vb: VB };
 }
 function dadosPericia(f, nome) {
   const p = (f.pericias || []).find(x => x.nome === nome);
   const base = SIS.pericias.find(x => x.nome === nome);
   const atr = p?.atributo || base?.atributo || 'inteligencia';
   const vt = vontade(f.vontade)?.pericias.includes(nome) ? 1 : 0;
-  return { pontos: p?.pontos || 0, vt, atr, dados: Math.max(1, (p?.pontos || 0) + vt), mod: f.atributos?.[atr] || 0 };
+  const pontos = p?.pontos || 0;
+  // Vetor vestido: +1 em toda perícia, mesmo passando do limite; passou do limite, ganha +1 dado
+  const vb = vetorAtivo(f) ? 1 : 0;
+  const alem = vb && pontos + 1 > patente(+f.nivel || 1).limite ? 1 : 0;
+  return { pontos, vt, vb, alem, atr, dados: Math.max(1, pontos + vt + vb + alem), mod: f.atributos?.[atr] || 0 };
 }
 
 /* ---------- dados (rolagem) ---------- */
@@ -673,7 +702,7 @@ ROTAS.agentes = async () => {
 };
 function cardAgente(f, extra = '') {
   return `<article class="card-ag">
-    <div class="foto" style="${f.foto ? `background-image:url('${esc(f.foto)}')` : ''}">${f.foto ? '' : esc(iniciais(f.nome))}</div>
+    <div class="foto" style="${fotoEf(f) ? `background-image:url('${esc(fotoEf(f))}')` : ''}">${fotoEf(f) ? '' : esc(iniciais(f.nome))}</div>
     <div class="corpo"><div class="nm">${esc(f.nome || 'Sem nome')}</div>
       <div class="dim" style="font-weight:600">${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''} · Nv ${+f.nivel || 1}</div>
       <div class="faint" style="font-size:12px">Registrado em ${dataBR(f.criado)}</div>
@@ -808,15 +837,18 @@ ROTAS.agente = async id => {
     const K = calc(F); const A = F.atributos || {};
     F.atual = F.atual || { ...K.max };
     const C = classe(F.classe), S = subclasse(F.classe, F.subclasse);
-    app.innerHTML = `<div id="ficha" class="${editando ? 'editando' : ''}" style="display:grid; gap:22px">
+    const VA = vetorAtivo(F), VL = vetorLiberado(F), cv = F.vetor?.cor || '#b4333b';
+    app.innerHTML = `<div id="ficha" class="${editando ? 'editando' : ''} ${VA ? 'vestido' : ''}" style="display:grid; gap:22px; --cv:${esc(cv)}">
     <div class="ficha-topo">
-      <div class="retrato" style="${F.foto ? `background-image:url('${esc(F.foto)}')` : ''}">${F.foto ? '' : esc(iniciais(F.nome))}</div>
+      <div class="retrato ${VA ? 'vetor' : ''}" style="${fotoEf(F) ? `background-image:url('${esc(fotoEf(F))}')` : ''}">${fotoEf(F) ? '' : esc(iniciais(F.nome))}</div>
       <div style="display:grid; gap:8px; min-width:0">
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center"><span class="el" style="color:var(--sangue-hi)">Dossiê de agente</span><span class="el" style="color:var(--ouro)">${esc(K.pat.nome)}</span>${F.vetor ? `<span class="el el-x">Vetor: ${esc(F.vetor)}</span>` : ''}</div>
-        <h1>${esc(F.nome)}</h1>
+        ${VA ? `<h1 class="nome-vetor">${esc(F.vetor.nome || 'Vetor')}</h1><div class="dim" style="margin-top:-4px">${esc(F.nome)}, vestindo o vetor</div>` : `<h1>${esc(F.nome)}</h1>`}
         <div class="dim">${esc(F.classe)} · ${esc(F.subclasse)} · Nível ${+F.nivel || 1}${F.vontade ? ` · Vontade de ${esc(F.vontade)}` : ''}</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px">
           ${podeEditar ? `<button class="btn ${editando ? '' : 'sec'}" id="editar">${editando ? 'Concluir edição' : 'Editar ficha'}</button>` : ''}
+          ${VL ? (podeEditar ? `<button class="btn btn-vetor ${VA ? 'ativo' : ''}" id="vestir">${VA ? 'Tirar o vetor' : 'Vestir vetor'}</button>` : '')
+            : `<button class="btn btn-vetor" disabled title="Só o mestre libera">${CADEADO} Vestir vetor</button>`}
           ${F.campanhas?.length ? `<span class="faint" style="align-self:center; font-size:13px">Rolagens vão para ${F.campanhas.length} campanha(s)</span>` : ''}
         </div>
       </div>
@@ -858,11 +890,12 @@ ROTAS.agente = async id => {
   function secao(K, C, S) {
     const barra = `<div class="caixa barra-teste"><div class="campo"><label class="rotulo" for="dt">DT do teste</label><input type="number" id="dt" value="${window._dt ?? 20}"></div><div class="campo"><label class="rotulo" for="bonus">Bônus extra</label><input type="number" id="bonus" value="${window._bonus ?? 0}"></div><span class="dim" style="font-size:13px; margin-left:auto">${esc(K.pat.nome)}: limite <b class="mono" style="color:var(--ouro)">${K.pat.limite}</b> por perícia</span></div>`;
     if (aba === 'pericias') {
-      const nomes = mostrarTodas || editando ? SIS.pericias.map(p => p.nome) : [...new Set([...(F.pericias || []).filter(p => p.pontos > 0).map(p => p.nome), ...(vontade(F.vontade)?.pericias || [])])];
+      const nomes = mostrarTodas || editando || vetorAtivo(F) ? SIS.pericias.map(p => p.nome) : [...new Set([...(F.pericias || []).filter(p => p.pontos > 0).map(p => p.nome), ...(vontade(F.vontade)?.pericias || [])])];
       return `<div style="display:grid; gap:12px">${barra}
         <div class="grade-per">${nomes.map(n => { const P = dadosPericia(F, n);
           return `<div class="per ${P.pontos + P.vt ? '' : 'zero'}"><div class="topo-p"><b>${esc(n)}</b><div class="pips">${Array.from({ length: Math.max(K.pat.limite, P.pontos) }, (_, k) => `<span class="pip ${k < P.pontos ? 'on' : ''}"></span>`).join('')}${P.vt ? '<span class="pip vt" title="+1 da Vontade"></span>' : ''}</div></div>
           <div class="mono dim" style="font-size:12px">${P.dados}d20 + ${P.mod} (${SIGLA[P.atr]})</div>
+          ${P.vb ? `<div style="display:flex; gap:4px; flex-wrap:wrap"><span class="tag tag-vetor">Vetor +1</span>${P.alem ? '<span class="tag tag-vetor">Além do limite +1 dado</span>' : ''}</div>` : ''}
           <div class="edit-only" style="display:flex; gap:6px; align-items:center"><button class="vbtn" data-pp="${esc(n)}" data-d="-1">−</button><button class="vbtn" data-pp="${esc(n)}" data-d="1">+</button>
             <select data-patr="${esc(n)}" style="width:auto; padding:4px">${ATR.map(([k, , s]) => `<option value="${k}" ${P.atr === k ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
           <button class="btn ouro mini" style="justify-self:start" data-teste="${esc(n)}">Rolar teste</button><div class="res" data-res="${esc(n)}"></div></div>`; }).join('')}</div>
@@ -882,6 +915,7 @@ ROTAS.agente = async id => {
       return `<div style="display:grid; gap:14px">
         <div class="cab-pagina"><h2>Classe · ${esc(F.subclasse)}</h2></div>
         <div class="grade-hab">${habCl.map(h => `<article class="hab ${h.nivel > F.nivel ? 'bloq' : ''}"><div class="cab"><span class="nm">${esc(h.nome)}</span><span class="tag">Nv ${h.nivel}</span></div><p>${esc(h.texto)}</p></article>`).join('') || '<div class="vazio">Sem subclasse.</div>'}</div>
+        ${VL_HAB()}
         <div class="cab-pagina"><h2>Passivas</h2>${podeEditar ? '<button class="btn mini" id="add-passiva">Adicionar passiva</button>' : ''}</div>
         <div class="grade-hab">${(F.passivas || []).map((h, i) => cardHab(h, 'passivas', i)).join('') || '<div class="vazio">Nenhuma passiva.</div>'}</div>
         <div class="cab-pagina"><h2>Outras habilidades</h2>${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" id="add-hab">Adicionar do homebrew</button><button class="btn sec mini" id="nova-hab">Nova habilidade</button></div>' : ''}</div>
@@ -905,6 +939,13 @@ ROTAS.agente = async id => {
     return `<div style="display:grid; gap:14px">${[['aparencia', 'Aparência'], ['personalidade', 'Personalidade'], ['historico', 'Histórico'], ['objetivo', 'Objetivo'], ['anotacoes', 'Anotações do jogador']].map(([k, l]) => `<div class="campo"><label class="rotulo" for="d-${k}">${l}</label>
       ${podeEditar ? `<textarea id="d-${k}" data-texto="${k}">${esc(F[k])}</textarea>` : `<p class="dim">${nl(F[k]) || '—'}</p>`}</div>`).join('')}</div>`;
   }
+  const VL_HAB = () => {
+    if (!vetorLiberado(F)) return '';
+    const hs = F.vetor.habilidades || [];
+    return `<div class="cab-pagina"><h2 class="titulo-vetor">Vetor · ${esc(F.vetor.nome || '')}</h2>${vetorAtivo(F) ? '<span class="tag tag-vetor">Vestido</span>' : '<span class="faint" style="font-size:13px">Vista o vetor para usar</span>'}</div>
+      ${F.vetor.descricao ? `<p class="dim" style="max-width:70ch; font-style:italic">${nl(F.vetor.descricao)}</p>` : ''}
+      <div class="grade-hab">${hs.map(h => `<article class="hab hab-vetor ${vetorAtivo(F) ? '' : 'bloq'}"><span class="nm">${esc(h.nome)}</span><p>${nl(h.texto)}</p></article>`).join('') || '<div class="vazio">O mestre ainda não escreveu habilidades para este vetor.</div>'}</div>`;
+  };
   const cardHab = (h, lista, i) => `<article class="hab"><div class="cab"><span class="nm">${esc(h.nome)}</span>${podeEditar ? `<button class="btn-x" data-rm="${lista}" data-i="${i}" aria-label="Remover">×</button>` : ''}</div>${h.origem ? `<span class="faint" style="font-size:12px">${esc(h.origem)}</span>` : ''}<p>${nl(h.texto)}</p></article>`;
   const cardRitual = (r, i) => `<article class="hab"><div class="cab"><span class="nm">${esc(r.nome)}</span><span style="display:flex; gap:6px; align-items:center">${r.elemento ? elTag(r.elemento) : ''}${podeEditar ? `<button class="btn-x" data-rm="rituais" data-i="${i}" aria-label="Remover">×</button>` : ''}</span></div>
     <div class="stats">${[['Alvo', r.alvo], ['Custo', r.custo]].filter(x => x[1]).map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
@@ -916,6 +957,19 @@ ROTAS.agente = async id => {
     $('#dt')?.addEventListener('input', e => window._dt = e.target.value);
     $('#bonus')?.addEventListener('input', e => window._bonus = e.target.value);
     $('#editar')?.addEventListener('click', () => { editando = !editando; render(); });
+    $('#vestir')?.addEventListener('click', async () => {
+      if (!vetorLiberado(F)) return;
+      const vestir = !F.vetorVestido, b = 5 * (+F.nivel || 1);
+      const a = { ...(F.atual || calc(F).max) };
+      F.vetorVestido = vestir;
+      const M = calc(F).max;
+      for (const k of ['pv', 'ps', 'pst']) a[k] = vestir ? Math.min(M[k], (a[k] ?? 0) + b) : Math.max(1, Math.min(M[k], (a[k] ?? 0) - b));
+      F.atual = a; pendente = true;
+      const fx = document.createElement('div'); fx.className = 'fx-vetor' + (vestir ? '' : ' sair'); fx.style.setProperty('--cv', F.vetor.cor || '#b4333b'); document.body.appendChild(fx); setTimeout(() => fx.remove(), 1100);
+      setTimeout(render, 380);
+      try { await ref.update({ vetorVestido: vestir, atual: a }); } catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); }
+      pendente = false;
+    });
     $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
     $('#todas')?.addEventListener('click', () => { mostrarTodas = !mostrarTodas; render(); });
     $$('[data-v]').forEach(b => b.onclick = () => { const k = b.dataset.v; F.atual[k] = Math.max(0, Math.min(K.max[k], (F.atual[k] ?? K.max[k]) + +b.dataset.d)); pendente = true; render(); salvarVitais(); });
@@ -1425,6 +1479,22 @@ ROTAS.campanha = async id => {
 /* =================================================================
    ESCUDO DO MESTRE
    ================================================================= */
+function editarVetor(f, v = {}, salvarFn) {
+  v = v || {};
+  abrirModal(v.nome ? 'Editar vetor' : 'Criar vetor', `<p class="dim">Vetor de <b>${esc(f.nome)}</b>. Ninguém além de você vê isto até você dar a chave.</p>
+    <div class="grade-campos"><div class="campo"><label class="rotulo" for="vt-n">Nome do vetor</label><input type="text" id="vt-n" value="${esc(v.nome)}" placeholder="Rosto Oco"></div>
+    <div class="campo"><label class="rotulo" for="vt-c">Cor</label><input type="color" id="vt-c" value="${esc(v.cor || '#b4333b')}" style="width:80px; height:40px; padding:2px"></div></div>
+    <div class="campo"><label class="rotulo" for="vt-f">Foto do vetor</label><div style="display:flex; gap:12px; align-items:center"><div id="vt-prev" class="ava" style="width:64px; height:64px; ${v.foto ? `background:center/cover url('${esc(v.foto)}')` : 'background:var(--painel-3)'}"></div><input type="file" id="vt-f" accept="image/*"></div></div>
+    <div class="campo"><label class="rotulo" for="vt-d">Descrição (o que o jogador lê ao receber)</label><textarea id="vt-d" style="min-height:80px">${esc(v.descricao)}</textarea></div>
+    <div class="campo"><label class="rotulo" for="vt-h">Habilidades extras (uma por linha: Nome: efeito)</label><textarea id="vt-h" style="min-height:140px" placeholder="Intangível: uma vez por rodada, teste de Vontade DT 18 para ficar Intangível até o próximo turno.">${esc((v.habilidades || []).map(h => `${h.nome}: ${h.texto}`).join('\n'))}</textarea></div>
+    <button class="btn" id="vt-ok">Salvar vetor</button>`, (m, fechar) => {
+    let foto = v.foto || '';
+    m.querySelector('#vt-f').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) { foto = u; m.querySelector('#vt-prev').style.background = `center/cover url('${u}')`; } };
+    m.querySelector('#vt-ok').onclick = () => { const nome = m.querySelector('#vt-n').value.trim(); if (!nome) return toast('Dê um nome ao vetor.');
+      const habilidades = m.querySelector('#vt-h').value.split('\n').map(l => l.trim()).filter(Boolean).map(l => { const i = l.indexOf(':'); return i > 0 ? { nome: l.slice(0, i).trim(), texto: l.slice(i + 1).trim() } : { nome: l, texto: '' }; });
+      salvarFn({ nome, cor: m.querySelector('#vt-c').value, foto, descricao: m.querySelector('#vt-d').value.trim(), habilidades }); fechar(); };
+  });
+}
 ROTAS.escudo = async id => {
   if (!db) { app.innerHTML = semBanco(); return; }
   const camp = await db.doc('campanhas/' + id).get();
@@ -1434,6 +1504,8 @@ ROTAS.escudo = async id => {
   let E = { anotacoes: { geral: '', futuras: '', anteriores: '' }, combate: { rodada: 1, turno: 0, lista: [], ativo: false }, pistas: [], ocultas: [] };
   try { const s = await refE.get(); if (s.exists) E = { ...E, ...s.data() }; } catch (e) {}
   let aba = 'agentes', gravando = Promise.resolve();
+  const VETORES = {};
+  assinar(db.collection(`mestre/${ME}/vetores`).where('campanha', '==', id).onSnapshot(s => { for (const k in VETORES) delete VETORES[k]; s.docs.forEach(d => VETORES[d.id] = d.data()); if (aba === 'vetores') render(); }));
   const salvarE = debounce(() => { gravando = gravando.then(() => refE.set(E)).catch(() => toast('Não deu para salvar o escudo.')); }, 600);
   const publicarCombate = debounce(() => {
     const c = E.combate; const ordem = c.lista.map(x => ({ nome: x.nome, tipo: x.tipo, ini: x.ini, cond: x.cond || [] }));
@@ -1456,14 +1528,14 @@ ROTAS.escudo = async id => {
   st = ouvirCampanha(id, (s, tipo) => { desenharFeed(); if (tipo === 'rolagens') return; if (!document.activeElement?.closest?.('#corpo-e input, #corpo-e textarea, #corpo-e select')) render(); });
 
   function render() {
-    const ABAS = [['agentes', 'Agentes'], ['combate', 'Combate'], ['investigacao', 'Investigação'], ['relatorios', 'Relatórios'], ['dados', 'Dados'], ['anotacoes', 'Anotações'], ['ligacao', 'Ligação']];
+    const ABAS = [['agentes', 'Agentes'], ['combate', 'Combate'], ['investigacao', 'Investigação'], ['relatorios', 'Relatórios'], ['dados', 'Dados'], ['vetores', 'Vetores'], ['anotacoes', 'Anotações'], ['ligacao', 'Ligação']];
     $('#abas-e').innerHTML = ABAS.map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('');
     $$('#abas-e [data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
     const fichas = Object.values(st.fichas).filter(Boolean);
     const corpo = $('#corpo-e');
     if (aba === 'agentes') {
       corpo.innerHTML = `<div class="grade-cards">${fichas.map(f => { const K = calc(f), a = f.atual || K.max;
-        return `<div class="ag-escudo"><div class="cab"><div class="mini-f" style="${f.foto ? `background-image:url('${esc(f.foto)}')` : ''}">${f.foto ? '' : esc(iniciais(f.nome))}</div><div style="min-width:0"><b style="font: 400 19px var(--f-disp)">${esc(f.nome)}</b><div class="dim" style="font-size:12.5px">${esc(f.classe)} · ${esc(f.subclasse)} · Nv ${f.nivel}</div></div></div>
+        return `<div class="ag-escudo"><div class="cab"><div class="mini-f" style="${fotoEf(f) ? `background-image:url('${esc(fotoEf(f))}')` : ''}">${fotoEf(f) ? '' : esc(iniciais(f.nome))}</div><div style="min-width:0"><b style="font: 400 19px var(--f-disp)">${esc(f.nome)}</b><div class="dim" style="font-size:12.5px">${esc(f.classe)} · ${esc(f.subclasse)} · Nv ${f.nivel}</div></div></div>
           <div class="attr-linha">${ATR.map(([k, , s]) => `<span><b>${f.atributos?.[k] ?? 0}</b>${s}</span>`).join('')}</div>
           ${['pv', 'ps', 'pst'].map(k => `<div class="vital ${k}"><div class="ctrl"><button class="vbtn" data-fv="${esc(f.id)}" data-k="${k}" data-d="-5">−5</button><button class="vbtn" data-fv="${esc(f.id)}" data-k="${k}" data-d="-1">−1</button>
             <div class="trilho fino" style="height:22px"><div class="cheio" style="width:${Math.min(100, (a[k] / (K.max[k] || 1)) * 100)}%"></div><div class="txt" style="line-height:20px">${k.toUpperCase()} ${a[k]}/${K.max[k]}</div></div>
@@ -1540,6 +1612,25 @@ ROTAS.escudo = async id => {
       $('#m-rolar').onclick = go; $('#m-expr').onkeydown = e => { if (e.key === 'Enter') go(); };
     }
     if (aba === 'ligacao') { corpo.innerHTML = '<div id="ligacao"></div>'; montarLigacao(id, camp.data(), st); }
+    if (aba === 'vetores') {
+      corpo.innerHTML = `<div class="aviso">O vetor fica guardado só com você. O jogador vê apenas um botão trancado até você dar a chave. Com a chave, ele pode vestir: <b>+5 por nível</b> em PV, PS e PST, <b>+1 em toda perícia</b> (passando do limite da patente, <b>+1 dado</b>), as habilidades que você escrever e a foto do vetor no lugar da dele.</div>
+        <div class="lista">${fichas.map(f => { const v = VETORES[f.id]; const lib = vetorLiberado(f);
+          const estado = !v ? 'Sem vetor' : !lib ? 'Criado, trancado' : f.vetorVestido ? 'Chave dada · vestido agora' : 'Chave dada';
+          return `<div class="item"><div class="cab"><span style="display:flex; gap:10px; align-items:center; min-width:0"><span class="ava" style="width:40px; height:40px; ${v?.foto ? `background:center/cover url('${esc(v.foto)}')` : `background:${esc(v?.cor || 'var(--painel-3)')}`}">${v?.foto ? '' : esc(iniciais(v?.nome || f.nome))}</span>
+            <span style="min-width:0"><b>${esc(f.nome)}</b>${v ? ` <span class="faint">→ ${esc(v.nome)}</span>` : ''}<br><span class="tag ${lib ? 'tag-vetor' : ''}">${estado}</span></span></span>
+            <span style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end">
+              <button class="btn mini sec" data-vt-ed="${esc(f.id)}">${v ? 'Editar vetor' : 'Criar vetor'}</button>
+              ${v ? (lib ? `<button class="btn mini" data-vt-tirar="${esc(f.id)}">Tomar a chave</button>` : `<button class="btn mini ouro" data-vt-dar="${esc(f.id)}">Dar a chave</button>`) : ''}
+            </span></div></div>`; }).join('') || '<div class="vazio">Nenhum agente na campanha.</div>'}</div>`;
+      const copiar = v => ({ nome: v.nome, foto: v.foto || '', cor: v.cor || '#b4333b', descricao: v.descricao || '', habilidades: v.habilidades || [], liberado: true });
+      $$('[data-vt-ed]').forEach(b => b.onclick = () => { const fid = b.dataset.vtEd; const f = st.fichas[fid]; editarVetor(f, VETORES[fid], async v => {
+        try { await db.doc(`mestre/${ME}/vetores/${fid}`).set({ ...v, ficha: fid, campanha: id, t: Date.now() });
+          if (vetorLiberado(f)) await db.doc('fichas/' + fid).update({ vetor: copiar(v) }); toast('Vetor salvo.'); } catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); } }); });
+      $$('[data-vt-dar]').forEach(b => b.onclick = async () => { const fid = b.dataset.vtDar; try { await db.doc('fichas/' + fid).update({ vetor: copiar(VETORES[fid]), vetorVestido: false }); toast('Chave entregue. O jogador já pode vestir.'); } catch (e) { toast('Não deu para entregar: ' + (e.message || e.code)); } });
+      $$('[data-vt-tirar]').forEach(b => b.onclick = async () => { const fid = b.dataset.vtTirar; const f = st.fichas[fid];
+        const semV = { ...f, vetorVestido: false }; const M = calc(semV).max; const a = { ...(f.atual || M) }; for (const k of ['pv', 'ps', 'pst']) a[k] = Math.max(1, Math.min(M[k], a[k] - (f.vetorVestido ? 5 * (+f.nivel || 1) : 0)));
+        try { await db.doc('fichas/' + fid).update({ vetor: { liberado: false }, vetorVestido: false, atual: a }); toast('Chave recolhida.'); } catch (e) { toast('Não deu para recolher: ' + (e.message || e.code)); } });
+    }
     if (aba === 'anotacoes') {
       corpo.innerHTML = [['geral', 'Geral', 'Informações gerais ao longo da sessão…'], ['futuras', 'Sessões futuras', 'Notas de possíveis eventos futuros…'], ['anteriores', 'Sessões anteriores', 'O que já aconteceu…']].map(([k, l, ph]) => `<div class="campo" style="margin-bottom:14px"><label class="rotulo" for="an-${k}">${l}</label><textarea id="an-${k}" data-an="${k}" style="min-height:160px" placeholder="${ph}">${esc(E.anotacoes[k])}</textarea></div>`).join('') + '<p class="faint" style="font-size:13px">Salvo automaticamente. Só você lê.</p>';
       $$('[data-an]').forEach(t => t.oninput = () => { E.anotacoes[t.dataset.an] = t.value; salvarE(); });
@@ -1682,7 +1773,7 @@ function calcularPersona(st) {
   const p = meu?.persona;
   if (!p) return { nome: PERFIL?.nome || 'Agente', foto: '', cor: corDe(ME), personagem: false };
   const f = p.ficha ? st.fichas?.[p.ficha] : null;
-  return { nome: f?.nome || p.nome || PERFIL?.nome || 'Agente', foto: f?.foto || p.foto || '', cor: p.cor || corDe(ME), personagem: !!(p.ficha || p.nome) };
+  return { nome: f?.nome || p.nome || PERFIL?.nome || 'Agente', foto: (f && fotoEf(f)) || p.foto || '', cor: p.cor || corDe(ME), personagem: !!(p.ficha || p.nome) };
 }
 function atualizarPersona(st) {
   const nova = calcularPersona(st);
