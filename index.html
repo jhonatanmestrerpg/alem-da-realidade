@@ -272,6 +272,11 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .lbl-v { color: #b18ee6; }
 .dado-btn { margin-left: auto; background: none; border: none; color: var(--lua); padding: 2px; }
 .dado-btn:hover { color: var(--ouro); }
+.pessoa:has(.vol-linha) { flex-wrap: wrap; }
+.vol-linha { flex-basis: 100%; display: grid; grid-template-columns: auto 1fr 44px; gap: 8px; align-items: center; padding: 2px 0 4px 32px; }
+.vol-linha.geral { padding-left: 0; margin-top: 10px; border-top: 1px solid var(--linha); padding-top: 10px; }
+.vol-linha input { width: 100%; accent-color: var(--fole); }
+.vol-linha b { font-size: 12px; text-align: right; }
 .pop-rol { position: fixed; inset: 0; z-index: 58; background: rgba(5,6,10,.55); display: grid; place-items: center; padding: 16px; animation: popFundo .12s ease-out; }
 .pop-cartao { width: min(360px, 100%); background: #141824; border: 1px solid #6c4fa3; box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(177,142,230,.15) inset; padding: 14px 18px 18px; display: grid; gap: 6px; animation: popCartao .16s cubic-bezier(.2,.9,.3,1.2); }
 .pop-cartao.dano { border-color: var(--ouro); }
@@ -322,7 +327,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .tiles.n2 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 .tile { position: relative; aspect-ratio: 16 / 10; background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--cor) 22%, #11141e), #0c0e15 72%); border: 2px solid transparent; border-radius: 6px; display: grid; place-items: center; overflow: hidden; transition: border-color .12s, box-shadow .12s; }
 .tile.falando { border-color: var(--cor); box-shadow: 0 0 0 1px var(--cor), 0 0 24px color-mix(in srgb, var(--cor) 55%, transparent); }
-.tile-ava { width: clamp(64px, 30%, 128px); aspect-ratio: 1; border-radius: 50%; background-size: cover; background-position: center; display: grid; place-items: center; font: 700 28px var(--f-body); color: #0b0d14; box-shadow: 0 0 0 3px var(--cor, transparent); }
+.tile-ava { width: clamp(56px, 28%, 120px); margin-bottom: 34px; aspect-ratio: 1; border-radius: 50%; background-size: cover; background-position: center; display: grid; place-items: center; font: 700 28px var(--f-body); color: #0b0d14; box-shadow: 0 0 0 3px var(--cor, transparent); }
 .tile-nome { position: absolute; left: 10px; bottom: 10px; background: rgba(5,6,10,.72); padding: 4px 9px; border-radius: 4px; display: grid; max-width: calc(100% - 60px); }
 .tile-nome b { font: 400 16px var(--f-disp); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tile-nome span { font-size: 11px; color: var(--lua-dim); }
@@ -1978,7 +1983,7 @@ ROTAS.escudo = async id => {
 /* =================================================================
    LIGAÇÃO (voz por WebRTC, sinalização e presença pelo tempo real do Supabase)
    ================================================================= */
-const CH = { sala: null, nomeSala: '', canal: null, dentro: false, local: null, pares: new Map(), mudo: false, presenca: {}, ctx: null, medidores: new Map(), timer: null, persona: null, ctxLig: null };
+const CH = { sala: null, nomeSala: '', canal: null, dentro: false, local: null, pares: new Map(), mudo: false, presenca: {}, ctx: null, medidores: new Map(), timer: null, persona: null, ctxLig: null, tentativas: new Map(), iceAntes: new Map() };
 const ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }];
 // TURN: retransmite a voz quando a rede (4G, empresa) não deixa as pessoas se ligarem direto.
 // Padrão: Open Relay (Metered), grátis até 20 GB/mês, credencial temporária gerada aqui (TURN REST, HMAC-SHA1).
@@ -2047,7 +2052,7 @@ async function sairLigacao(manterSala) {
   try { await CH.canal?.untrack(); } catch (e) {}
   CH.local?.getTracks().forEach(t => t.stop()); CH.local = null;
   try { await CH.ctx?.close(); } catch (e) {} CH.ctx = null; CH.medidores.clear();
-  CH.dentro = false; CH.surdo = false; CH.mudoPeloSurdo = false;
+  CH.dentro = false; CH.tentativas.clear(); CH.iceAntes.clear(); CH.surdo = false; CH.mudoPeloSurdo = false;
   const naTela = document.getElementById('ligacao')?.dataset.camp === CH.sala;
   if (!manterSala && !naTela) fecharSala();
   desenharVoz();
@@ -2057,7 +2062,15 @@ function conferirPares() {
   if (!CH.dentro) return;
   const ids = Object.keys(CH.presenca).filter(i => i !== ME);
   for (const id of ids) if (!CH.pares.has(id) && ME < id) criarPar(id, true);
-  for (const [id, p] of CH.pares) if (!ids.includes(id) || ['failed', 'closed'].includes(p.pc.connectionState)) fecharPar(id);
+  const agora = Date.now();
+  for (const [id, p] of CH.pares) {
+    if (!ids.includes(id) || p.pc.connectionState === 'closed') { fecharPar(id); continue; }
+    // travou em "Conectando…" ou caiu: refaz a conexão (quem inicia oferece de novo; o outro pede uma oferta nova)
+    if (p.pc.connectionState !== 'connected' && agora - p.desde > ({ failed: 1500, new: 6000 }[p.pc.connectionState] ?? 10000)) {
+      fecharPar(id); p.tentativas = (p.tentativas || 0) + 1; CH.tentativas.set(id, p.tentativas);
+      if (ME < id) criarPar(id, true); else enviarSinal(id, { tipo: 'pedir' });
+    }
+  }
 }
 // voz: Opus mono 64 kbps com correção de perda (FEC), sem cortar silêncio (DTX) e pacotes de 10 ms (menos atraso)
 function opusAfinado(sdp) {
@@ -2070,17 +2083,19 @@ function opusAfinado(sdp) {
 function afinarEnvio(pc) { pc.getSenders().forEach(snd => { if (snd.track?.kind !== 'audio') return; const pr = snd.getParameters(); pr.encodings = pr.encodings?.length ? pr.encodings : [{}]; pr.encodings[0].maxBitrate = 64000; pr.encodings[0].priority = 'high'; pr.encodings[0].networkPriority = 'high'; snd.setParameters(pr).catch(() => {}); }); }
 function criarPar(id, iniciador) {
   const pc = new RTCPeerConnection({ iceServers: CH.ice || ICE });
-  const par = { pc, audio: new Audio(), pendentes: [], remoto: false };
+  const par = { pc, audio: new Audio(), pendentes: [...(CH.iceAntes.get(id) || [])], remoto: false, desde: Date.now(), tentativas: CH.tentativas.get(id) || 0 }; CH.iceAntes.delete(id);
   par.audio.autoplay = true; par.audio.playsInline = true; par.audio.muted = !!CH.surdo;
   CH.pares.set(id, par);
   CH.local.getTracks().forEach(t => pc.addTrack(t, CH.local));
   pc.onicecandidate = e => { if (e.candidate) enviarSinal(id, { tipo: 'ice', cand: e.candidate.toJSON() }); };
-  pc.ontrack = e => { try { e.receiver.jitterBufferTarget = 0; e.receiver.playoutDelayHint = 0; } catch (x) {} const s = e.streams[0]; par.audio.srcObject = s; par.audio.play().catch(() => {}); medir(id, s); };
-  pc.onconnectionstatechange = () => { if (pc.connectionState === 'connected') afinarEnvio(pc); desenharVoz(); };
+  pc.ontrack = e => { try { e.receiver.jitterBufferTarget = 0; e.receiver.playoutDelayHint = 0; } catch (x) {} const s = e.streams[0]; par.audio.srcObject = s; par.audio.play().catch(() => {});
+    if (CH.ctx && !par.ganho) { try { const src = CH.ctx.createMediaStreamSource(s); par.ganho = CH.ctx.createGain(); src.connect(par.ganho).connect(CH.ctx.destination); par.fonte = src; } catch (x) { par.ganho = null; } }
+    aplicarVolume(id); medir(id, s); };
+  pc.onconnectionstatechange = () => { par.desde = Date.now(); if (pc.connectionState === 'connected') { afinarEnvio(pc); CH.tentativas.delete(id); } desenharVoz(); };
   if (iniciador) (async () => { const of = await pc.createOffer(); of.sdp = opusAfinado(of.sdp); await pc.setLocalDescription(of); enviarSinal(id, { tipo: 'offer', sdp: pc.localDescription.toJSON() }); })().catch(e => console.warn(e));
   return par;
 }
-function fecharPar(id) { const p = CH.pares.get(id); if (!p) return; try { p.pc.close(); } catch (e) {} p.audio.srcObject = null; CH.pares.delete(id); CH.medidores.delete(id); }
+function fecharPar(id) { const p = CH.pares.get(id); if (!p) return; try { p.pc.close(); } catch (e) {} try { p.fonte?.disconnect(); p.ganho?.disconnect(); } catch (e) {} p.audio.srcObject = null; CH.pares.delete(id); CH.medidores.delete(id); }
 async function tratarSinal(m) {
   if (m.tipo === 'offer') {
     if (CH.pares.has(m.de)) fecharPar(m.de);
@@ -2093,8 +2108,10 @@ async function tratarSinal(m) {
     const par = CH.pares.get(m.de); if (!par || par.pc.signalingState !== 'have-local-offer') return;
     await par.pc.setRemoteDescription(m.sdp); par.remoto = true;
     for (const c of par.pendentes) await par.pc.addIceCandidate(c).catch(() => {});
+  } else if (m.tipo === 'pedir') {
+    if (!CH.dentro || !CH.local) return; if (CH.pares.has(m.de)) fecharPar(m.de); criarPar(m.de, true);
   } else if (m.tipo === 'ice') {
-    const par = CH.pares.get(m.de); if (!par) return;
+    const par = CH.pares.get(m.de); if (!par) { const l = CH.iceAntes.get(m.de) || []; l.push(m.cand); CH.iceAntes.set(m.de, l.slice(-40)); return; }
     if (par.remoto) await par.pc.addIceCandidate(m.cand).catch(() => {}); else par.pendentes.push(m.cand);
   }
 }
@@ -2130,7 +2147,13 @@ function atualizarFala() {
 let ultimoFalanteEm = 0;
 function ultimoFalanteValido() { return ultimoFalante && Date.now() - ultimoFalanteEm < 1500 && (CH.presenca[ultimoFalante] || ultimoFalante === ME) ? ultimoFalante : null; }
 function alternarMudo() { CH.mudo = !CH.mudo; if (!CH.mudo && CH.surdo) { CH.surdo = false; aplicarSurdo(); } CH.local?.getAudioTracks().forEach(t => t.enabled = !CH.mudo); rastrear(); desenharVoz(); }
-function aplicarSurdo() { for (const par of CH.pares.values()) par.audio.muted = !!CH.surdo; }
+const VOL = (() => { try { return JSON.parse(localStorage.getItem('adr-vol') || '{}'); } catch (e) { return {}; } })();
+const volDe = id => +(VOL[id] ?? 100);
+function salvarVol() { try { localStorage.setItem('adr-vol', JSON.stringify(VOL)); } catch (e) {} }
+// até 200%: o som de cada pessoa passa por um ganho do Web Audio (o <audio> sozinho para em 100%)
+function aplicarVolume(id) { const par = CH.pares.get(id); if (!par) return; const v = CH.surdo ? 0 : volDe(id) / 100 * volDe('geral') / 100;
+  if (par.ganho) { par.ganho.gain.value = v; par.audio.muted = true; } else { par.audio.volume = Math.min(1, v); par.audio.muted = !!CH.surdo; } }
+function aplicarSurdo() { for (const id of CH.pares.keys()) aplicarVolume(id); }
 function alternarSurdo() { CH.surdo = !CH.surdo; aplicarSurdo(); if (CH.surdo && !CH.mudo) { CH.mudo = true; CH.mudoPeloSurdo = true; } else if (!CH.surdo && CH.mudoPeloSurdo) { CH.mudo = false; CH.mudoPeloSurdo = false; } CH.local?.getAudioTracks().forEach(t => t.enabled = !CH.mudo); rastrear(); desenharVoz(); }
 
 /* persona: quem você interpreta nesta campanha */
@@ -2181,7 +2204,7 @@ function tileVoz(id, p, conectando) {
   return `<div class="tile" data-voz="${esc(id)}" style="--cor:${esc(cor)}">
     <div class="tile-ava" style="${p.foto ? `background-image:url('${esc(p.foto)}')` : `background:${esc(cor)}`}">${p.foto ? '' : esc(iniciais(p.nome))}</div>
     <div class="tile-nome"><b>${esc(p.nome)}</b>${p.jogador && p.jogador !== p.nome ? `<span>${esc(p.jogador)}</span>` : ''}</div>
-    ${p.mudo ? `<span class="tile-mudo" title="Microfone desligado">${MIC_SVG}</span>` : ''}${conectando ? '<span class="tile-estado">Conectando…</span>' : ''}</div>`;
+    ${p.mudo ? `<span class="tile-mudo" title="Microfone desligado">${MIC_SVG}</span>` : ''}${conectando ? `<span class="tile-estado">${(CH.tentativas.get(id) || 0) > 0 ? `Tentando de novo (${CH.tentativas.get(id)})…` : 'Conectando…'}</span>` : ''}</div>`;
 }
 function arrastavel(el) {
   const M = 10, salvo = (() => { try { return JSON.parse(localStorage.getItem('adr-pip') || 'null'); } catch (e) { return null; } })();
@@ -2239,7 +2262,8 @@ function desenharVoz() {
     </div>
     <aside class="call-side">
       <div class="rotulo">Na ligação · ${naLig.length}</div>
-      ${naLig.map(([id, p]) => `<div class="pessoa" data-voz="${esc(id)}" style="--cor:${esc(p.cor || corDe(id))}"><span class="ava" style="${p.foto ? `background:center/cover url('${esc(p.foto)}')` : `background:${esc(p.cor || corDe(id))}`}">${p.foto ? '' : esc(iniciais(p.nome))}</span><span style="min-width:0"><b style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(p.nome)}</b>${p.jogador && p.jogador !== p.nome ? `<span class="faint" style="font-size:11.5px">${esc(p.jogador)}</span>` : ''}</span>${p.mudo ? `<span class="faint" style="margin-left:auto">${MIC_SVG}</span>` : ''}</div>`).join('') || '<p class="faint" style="font-size:13px">Vazia.</p>'}
+      ${naLig.map(([id, p]) => `<div class="pessoa" data-voz="${esc(id)}" style="--cor:${esc(p.cor || corDe(id))}"><span class="ava" style="${p.foto ? `background:center/cover url('${esc(p.foto)}')` : `background:${esc(p.cor || corDe(id))}`}">${p.foto ? '' : esc(iniciais(p.nome))}</span><span style="min-width:0"><b style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(p.nome)}</b>${p.jogador && p.jogador !== p.nome ? `<span class="faint" style="font-size:11.5px">${esc(p.jogador)}</span>` : ''}</span>${p.mudo ? `<span class="faint" style="margin-left:auto">${MIC_SVG}</span>` : ''}${id !== ME && CH.dentro ? `<label class="vol-linha"><span class="rotulo">Volume</span><input type="range" min="0" max="200" step="10" value="${volDe(id)}" data-vol="${esc(id)}" aria-label="Volume de ${esc(p.nome)}"><b class="mono" data-vol-n="${esc(id)}">${volDe(id)}%</b></label>` : ''}</div>`).join('') || '<p class="faint" style="font-size:13px">Vazia.</p>'}
+      ${CH.dentro ? `<label class="vol-linha geral"><span class="rotulo">Volume geral</span><input type="range" min="0" max="200" step="10" value="${volDe('geral')}" data-vol="geral" aria-label="Volume geral"><b class="mono" data-vol-n="geral">${volDe('geral')}%</b></label>` : ''}
       <div class="rotulo" style="margin-top:14px">Fora da ligação · ${fora.length}</div>
       <div id="lg-fora">${fora.map(u => `<div class="pessoa fora"><span class="ava" style="background:${corDe(u)}">·</span><span data-nome-uid="${esc(u)}">…</span></div>`).join('')}</div>
     </aside></div>`;
@@ -2248,6 +2272,7 @@ function desenharVoz() {
   el.querySelector('#lg-entrar')?.addEventListener('click', () => entrarLigacao(campId, C.nome));
   el.querySelector('#lg-mudo')?.addEventListener('click', alternarMudo);
   el.querySelector('#lg-surdo')?.addEventListener('click', alternarSurdo);
+  el.querySelectorAll('[data-vol]').forEach(r => r.oninput = () => { const id = r.dataset.vol; VOL[id] = +r.value; el.querySelector(`[data-vol-n="${CSS.escape(id)}"]`).textContent = r.value + '%'; if (id === 'geral') aplicarSurdo(); else aplicarVolume(id); salvarVol(); });
   el.querySelector('#lg-sair')?.addEventListener('click', () => sairLigacao(true));
 }
 addEventListener('pagehide', () => { if (CH.dentro) { try { CH.canal?.untrack(); } catch (e) {} } });
