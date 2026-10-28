@@ -316,6 +316,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .tabela th, .tabela td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--linha); vertical-align: top; }
 .tabela th { font: 600 10.5px var(--f-body); letter-spacing: .14em; text-transform: uppercase; color: var(--lua-faint); }
 .rolavel { overflow-x: auto; }
+.hab-feitico { border-color: rgba(185,138,216,.35); background: linear-gradient(180deg, rgba(185,138,216,.07), var(--painel) 60%); }
+.hab-feitico .nm { color: #d7c2ef; }
+
 /* ---------- alinhamento ---------- */
 .grade-al { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
 .card-al { background: linear-gradient(180deg, color-mix(in srgb, var(--ca) 9%, var(--painel)), var(--painel) 55%); border: 1px solid color-mix(in srgb, var(--ca) 35%, var(--linha)); padding: 14px 16px; display: grid; gap: 8px; align-content: start; }
@@ -497,6 +500,8 @@ function pontosPericia(f) { const total = pontosPericiaTotal(f.classe, f.atribut
 function qtdPassivas(nivel) { return [2, 6, 9, 11].filter(x => nivel >= x).length; }
 
 /* ---------- regras de cálculo ---------- */
+const ehBruxa = f => f?.classe === 'Bruxa';
+const sabeFeitico = f => ehBruxa(f) || (f?.passivas || []).some(p => p.nome === 'Aprender Feitiço') || (f?.habilidades || []).some(p => p.nome === 'Aprender Feitiço');
 const vetorLiberado = f => !!(f?.vetor?.liberado);
 const vetorAtivo = f => vetorLiberado(f) && !!f.vetorVestido;
 const fotoEf = f => (vetorAtivo(f) && f.vetor.foto) || f?.foto || '';
@@ -915,7 +920,7 @@ ROTAS.agente = async id => {
       </div>
     </section>
 
-    <div class="abas" role="tablist">${[['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ['inventario', 'Inventário'], ['descricao', 'Descrição']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
+    <div class="abas" role="tablist">${[['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ...(sabeFeitico(F) ? [['feiticos', 'Feitiços']] : []), ['inventario', 'Inventário'], ['descricao', 'Descrição']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
     <section id="sec">${secao(K, C, S)}</section>
     </div>`;
     ligarFicha(K);
@@ -981,6 +986,12 @@ ROTAS.agente = async id => {
       return `<div style="display:grid; gap:14px">${barra}<div class="cab-pagina"><h2>Rituais</h2>${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" id="add-rit">Adicionar ritual</button><button class="btn sec mini" id="novo-rit">Novo ritual</button></div>' : ''}</div>
         <div class="grade-hab">${(F.rituais || []).map((r, i) => cardRitual(r, i)).join('') || '<div class="vazio">Você ainda não possui rituais.</div>'}</div></div>`;
     }
+    if (aba === 'feiticos') {
+      if (!sabeFeitico(F)) return '<div class="vazio">Feitiços só para Bruxas ou para quem tem a passiva Aprender Feitiço.</div>';
+      const PB = dadosPericia(F, 'Bruxaria');
+      return `<div style="display:grid; gap:14px">${barra}<div class="cab-pagina"><div><h2>Feitiços</h2><span class="dim" style="font-size:13px">Lançar: teste de Bruxaria <b class="mono">${PB.dados}d20 + ${PB.mod}</b> contra a DT do feitiço${ehBruxa(F) ? '' : ' · liberado por Aprender Feitiço'}</span></div>${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" id="add-feit">Adicionar do homebrew</button><button class="btn sec mini" id="novo-feit">Novo feitiço</button></div>' : ''}</div>
+        <div class="grade-hab">${(F.feiticos || []).map((r, i) => cardFeitico(r, i)).join('') || '<div class="vazio">Você ainda não conhece feitiços.</div>'}</div></div>`;
+    }
     if (aba === 'inventario') {
       const est = SIS.carga.find(c => K.cc ? (K.carga / K.cc * 100) <= c.ate : K.carga === 0) || SIS.carga[2];
       const pct = K.cc ? K.carga / K.cc * 100 : (K.carga ? 999 : 0);
@@ -1003,6 +1014,10 @@ ROTAS.agente = async id => {
       <div class="grade-hab">${hs.map(h => `<article class="hab hab-vetor ${vetorAtivo(F) ? '' : 'bloq'}"><span class="nm">${esc(h.nome)}</span><p>${nl(h.texto)}</p></article>`).join('') || '<div class="vazio">O mestre ainda não escreveu habilidades para este vetor.</div>'}</div>`;
   };
   const cardHab = (h, lista, i) => `<article class="hab"><div class="cab"><span class="nm">${esc(h.nome)}</span>${podeEditar ? `<button class="btn-x" data-rm="${lista}" data-i="${i}" aria-label="Remover">×</button>` : ''}</div>${h.origem ? `<span class="faint" style="font-size:12px">${esc(h.origem)}</span>` : ''}<p>${nl(h.texto)}</p></article>`;
+  const cardFeitico = (r, i) => `<article class="hab hab-feitico"><div class="cab"><span class="nm">${esc(r.nome)}</span>${podeEditar ? `<button class="btn-x" data-rm="feiticos" data-i="${i}" aria-label="Remover">×</button>` : ''}</div>
+    <div class="stats">${[['Alvo', r.alvo], ['Alcance', r.alcance], ['Duração', r.duracao], ['Custo', r.custo], ['DT', r.dt]].filter(x => x[1]).map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
+    ${r.descricao ? `<p style="font-style:italic">${esc(r.descricao)}</p>` : ''}<p>${nl(r.efeito)}</p>${(r.limitacoes || []).length ? `<p class="faint" style="font-size:13px">${r.limitacoes.map(esc).join('<br>')}</p>` : ''}
+    <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" data-lancar="${i}">Lançar (Bruxaria${r.dt ? ' DT ' + esc(r.dt) : ''})</button>${rolaveis(r.efeito).map(x => `<button class="btn ouro mini" data-feit="${i}" data-expr="${esc(x)}">Rolar ${esc(x)}</button>`).join('')}</div><div class="res" id="res-feit-${i}"></div></article>`;
   const cardRitual = (r, i) => `<article class="hab"><div class="cab"><span class="nm">${esc(r.nome)}</span><span style="display:flex; gap:6px; align-items:center">${r.elemento ? elTag(r.elemento) : ''}${podeEditar ? `<button class="btn-x" data-rm="rituais" data-i="${i}" aria-label="Remover">×</button>` : ''}</span></div>
     <div class="stats">${[['Alvo', r.alvo], ['Custo', r.custo]].filter(x => x[1]).map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
     ${r.descricao ? `<p style="font-style:italic">${esc(r.descricao)}</p>` : ''}<p>${nl(r.efeito)}</p>${(r.limitacoes || []).length ? `<p class="faint" style="font-size:13px">${r.limitacoes.map(esc).join('<br>')}</p>` : ''}
@@ -1060,6 +1075,12 @@ ROTAS.agente = async id => {
       const ex = $('#extra-' + i).value.trim(); if (ex) { const r2 = rolar(ex); if (r2) { total += r2.total; txt += `<br>+ ${esc(ex)} → ${r2.detalhe} = ${r2.total} <span class="faint">(fora do crítico)</span>`; } }
       $('#res-' + i).innerHTML = `${txt}<br>Dano total: <b>${total}</b>`; publicarRolagem(F, `Dano · ${it.nome}${crit ? ' (crítico)' : ''}`, { total, detalhe: base.detalhe }); });
     $('#rolar-livre')?.addEventListener('click', () => { const ex = $('#livre').value; const r = rolar(ex); $('#res-livre').innerHTML = r ? `${r.detalhe} = <b>${r.total}</b>` : '<span class="falha">Formato inválido. Ex.: 2d6+3, 3d20m+4</span>'; if (r) publicarRolagem(F, ex, r); });
+    $$('[data-lancar]').forEach(b => b.onclick = () => { const fe = F.feiticos[+b.dataset.lancar]; const P = dadosPericia(F, 'Bruxaria'); const r = teste(P.dados, P.mod + bnv()); const dtF = +fe.dt || dtv();
+      $('#res-feit-' + b.dataset.lancar).innerHTML = `Lançar ${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtF)}${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`; publicarRolagem(F, `Feitiço · ${fe.nome}`, r); });
+    $$('[data-feit]').forEach(b => b.onclick = () => { const r = rolar(b.dataset.expr); if (!r) return; $('#res-feit-' + b.dataset.feit).innerHTML = `${esc(b.dataset.expr)} → ${r.detalhe} = <b>${r.total}</b>`; publicarRolagem(F, `${F.feiticos[+b.dataset.feit].nome}`, r); });
+    $('#add-feit')?.addEventListener('click', async () => { const hb = await homebrewVisivel('feitico'); if (!hb.length) return toast('Ainda não há feitiços no homebrew. O mestre cria em Homebrew › Feitiços.');
+      seletor('Feitiços do homebrew', hb, r => `<b>${esc(r.nome)}</b> ${r.custo ? `<span class="tag">${esc(r.custo)}</span>` : ''}<p>${esc(r.efeito)}</p>`, r => add('feiticos', { nome: r.nome, alvo: r.alvo, alcance: r.alcance, duracao: r.duracao, custo: r.custo, dt: r.dt, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] })); });
+    $('#novo-feit')?.addEventListener('click', () => formFeitico(r => add('feiticos', r)));
     $$('[data-rit]').forEach(b => b.onclick = () => { const r = rolar(b.dataset.expr); if (!r) return; $('#res-rit-' + b.dataset.rit).innerHTML = `${esc(b.dataset.expr)} → ${r.detalhe} = <b>${r.total}</b>`; publicarRolagem(F, `${F.rituais[+b.dataset.rit].nome}`, r); });
     // remover itens/habilidades/rituais
     $$('[data-rm]').forEach(b => b.onclick = () => { const l = b.dataset.rm; F[l].splice(+b.dataset.i, 1); salvar({ [l]: F[l] }); render(); });
@@ -1110,6 +1131,20 @@ function formHabilidade(salvarFn, h = {}) {
     m.querySelector('#fh-ok').onclick = () => { const nome = m.querySelector('#fh-n').value.trim(); if (!nome) return toast('Dê um nome à habilidade.'); salvarFn({ nome, origem: m.querySelector('#fh-o').value.trim(), texto: m.querySelector('#fh-t').value.trim() }); fechar(); };
   });
 }
+function formFeitico(salvarFn, r = {}) {
+  abrirModal(r.nome ? 'Editar feitiço' : 'Novo feitiço', `<div class="grade-campos"><div class="campo"><label class="rotulo" for="ff-n">Nome</label><input type="text" id="ff-n" value="${esc(r.nome)}"></div>
+    <div class="campo"><label class="rotulo" for="ff-a">Alvo</label><input type="text" id="ff-a" value="${esc(r.alvo)}" placeholder="Único, área 3m, próprio…"></div>
+    <div class="campo"><label class="rotulo" for="ff-al">Alcance</label><input type="text" id="ff-al" value="${esc(r.alcance)}" placeholder="Toque, 9m, visão…"></div>
+    <div class="campo"><label class="rotulo" for="ff-du">Duração</label><input type="text" id="ff-du" value="${esc(r.duracao)}" placeholder="Instantâneo, 1 cena…"></div>
+    <div class="campo"><label class="rotulo" for="ff-c">Custo</label><input type="text" id="ff-c" value="${esc(r.custo)}" placeholder="3 PS"></div>
+    <div class="campo"><label class="rotulo" for="ff-dt">DT para lançar</label><input type="number" id="ff-dt" value="${esc(r.dt)}" placeholder="18"></div></div>
+    <div class="campo"><label class="rotulo" for="ff-d">Descrição</label><textarea id="ff-d" style="min-height:70px">${esc(r.descricao)}</textarea></div>
+    <div class="campo"><label class="rotulo" for="ff-f">Efeito</label><textarea id="ff-f">${esc(r.efeito)}</textarea></div>
+    <div class="campo"><label class="rotulo" for="ff-l">Limitações (uma por linha)</label><textarea id="ff-l" style="min-height:70px">${esc((r.limitacoes || []).join('\n'))}</textarea></div><button class="btn" id="ff-ok">Salvar</button>`, (m, fechar) => {
+    m.querySelector('#ff-ok').onclick = () => { const v = id => m.querySelector(id).value.trim(); if (!v('#ff-n')) return toast('Dê um nome ao feitiço.');
+      salvarFn({ nome: v('#ff-n'), alvo: v('#ff-a'), alcance: v('#ff-al'), duracao: v('#ff-du'), custo: v('#ff-c'), dt: v('#ff-dt') ? +v('#ff-dt') : '', descricao: v('#ff-d'), efeito: v('#ff-f'), limitacoes: v('#ff-l').split('\n').map(x => x.trim()).filter(Boolean) }); fechar(); };
+  });
+}
 function formRitual(salvarFn, r = {}) {
   abrirModal(r.nome ? 'Editar ritual' : 'Novo ritual', `<div class="grade-campos"><div class="campo"><label class="rotulo" for="fr-n">Nome</label><input type="text" id="fr-n" value="${esc(r.nome)}"></div>
     <div class="campo"><label class="rotulo" for="fr-e">Elemento</label><select id="fr-e">${ELEMS.map(e => `<option ${r.elemento === e ? 'selected' : ''}>${e}</option>`).join('')}</select></div>
@@ -1149,7 +1184,7 @@ async function homebrewVisivel(tipo) {
     return [...m.values()].filter(x => !tipo || x.tipo === tipo);
   } catch (e) { return []; }
 }
-const TIPOS_HB = [['ameaca', 'Ameaças'], ['habilidade', 'Habilidades'], ['ritual', 'Rituais'], ['item', 'Itens']];
+const TIPOS_HB = [['ameaca', 'Ameaças'], ['habilidade', 'Habilidades'], ['ritual', 'Rituais'], ['feitico', 'Feitiços'], ['item', 'Itens']];
 ROTAS.homebrew = async () => {
   let aba = 'ameaca', docs = [];
   app.className = 'pagina estreita';
@@ -1170,6 +1205,7 @@ ROTAS.homebrew = async () => {
     let corpo = '';
     if (x.tipo === 'ameaca') corpo = `<div style="display:flex; gap:8px; flex-wrap:wrap">${elTag(x.elemento)}<span class="tag">Nv ${esc(x.nivel)} · ${esc(nivelAm(x.nivel)[1])}</span><span class="tag">PV ${esc(x.ficha?.pv)}</span></div><p class="dim" style="font-size:13.5px">${esc((x.descricao || '').slice(0, 220))}</p>`;
     if (x.tipo === 'habilidade') corpo = `<p class="dim" style="font-size:13.5px">${nl(x.texto)}</p>`;
+    if (x.tipo === 'feitico') corpo = `<div style="display:flex; gap:6px; flex-wrap:wrap">${x.custo ? `<span class="tag">${esc(x.custo)}</span>` : ''}${x.dt ? `<span class="tag">DT ${esc(x.dt)}</span>` : ''}${x.alcance ? `<span class="tag">${esc(x.alcance)}</span>` : ''}</div><p class="dim" style="font-size:13.5px">${nl(x.efeito)}</p>`;
     if (x.tipo === 'ritual') corpo = `<div style="display:flex; gap:8px">${elTag(x.elemento)}${x.custo ? `<span class="tag">${esc(x.custo)}</span>` : ''}</div><p class="dim" style="font-size:13.5px">${nl(x.efeito)}</p>`;
     if (x.tipo === 'item') corpo = `<div style="display:flex; gap:6px">${x.dano ? `<span class="tag">${esc(x.dano)} ×${esc(x.mult || 1)}</span>` : ''}${x.peso ? `<span class="tag">${fmtKg(x.peso)}</span>` : ''}</div><p class="dim" style="font-size:13.5px">${esc(x.obs)}</p>`;
     const meu = x.autor === ME || DONO;
@@ -1193,6 +1229,7 @@ ROTAS.homebrew = async () => {
   function editarHB(x) {
     if (x.tipo === 'habilidade') return formHabilidade(h => gravar(x, h), x);
     if (x.tipo === 'ritual') return formRitual(r => gravar(x, r), x);
+    if (x.tipo === 'feitico') return formFeitico(r => gravar(x, r), x);
     if (x.tipo === 'item') return formItem(it => gravar(x, it), x);
     formAmeaca(x, a => gravar(x, a));
   }
