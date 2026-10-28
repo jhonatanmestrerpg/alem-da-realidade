@@ -1,5 +1,15 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#090b11">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Além da Realidade: fichas, campanhas, escudo do mestre e bestiário do sistema A.R.RPG.">
 <title>Além da Realidade</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@1&family=Barlow:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap">
@@ -305,8 +315,77 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .tabela th, .tabela td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--linha); vertical-align: top; }
 .tabela th { font: 600 10.5px var(--f-body); letter-spacing: .14em; text-transform: uppercase; color: var(--lua-faint); }
 .rolavel { overflow-x: auto; }
+/* ---------- celular ---------- */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+button, a, input, select, textarea { touch-action: manipulation; }
+@media (max-width: 760px) {
+  .topo-in { gap: 6px 12px; min-height: 0; padding-block: 8px 0; }
+  .marca { order: 1; }
+  .quem { order: 2; margin-left: auto; }
+  .quem > a > span:first-child { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav { order: 3; flex: 1 0 100%; flex-wrap: nowrap; overflow-x: auto; gap: 18px; padding-bottom: 2px; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    mask-image: linear-gradient(90deg, #000 85%, transparent); -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav a { font-size: 17px; padding: 10px 0; white-space: nowrap; }
+  main { padding-block: 18px 110px; }
+  .pagina { gap: 16px; }
+  h1 { font-size: clamp(28px, 8.5vw, 40px); }
+  .hero { padding-block: 4px; gap: 12px; }
+  .hero h1 { font-size: clamp(40px, 13vw, 58px); }
+  .hero canvas { max-width: 240px; }
+  input[type=text], input[type=number], input[type=search], select, textarea { font-size: 16px; }
+  .btn { padding: 10px 14px; }
+  .btn.mini { padding: 7px 11px; font-size: 12.5px; }
+  .vbtn { width: 36px; height: 36px; }
+  .btn-x { font-size: 22px; padding: 6px 10px; }
+  .abas { gap: 2px 16px; scrollbar-width: none; }
+  .abas::-webkit-scrollbar { display: none; }
+  .abas button { padding: 12px 0; }
+  .grade-cards, .grade-hab, .grade-per { grid-template-columns: 1fr; }
+  .card-ag { grid-template-columns: 92px 1fr; }
+  .card-am { grid-template-columns: 96px 1fr; }
+  .cab-pagina > div:last-child:not(:first-child) { width: 100%; }
+  .retrato { width: 132px; font-size: 48px; }
+  .ficha-topo { justify-items: start; }
+  .principal .caixa.penta svg { max-width: 240px; }
+  .ident { grid-template-columns: 1fr; }
+  .barra-teste span { margin-left: 0 !important; flex-basis: 100%; }
+  .mini-stats > div { flex-basis: 70px; }
+  .escudo { gap: 12px; }
+  .feed { max-height: 260px; }
+  .combatente { grid-template-columns: 54px 1fr auto; gap: 8px; padding: 10px 8px; }
+  .combatente .ini input { width: 54px; }
+  .fundo-modal { padding: 0; place-items: end stretch; }
+  .modal { width: 100%; max-height: 92vh; padding: 16px max(16px, env(safe-area-inset-left, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)); border-left: none; border-right: none; border-bottom: none; border-radius: 12px 12px 0 0; }
+  .opcao { flex-direction: column; }
+  .opcao .btn { align-self: flex-start; }
+  .call { min-height: 0; }
+  .call-main { padding: 10px; }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px; }
+  .tiles.n1 { grid-template-columns: minmax(0, 1fr) !important; }
+  .tile-nome { left: 6px; bottom: 6px; padding: 3px 7px; }
+  .tile-nome b { font-size: 14px; }
+  .call-bar { position: sticky; bottom: 0; background: #07080d; padding-block: 10px; }
+  .call-bar .btn { flex: 1 1 140px; }
+  .voz-barra { left: 8px; right: 8px; width: auto; bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
+  .toast { bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
+  .passos { gap: 6px; }
+  .passos span { font-size: 15px; }
+  .passos i { width: 14px; }
+  .attr-box .v { font-size: 32px; }
+  .tabela { font-size: 13px; }
+  .det-am { gap: 16px; }
+}
+@media (max-width: 380px) {
+  .attr-lista .v { font-size: 18px; }
+  .vital .ctrl { gap: 3px; }
+  .vbtn { width: 32px; height: 34px; font-size: 11px; }
+}
+@media (hover: none) { .card-am:hover, .atalho:hover { border-color: var(--linha); background: var(--painel); } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
+</head>
+<body>
 
 <header class="topo">
   <div class="topo-in">
@@ -1768,3 +1847,5 @@ async function carregarSessao(session) {
   rotear();
 })();
 </script>
+</body>
+</html>
