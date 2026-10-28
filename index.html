@@ -253,6 +253,18 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .lbl-v { color: #b18ee6; }
 .dado-btn { margin-left: auto; background: none; border: none; color: var(--lua); padding: 2px; }
 .dado-btn:hover { color: var(--ouro); }
+.chamada { position: fixed; z-index: 40; right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); width: min(320px, calc(100vw - 32px));
+  background: var(--painel); border: 1px solid var(--linha-2); box-shadow: 0 12px 40px rgba(0,0,0,.5); display: grid; }
+.chamada .cab-ch { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--linha); }
+.chamada .pessoas { display: grid; gap: 2px; padding: 8px; max-height: 260px; overflow: auto; }
+.chamada .pessoa { display: flex; align-items: center; gap: 10px; padding: 6px; }
+.chamada .pessoa .ava { width: 30px; height: 30px; font-size: 11px; box-shadow: 0 0 0 2px transparent; transition: box-shadow .12s; }
+.chamada .pessoa.falando .ava { box-shadow: 0 0 0 2px var(--fole), 0 0 12px var(--fole); }
+.chamada .pessoa .st { margin-left: auto; font-size: 11px; color: var(--lua-faint); }
+.chamada .acoes-ch { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--linha); }
+.chamada .acoes-ch .btn { flex: 1; }
+.chamada.min .pessoas, .chamada.min .acoes-ch { display: none; }
+.ponto-vivo { width: 8px; height: 8px; border-radius: 50%; background: var(--fole); display: inline-block; margin-right: 6px; }
 /* home */
 .hero { display: grid; grid-template-columns: 1.3fr 1fr; gap: 28px; align-items: center; padding-block: 18px; }
 @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } }
@@ -1204,21 +1216,17 @@ ROTAS.campanhas = async () => {
       await entrarCampanha(id); fechar(); location.hash = 'campanha-' + id; };
   });
 };
-const linkDiscordValido = u => !u || /^https:\/\/(discord\.com\/channels\/\d+\/\d+|discord\.gg\/[\w-]+|discord\.com\/invite\/[\w-]+)\/?$/.test(u);
 function editarCampanha(id, C) {
   abrirModal('Editar campanha', `<div class="campo"><label class="rotulo" for="ec-n">Nome</label><input type="text" id="ec-n" value="${esc(C.nome)}"></div>
     <div class="campo"><label class="rotulo" for="ec-d">Descrição</label><textarea id="ec-d">${esc(C.descricao)}</textarea></div>
-    <div class="campo"><label class="rotulo" for="ec-ds">Chamada do Discord</label><input type="text" id="ec-ds" value="${esc(C.discord)}" placeholder="https://discord.com/channels/…  ou  https://discord.gg/…">
-      <span class="faint" style="font-size:12.5px">No Discord, clique com o botão direito no canal de voz da mesa e escolha Copiar link. Convite (discord.gg) também serve para quem ainda não está no servidor.</span></div>
     <div class="campo"><label class="rotulo" for="ec-c">Nova capa</label><input type="file" id="ec-c" accept="image/*"></div>
     <button class="btn" id="ec-ok">Salvar</button>`, (m, fechar) => {
     let capa = C.capa || '';
     m.querySelector('#ec-c').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) { capa = u; toast('Capa enviada.'); } };
     m.querySelector('#ec-ok').onclick = async () => {
-      const nome = m.querySelector('#ec-n').value.trim(), discord = m.querySelector('#ec-ds').value.trim();
+      const nome = m.querySelector('#ec-n').value.trim();
       if (!nome) return toast('Dê um nome à campanha.');
-      if (!linkDiscordValido(discord)) return toast('Link do Discord inválido. Use o link do canal (discord.com/channels/…) ou um convite (discord.gg/…).');
-      try { await db.doc('campanhas/' + id).update({ nome, descricao: m.querySelector('#ec-d').value.trim(), discord, capa }); toast('Campanha salva.'); fechar(); }
+      try { await db.doc('campanhas/' + id).update({ nome, descricao: m.querySelector('#ec-d').value.trim(), capa }); toast('Campanha salva.'); fechar(); }
       catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); }
     };
   });
@@ -1274,7 +1282,7 @@ ROTAS.campanha = async id => {
     if (aba === 'rolagens') corpo = `<div class="caixa" style="display:grid; gap:8px"><span class="rotulo">Rolar dados na mesa</span><div style="display:flex; gap:8px"><input type="text" id="dados-expr" placeholder="2d6+3 ou 3d20m+4 (m = fica o maior)"><button class="btn" id="dados-ok">Rolar</button></div></div>
       <div class="caixa" style="padding:0">${st.rolagens.map(rolHtml).join('') || '<div class="vazio">Nenhuma rolagem ainda.</div>'}</div>`;
     app.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
-        ${C.discord ? `<a class="btn" href="${esc(C.discord)}" target="_blank" rel="noopener" style="text-decoration:none; background:#5865F2; border-color:#5865F2">Entrar na chamada do Discord</a>` : ''}
+        ${membro ? `<span id="slot-chamada">${botaoChamada(id, C.nome)}</span>` : ''}
         ${mestre ? `<button class="btn sec" id="editar-c">Editar campanha</button><a class="btn ouro" href="#escudo-${esc(id)}" style="text-decoration:none">Escudo do mestre</a>` : ''}
         ${membro ? '<button class="btn sec" id="add-ag">Adicionar agente</button><button class="btn sec" id="convidar">Convidar jogadores</button>' : '<button class="btn" id="entrar-c">Entrar nesta campanha</button>'}
         ${membro && !mestre ? '<button class="btn sec" id="sair">Sair da campanha</button>' : ''}</div>
@@ -1331,7 +1339,7 @@ ROTAS.escudo = async id => {
   };
   let publico = false;
   app.className = 'pagina';
-  app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Escudo do mestre</span><h1>${esc(camp.data().nome)}</h1></div><div style="display:flex; gap:8px; flex-wrap:wrap">${camp.data().discord ? `<a class="btn" href="${esc(camp.data().discord)}" target="_blank" rel="noopener" style="text-decoration:none; background:#5865F2; border-color:#5865F2">Chamada do Discord</a>` : ''}<a class="btn sec" href="#campanha-${esc(id)}" style="text-decoration:none">Ver como jogador</a></div></div>
+  app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Escudo do mestre</span><h1>${esc(camp.data().nome)}</h1></div><div style="display:flex; gap:8px; flex-wrap:wrap"><span id="slot-chamada">${botaoChamada(id, camp.data().nome)}</span><a class="btn sec" href="#campanha-${esc(id)}" style="text-decoration:none">Ver como jogador</a></div></div>
     <div class="escudo" id="escudo"><aside class="feed" id="feed"></aside><div style="display:grid; gap:16px; min-width:0"><div class="abas" id="abas-e"></div><div id="corpo-e"></div></div></div>`;
   function desenharFeed() {
     const todas = [...(st?.rolagens || []), ...(E.ocultas || [])].sort((a, b) => b.t - a.t).slice(0, 40);
@@ -1430,6 +1438,119 @@ ROTAS.escudo = async id => {
   }
   render(); desenharFeed();
 };
+
+/* =================================================================
+   CHAMADA DE VOZ (WebRTC, sinalização pelo tempo real do Supabase)
+   ================================================================= */
+const CH = { camp: null, nomeCamp: '', canal: null, local: null, pares: new Map(), mudo: false, presenca: {}, ctx: null, medidores: new Map(), timer: null, min: false };
+const ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }];
+async function entrarChamada(campId, nomeCamp) {
+  if (!sb || !ME) return toast('Entre na sua conta para usar a chamada.');
+  if (CH.camp === campId) return;
+  if (CH.camp) await sairChamada();
+  if (!navigator.mediaDevices?.getUserMedia) return toast('Este navegador não deixa usar o microfone aqui.');
+  try { CH.local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); }
+  catch (e) { return toast('Sem acesso ao microfone. Libere a permissão do navegador e tente de novo.'); }
+  CH.camp = campId; CH.nomeCamp = nomeCamp; CH.mudo = false;
+  try { CH.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+  medir(ME, CH.local);
+  const canal = sb.channel('chamada-' + campId, { config: { presence: { key: ME }, broadcast: { self: false } } });
+  CH.canal = canal;
+  canal.on('presence', { event: 'sync' }, () => { CH.presenca = Object.fromEntries(Object.entries(canal.presenceState()).map(([k, v]) => [k, v[v.length - 1]])); conferirPares(); painelChamada(); });
+  canal.on('broadcast', { event: 'sinal' }, ({ payload }) => { if (payload?.para === ME) tratarSinal(payload).catch(e => console.warn('sinal', e)); });
+  canal.subscribe(async st => { if (st === 'SUBSCRIBED') await canal.track({ nome: PERFIL?.nome || 'Agente', mudo: false, t: Date.now() }); });
+  CH.timer = setInterval(() => { conferirPares(); atualizarFala(); }, 150);
+  painelChamada();
+}
+function enviarSinal(para, dados) { CH.canal?.send({ type: 'broadcast', event: 'sinal', payload: { ...dados, de: ME, para } }); }
+function conferirPares() {
+  const ids = Object.keys(CH.presenca).filter(i => i !== ME);
+  for (const id of ids) if (!CH.pares.has(id) && ME < id) criarPar(id, true);
+  for (const [id, p] of CH.pares) if (!ids.includes(id) || ['failed', 'closed'].includes(p.pc.connectionState)) fecharPar(id);
+}
+function criarPar(id, iniciador) {
+  const pc = new RTCPeerConnection({ iceServers: ICE });
+  const par = { pc, audio: new Audio(), pendentes: [], remoto: false };
+  par.audio.autoplay = true; par.audio.playsInline = true;
+  CH.pares.set(id, par);
+  CH.local.getTracks().forEach(t => pc.addTrack(t, CH.local));
+  pc.onicecandidate = e => { if (e.candidate) enviarSinal(id, { tipo: 'ice', cand: e.candidate.toJSON() }); };
+  pc.ontrack = e => { const st = e.streams[0]; par.audio.srcObject = st; par.audio.play().catch(() => {}); medir(id, st); };
+  pc.onconnectionstatechange = () => painelChamada();
+  if (iniciador) (async () => { const of = await pc.createOffer(); await pc.setLocalDescription(of); enviarSinal(id, { tipo: 'offer', sdp: pc.localDescription.toJSON() }); })().catch(e => console.warn(e));
+  return par;
+}
+function fecharPar(id) { const p = CH.pares.get(id); if (!p) return; try { p.pc.close(); } catch (e) {} p.audio.srcObject = null; CH.pares.delete(id); CH.medidores.delete(id); }
+async function tratarSinal(m) {
+  if (!CH.camp) return;
+  if (m.tipo === 'offer') {
+    if (CH.pares.has(m.de)) fecharPar(m.de);
+    const par = criarPar(m.de, false);
+    await par.pc.setRemoteDescription(m.sdp); par.remoto = true;
+    for (const c of par.pendentes) await par.pc.addIceCandidate(c).catch(() => {});
+    const resp = await par.pc.createAnswer(); await par.pc.setLocalDescription(resp);
+    enviarSinal(m.de, { tipo: 'answer', sdp: par.pc.localDescription.toJSON() });
+  } else if (m.tipo === 'answer') {
+    const par = CH.pares.get(m.de); if (!par || par.pc.signalingState !== 'have-local-offer') return;
+    await par.pc.setRemoteDescription(m.sdp); par.remoto = true;
+    for (const c of par.pendentes) await par.pc.addIceCandidate(c).catch(() => {});
+  } else if (m.tipo === 'ice') {
+    const par = CH.pares.get(m.de); if (!par) return;
+    if (par.remoto) await par.pc.addIceCandidate(m.cand).catch(() => {}); else par.pendentes.push(m.cand);
+  }
+}
+function medir(id, stream) {
+  if (!CH.ctx) return;
+  try { const src = CH.ctx.createMediaStreamSource(stream); const an = CH.ctx.createAnalyser(); an.fftSize = 512; src.connect(an); CH.medidores.set(id, { an, buf: new Uint8Array(an.fftSize) }); } catch (e) {}
+}
+function atualizarFala() {
+  if (CH.ctx?.state === 'suspended') CH.ctx.resume().catch(() => {});
+  for (const [id, m] of CH.medidores) {
+    m.an.getByteTimeDomainData(m.buf); let s = 0; for (const v of m.buf) { const x = (v - 128) / 128; s += x * x; }
+    const falando = Math.sqrt(s / m.buf.length) > 0.04 && !(id === ME && CH.mudo);
+    document.querySelector(`.chamada .pessoa[data-uid="${CSS.escape(id)}"]`)?.classList.toggle('falando', falando);
+  }
+}
+function alternarMudo() {
+  CH.mudo = !CH.mudo; CH.local?.getAudioTracks().forEach(t => t.enabled = !CH.mudo);
+  CH.canal?.track({ nome: PERFIL?.nome || 'Agente', mudo: CH.mudo, t: Date.now() }); painelChamada();
+}
+async function sairChamada() {
+  clearInterval(CH.timer); CH.timer = null;
+  for (const id of [...CH.pares.keys()]) fecharPar(id);
+  try { await CH.canal?.untrack(); await sb.removeChannel(CH.canal); } catch (e) {}
+  CH.local?.getTracks().forEach(t => t.stop());
+  try { await CH.ctx?.close(); } catch (e) {}
+  Object.assign(CH, { camp: null, canal: null, local: null, presenca: {}, ctx: null }); CH.medidores.clear();
+  painelChamada(); if (typeof rotearLeve === 'function') rotearLeve();
+}
+function painelChamada() {
+  let el = document.getElementById('chamada');
+  if (!CH.camp) { el?.remove(); return; }
+  if (!el) { el = document.createElement('section'); el.id = 'chamada'; el.className = 'chamada'; el.setAttribute('aria-label', 'Chamada de voz'); document.body.appendChild(el); }
+  el.classList.toggle('min', CH.min);
+  const pessoas = Object.entries(CH.presenca);
+  if (!pessoas.some(([k]) => k === ME)) pessoas.unshift([ME, { nome: PERFIL?.nome || 'Você', mudo: CH.mudo }]);
+  const estado = id => { if (id === ME) return CH.mudo ? 'Mudo' : 'Você'; const p = CH.pares.get(id); const c = p?.pc.connectionState;
+    return CH.presenca[id]?.mudo ? 'Mudo' : c === 'connected' ? '' : c === 'failed' ? 'Sem conexão' : 'Conectando…'; };
+  el.innerHTML = `<div class="cab-ch"><b style="font:400 17px var(--f-disp); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap"><span class="ponto-vivo"></span>${esc(CH.nomeCamp)}</b>
+      <span style="display:flex; gap:2px"><span class="faint mono" style="font-size:12px; align-self:center">${pessoas.length}</span><button class="btn-x" id="ch-min" aria-label="${CH.min ? 'Expandir' : 'Minimizar'}">${CH.min ? '▴' : '▾'}</button></span></div>
+    <div class="pessoas">${pessoas.map(([id, p]) => `<div class="pessoa" data-uid="${esc(id)}"><span class="ava" style="background:${corDe(id)}">${esc(iniciais(p.nome))}</span><span>${esc(p.nome)}</span><span class="st">${esc(estado(id))}</span></div>`).join('')}</div>
+    <div class="acoes-ch"><button class="btn sec" id="ch-mudo">${CH.mudo ? 'Ativar microfone' : 'Silenciar'}</button><button class="btn" id="ch-sair">Sair da chamada</button></div>`;
+  el.querySelector('#ch-min').onclick = () => { CH.min = !CH.min; painelChamada(); };
+  el.querySelector('#ch-mudo').onclick = alternarMudo;
+  el.querySelector('#ch-sair').onclick = sairChamada;
+}
+addEventListener('pagehide', () => { if (CH.camp) { try { CH.canal?.untrack(); } catch (e) {} } });
+function botaoChamada(id, nome) {
+  return CH.camp === id ? `<button class="btn sec" data-sair-chamada>Sair da chamada</button>` : `<button class="btn" data-chamada="${esc(id)}" data-nome-camp="${esc(nome)}">Entrar na chamada</button>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-chamada]'); if (b) { entrarChamada(b.dataset.chamada, b.dataset.nomeCamp).then(() => rotearLeve()); return; }
+  if (e.target.closest('[data-sair-chamada]')) sairChamada();
+});
+function rotearLeve() { const slot = document.getElementById('slot-chamada'); if (!slot) return; const m = /^#(?:campanha|escudo)-(.+)$/.exec(location.hash); if (!m) return;
+  const nome = slot.querySelector('[data-nome-camp]')?.dataset.nomeCamp || CH.nomeCamp || ''; slot.innerHTML = botaoChamada(m[1], nome); }
 
 /* =================================================================
    LOGIN
