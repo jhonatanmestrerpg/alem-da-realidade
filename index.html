@@ -507,7 +507,10 @@ const ehBruxa = f => f?.classe === 'Bruxa';
 const nivelFeitMax = f => Math.max(0, ...(SIS.feiticoNivel || []).filter(x => (+f?.nivel || 1) >= x.desde).map(x => x.nivel));
 const desdeFeit = n => (SIS.feiticoNivel || []).find(x => x.nivel === +n)?.desde || 1;
 const reqFeitico = r => [r.ingrediente, r.item].filter(Boolean);
-const htmlReq = r => (r.ingrediente || r.item || r.sacrificio) ? `<p class="preparo"><b>Requer.</b> ${reqFeitico(r).map(esc).join(' + ')}${r.item ? ' (consumidos)' : r.ingrediente ? ' (consumido)' : ''}${r.sacrificio ? `<br><b>Sacrifício.</b> ${esc(r.sacrificio)}` : ''}</p>` : '';
+const USOS_SACO = 3, ehSaco = it => /^Saco de Ingredientes/i.test(it?.nome || '');
+const usosSaco = it => it.usos ?? USOS_SACO;
+const tagUsos = it => ehSaco(it) ? `<span class="tag">${usosSaco(it)}/${USOS_SACO} usos</span>` : '';
+const htmlReq = r => (r.ingrediente || r.item || r.sacrificio) ? `<p class="preparo"><b>Requer.</b> ${[r.ingrediente ? r.ingrediente + ' (1 uso)' : '', r.item ? r.item + ' (consumido)' : ''].filter(Boolean).map(esc).join(' + ')}${r.sacrificio ? `<br><b>Sacrifício.</b> ${esc(r.sacrificio)}` : ''}</p>` : '';
 const tagNivelF = r => r.nivel ? `<span class="tag">Nível ${esc(r.nivel)}</span>` : '';
 const sabeFeitico = f => ehBruxa(f) || (f?.passivas || []).some(p => p.nome === 'Aprender Feitiço') || (f?.habilidades || []).some(p => p.nome === 'Aprender Feitiço');
 const vetorLiberado = f => !!(f?.vetor?.liberado);
@@ -1011,7 +1014,7 @@ ROTAS.agente = async id => {
           <div class="trilho fino"><div class="cheio" style="width:${Math.min(100, pct / 2)}%; background:var(--lua-dim)"></div></div><span class="dim" style="font-size:13px">${esc(est.texto)}</span></div>
         ${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" id="add-item">Adicionar do livro</button><button class="btn sec mini" id="add-item-hb">Adicionar do homebrew</button><button class="btn sec mini" id="novo-item">Novo item</button></div>' : ''}
         <div class="lista">${(F.equipamentos || []).map((it, i) => `<div class="item"><div class="cab"><span class="nm">${esc(it.nome)}${it.qtd > 1 ? ` <span class="faint">×${it.qtd}</span>` : ''}</span>
-          <span style="display:flex; gap:6px; align-items:center">${it.peso ? `<span class="tag">${fmtKg(it.peso * (it.qtd || 1))}</span>` : ''}${it.alivio ? `<span class="tag">alivia ${fmtKg(it.alivio)}</span>` : ''}${it.rd ? `<span class="tag">RD ${it.rd}</span>` : ''}${it.dano ? `<span class="tag">${esc(it.dano)}${it.mult > 1 ? ' ×' + it.mult : ''}</span>` : ''}${podeEditar ? `<span class="qtd-ctrl"><button class="vbtn" data-qtd="${i}" data-d="-1" aria-label="Menos um">−</button><span class="mono">${+it.qtd || 1}</span><button class="vbtn" data-qtd="${i}" data-d="1" aria-label="Mais um">+</button></span><button class="btn-x" data-rm-item="${i}" aria-label="Remover">×</button>` : ''}</span></div>
+          <span style="display:flex; gap:6px; align-items:center">${tagUsos(it)}${it.peso ? `<span class="tag">${fmtKg(it.peso * (it.qtd || 1))}</span>` : ''}${it.alivio ? `<span class="tag">alivia ${fmtKg(it.alivio)}</span>` : ''}${it.rd ? `<span class="tag">RD ${it.rd}</span>` : ''}${it.dano ? `<span class="tag">${esc(it.dano)}${it.mult > 1 ? ' ×' + it.mult : ''}</span>` : ''}${podeEditar ? `<span class="qtd-ctrl"><button class="vbtn" data-qtd="${i}" data-d="-1" aria-label="Menos um">−</button><span class="mono">${+it.qtd || 1}</span><button class="vbtn" data-qtd="${i}" data-d="1" aria-label="Mais um">+</button></span><button class="btn-x" data-rm-item="${i}" aria-label="Remover">×</button>` : ''}</span></div>
           ${it.obs ? `<p class="dim" style="font-size:13.5px">${esc(it.obs)}</p>` : ''}</div>`).join('') || '<div class="vazio">Inventário vazio.</div>'}</div></div>`;
     }
     return `<div style="display:grid; gap:14px">${[['aparencia', 'Aparência'], ['personalidade', 'Personalidade'], ['historico', 'Histórico'], ['objetivo', 'Objetivo'], ['anotacoes', 'Anotações do jogador']].map(([k, l]) => `<div class="campo"><label class="rotulo" for="d-${k}">${l}</label>
@@ -1030,7 +1033,7 @@ ROTAS.agente = async id => {
     ${r.preparo ? `<p class="preparo"><b>Preparo.</b> ${esc(r.preparo)}</p>` : ''}${htmlReq(r)}
     <div class="stats">${[['Alvo', r.alvo], ['Alcance', r.alcance], ['Duração', r.duracao], ['DT', r.dt], ['Se falhar', r.falha ? r.falha + ' PS' : (r.custo || '')]].filter(x => x[1]).map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
     ${r.descricao ? `<p style="font-style:italic">${esc(r.descricao)}</p>` : ''}<p>${nl(r.efeito)}</p>${(r.limitacoes || []).length ? `<p class="faint" style="font-size:13px">${r.limitacoes.map(esc).join('<br>')}</p>` : ''}
-    <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" data-lancar="${i}">Lançar (Bruxaria${r.dt ? ' DT ' + esc(r.dt) : ''})</button>${rolaveis(r.efeito).map(x => `<button class="btn ouro mini" data-feit="${i}" data-expr="${esc(x)}">Rolar ${esc(x)}</button>`).join('')}</div><div class="res" id="res-feit-${i}"></div></article>`;
+    <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" data-lancar="${i}">Usar feitiço (Bruxaria${r.dt ? ' DT ' + esc(r.dt) : ''})</button>${rolaveis(r.efeito).map(x => `<button class="btn ouro mini" data-feit="${i}" data-expr="${esc(x)}">Rolar ${esc(x)}</button>`).join('')}</div><div class="res" id="res-feit-${i}"></div></article>`;
   const cardRitual = (r, i) => `<article class="hab"><div class="cab"><span class="nm">${esc(r.nome)}</span><span style="display:flex; gap:6px; align-items:center">${r.elemento ? elTag(r.elemento) : ''}${podeEditar ? `<button class="btn-x" data-rm="rituais" data-i="${i}" aria-label="Remover">×</button>` : ''}</span></div>
     <div class="stats">${[['Alvo', r.alvo], ['Custo', r.custo]].filter(x => x[1]).map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
     ${r.descricao ? `<p style="font-style:italic">${esc(r.descricao)}</p>` : ''}<p>${nl(r.efeito)}</p>${(r.limitacoes || []).length ? `<p class="faint" style="font-size:13px">${r.limitacoes.map(esc).join('<br>')}</p>` : ''}
@@ -1093,9 +1096,13 @@ ROTAS.agente = async id => {
       const inv = F.equipamentos || [], acha = n => inv.findIndex(it => (it.nome || '').trim().toLowerCase() === n.toLowerCase());
       const faltam = reqFeitico(fe).filter(n => acha(n) < 0);
       if (faltam.length) { $('#res-feit-' + i).innerHTML = `<span class="falha">Sem componentes. Falta no inventário: ${faltam.map(esc).join(', ')}.</span>`; return; }
-      if (reqFeitico(fe).length && podeEditar) { for (const n of reqFeitico(fe)) { const k = acha(n); if ((+inv[k].qtd || 1) > 1) inv[k].qtd = +inv[k].qtd - 1; else inv.splice(k, 1); } salvar({ equipamentos: inv }); }
+      const gastos = [];
+      if (reqFeitico(fe).length && podeEditar) { for (const n of reqFeitico(fe)) { const k = acha(n), it = inv[k];
+          if (ehSaco(it)) { const u = usosSaco(it) - 1; if (u > 0) { it.usos = u; gastos.push(`${n}: ${u}/${USOS_SACO} usos restantes`); } else if ((+it.qtd || 1) > 1) { it.qtd = +it.qtd - 1; it.usos = USOS_SACO; gastos.push(`${n} esvaziou: abriu o próximo (${it.qtd} restante${it.qtd > 1 ? 's' : ''})`); } else { inv.splice(k, 1); gastos.push(`${n} esvaziou e acabou`); } }
+          else { if ((+it.qtd || 1) > 1) it.qtd = +it.qtd - 1; else inv.splice(k, 1); gastos.push(`${n} consumido`); } }
+        salvar({ equipamentos: inv }); }
       const P = dadosPericia(F, 'Bruxaria'); const r = teste(P.dados, P.mod + bnv()); const dtF = +fe.dt || dtv();
-      let txt = `${reqFeitico(fe).length ? `<span class="faint">Consumido: ${reqFeitico(fe).map(esc).join(', ')}.</span><br>` : ''}${fe.sacrificio ? `<span class="faint">Sacrifício: ${esc(fe.sacrificio)}</span><br>` : ''}Lançar ${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtF)}${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`;
+      let txt = `${gastos.length ? `<span class="faint">${gastos.map(esc).join('. ')}.</span><br>` : ''}${fe.sacrificio ? `<span class="faint">Sacrifício: ${esc(fe.sacrificio)}</span><br>` : ''}Lançar ${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtF)}${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`;
       const falhou = dtF && r.total < dtF; let perda = null;
       if (falhou && fe.falha) { perda = rolar(fe.falha); if (perda) txt += `<br>O feitiço cobra: ${esc(fe.falha)} → ${perda.detalhe} = <b>${perda.total} PS</b> ${podeEditar ? `<button class="btn mini" data-cobrar="${perda.total}">Descontar ${perda.total} PS</button>` : ''}`; }
       else if (!falhou) txt += '<br><span class="faint">Deu certo: nenhuma sanidade gasta.</span>';
