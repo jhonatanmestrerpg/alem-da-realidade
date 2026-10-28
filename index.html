@@ -233,7 +233,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .feed { background: var(--painel); border: 1px solid var(--linha); display: grid; align-content: start; max-height: 80vh; overflow: auto; position: sticky; top: 84px; }
 @media (max-width: 980px) { .feed { position: static; max-height: 360px; } }
 .feed .cab-f { padding: 12px 14px; border-bottom: 1px solid var(--linha); display: flex; justify-content: space-between; align-items: center; }
-.rol { padding: 10px 14px; border-bottom: 1px solid var(--linha); display: grid; gap: 3px; }
+.rol { padding: 10px 14px; border-bottom: 1px solid var(--linha); display: grid; grid-template-columns: 38px 1fr; gap: 10px; align-items: start; }
+.rol-tx { display: grid; gap: 3px; min-width: 0; }
+.rol-av { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--linha-2); background: var(--painel-3) center/cover no-repeat; display: grid; place-items: center; font: 700 13px var(--f-mono); color: var(--lua-dim); }
+.btn-hist { position: fixed; z-index: 41; right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); width: 54px; height: 54px; border-radius: 50%; border: 1px solid var(--linha-2); background: var(--painel-3); color: var(--lua); display: grid; place-items: center; box-shadow: 0 6px 20px rgba(0,0,0,.5); cursor: pointer; }
+.btn-hist svg { width: 24px; height: 24px; }
+.hist-gaveta { position: fixed; z-index: 45; top: 0; right: 0; bottom: 0; width: min(380px, 100vw); background: var(--painel); border-left: 1px solid var(--linha-2); display: grid; grid-template-rows: auto 1fr; box-shadow: -10px 0 30px rgba(0,0,0,.5); padding-top: env(safe-area-inset-top, 0px); }
+.hist-topo { padding: 12px 14px; border-bottom: 1px solid var(--linha); display: grid; gap: 8px; }
+.hist-cab { display: flex; justify-content: space-between; align-items: center; }
+.hist-lista { overflow-y: auto; overscroll-behavior: contain; padding-bottom: 80px; }
 .rol .l1 { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
 .rol .total { font: 700 22px var(--f-mono); }
 .rol.oculta { background: rgba(123,92,168,.12); }
@@ -619,7 +627,7 @@ async function salvarPart() { try { await refPart().set({ campanhas: [...new Set
 async function publicarRolagem(f, rotulo, r) {
   if (!db || !f?.campanhas?.length) return;
   for (const c of f.campanhas) {
-    try { await db.collection(`campanhas/${c}/rolagens`).add({ uid: ME, autor: f.nome || 'Agente', rotulo, detalhe: r.detalhe, total: r.total, t: Date.now() }); } catch (e) {}
+    try { await db.collection(`campanhas/${c}/rolagens`).add({ uid: ME, autor: f.nome || 'Agente', foto: (typeof fotoEf === 'function' ? fotoEf(f) : f.foto) || '', cor: (vetorAtivo(f) && f.vetor?.cor) || '', ficha: f.id || '', rotulo, detalhe: r.detalhe, total: r.total ?? '', t: Date.now() }); } catch (e) {}
   }
 }
 
@@ -866,6 +874,85 @@ ROTAS.agente = async id => {
   window._abaFicha = null;
   const salvarVitais = debounce(async () => { try { await ref.update({ atual: F.atual }); } catch (e) { toast('Não deu para salvar os vitais.'); } pendente = false; }, 500);
   async function salvar(campos) { try { await ref.update(campos); } catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); } }
+  function formAuto(nome) {
+    const a = (F.autos || {})[nome] || {}, c = a.custo || {}, armas = (F.equipamentos || []).filter(x => x.dano);
+    const op = (v, atual, rot) => `<option value="${esc(v)}" ${String(atual ?? '') === String(v) ? 'selected' : ''}>${esc(rot ?? v)}</option>`;
+    abrirModal(`Automatizar · ${nome}`, `<p class="dim" style="font-size:13.5px">O botão Usar faz isso na ordem: desconta o custo, rola o teste, faz os ataques e a rolagem extra. Deixe em branco o que a habilidade não usa.</p>
+      <div class="grade-campos"><div class="campo"><label class="rotulo" for="au-pv">Custo em PV</label><input type="number" min="0" id="au-pv" value="${esc(c.pv || '')}"></div>
+      <div class="campo"><label class="rotulo" for="au-ps">Custo em PS</label><input type="number" min="0" id="au-ps" value="${esc(c.ps || '')}"></div>
+      <div class="campo"><label class="rotulo" for="au-pst">Custo em PST</label><input type="number" min="0" id="au-pst" value="${esc(c.pst || '')}"></div>
+      <div class="campo"><label class="rotulo" for="au-pe">Teste antes (perícia)</label><select id="au-pe">${op('', a.pericia, 'Nenhum')}${SIS.pericias.map(p => op(p.nome, a.pericia)).join('')}</select></div>
+      <div class="campo"><label class="rotulo" for="au-dt">DT do teste</label><input type="number" id="au-dt" value="${esc(a.dt || '')}" placeholder="Se falhar, para aqui"></div>
+      <div class="campo"><label class="rotulo" for="au-n">Número de ataques</label><input type="number" min="0" max="20" id="au-n" value="${esc(a.ataques || '')}" placeholder="0 = sem ataque"></div>
+      <div class="campo"><label class="rotulo" for="au-ar">Arma</label><select id="au-ar">${op('', a.arma, 'Escolher na hora')}${armas.map(x => op(x.nome, a.arma)).join('')}</select></div>
+      <div class="campo"><label class="rotulo" for="au-mo">Dano dos ataques seguintes</label><select id="au-mo">${op('cada', a.modo, 'Cada um rola o próprio dano')}${op('metade', a.modo, 'Metade do dano do primeiro')}${op('igual', a.modo, 'Igual ao dano do primeiro')}</select></div>
+      <div class="campo"><label class="rotulo" for="au-ac">Acerto</label><select id="au-ac">${op('cada', a.acerto, 'Cada ataque rola o acerto')}${op('um', a.acerto, 'Um acerto vale para todos')}</select></div>
+      <div class="campo"><label class="rotulo" for="au-ba">Bônus no acerto</label><input type="number" id="au-ba" value="${esc(a.bonus || '')}" placeholder="0"></div>
+      <div class="campo"><label class="rotulo" for="au-de">Dano extra por ataque</label><input type="text" id="au-de" value="${esc(a.danoExtra || '')}" placeholder="1d6"></div>
+      <div class="campo"><label class="rotulo" for="au-ex">Rolagem extra</label><input type="text" id="au-ex" value="${esc(a.expr || '')}" placeholder="2d8+2"></div>
+      <div class="campo"><label class="rotulo" for="au-rx">Nome da rolagem extra</label><input type="text" id="au-rx" value="${esc(a.rotuloExpr || '')}" placeholder="Cura, Dano em área…"></div></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn" id="au-ok">Salvar</button>${F.autos?.[nome] ? '<button class="btn sec" id="au-rm">Tirar automação</button>' : ''}</div>`, (m, fechar) => {
+      const v = id => m.querySelector(id).value.trim();
+      m.querySelector('#au-ok').onclick = () => {
+        for (const [id, rot] of [['#au-de', 'Dano extra'], ['#au-ex', 'Rolagem extra']]) if (v(id) && !rolar(v(id))) return toast(`${rot} em formato inválido. Ex.: 2d6+3`);
+        const n = Math.max(0, Math.min(20, +v('#au-n') || 0));
+        const cfg = { custo: { pv: +v('#au-pv') || 0, ps: +v('#au-ps') || 0, pst: +v('#au-pst') || 0 }, pericia: v('#au-pe'), dt: +v('#au-dt') || 0, ataques: n, arma: v('#au-ar'), modo: v('#au-mo'), acerto: v('#au-ac'), bonus: +v('#au-ba') || 0, danoExtra: v('#au-de'), expr: v('#au-ex'), rotuloExpr: v('#au-rx') };
+        F.autos = { ...(F.autos || {}), [nome]: cfg }; salvar({ autos: F.autos }); fechar(); render(); };
+      m.querySelector('#au-rm')?.addEventListener('click', () => { const x = { ...(F.autos || {}) }; delete x[nome]; F.autos = x; salvar({ autos: x }); fechar(); render(); });
+    });
+  }
+  function usarHab(nome, armaEscolhida) {
+    const a = (F.autos || {})[nome], chave = id + '|' + nome, caixa = () => document.querySelector(`[data-res-hab="${CSS.escape(nome)}"]`);
+    const mostrar = h => { (window._resHab = window._resHab || {})[chave] = h; const c = caixa(); if (c) c.innerHTML = h; };
+    const dt = +($('#dt')?.value || 0), bn = +($('#bonus')?.value || 0);
+    if (!a) { mostrar(`<span class="faint">${esc(F.nome)} usou ${esc(nome)}.</span>`); return publicarRolagem(F, `Usou ${nome}`, { total: '', detalhe: 'Habilidade' }); }
+    const armas = (F.equipamentos || []).filter(x => x.dano);
+    let arma = null;
+    if (a.ataques) {
+      arma = armaEscolhida || armas.find(x => x.nome === a.arma) || (armas.length === 1 ? armas[0] : null);
+      if (!armas.length) return mostrar('<span class="falha">Nenhuma arma no inventário para os ataques.</span>');
+      if (!arma) { mostrar(`<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">Com qual arma? <select data-esc-arma>${armas.map((x, k) => `<option value="${k}">${esc(x.nome)} (${esc(x.dano)})</option>`).join('')}</select><button class="btn mini" data-ok-arma>Usar</button></div>`);
+        const c = caixa(); c?.querySelector('[data-ok-arma]')?.addEventListener('click', () => usarHab(nome, armas[+c.querySelector('[data-esc-arma]').value])); return; }
+    }
+    const L = [], c = a.custo || {}, max = calc(F).max;
+    const custos = ['pv', 'ps', 'pst'].filter(k => +c[k] > 0);
+    if (custos.length) {
+      const atual = { ...max, ...(F.atual || {}) };
+      const falta = custos.filter(k => atual[k] < +c[k]);
+      if (falta.length) return mostrar(`<span class="falha">Sem ${falta.map(k => k.toUpperCase()).join(' e ')} para pagar ${esc(nome)}.</span>`);
+      custos.forEach(k => atual[k] -= +c[k]); F.atual = atual; pendente = true; salvarVitais();
+      L.push(`<span class="faint">Gastou ${custos.map(k => `${c[k]} ${k.toUpperCase()}`).join(', ')}.</span>`);
+    }
+    let resumo = [], totalPub = '';
+    if (a.pericia) {
+      const P = dadosPericia(F, a.pericia), r = teste(P.dados, P.mod + bn);
+      L.push(`${esc(a.pericia)} ${r.detalhe} = <b>${r.total}</b>${veredito(r.total, a.dt)}`);
+      resumo.push(`${a.pericia} ${r.total}`); totalPub = r.total;
+      if (a.dt && r.total < a.dt) { L.push('<span class="falha">A habilidade não sai.</span>'); mostrar(L.join('<br>')); return publicarRolagem(F, `${nome} (falhou)`, { total: r.total, detalhe: r.detalhe }); }
+    }
+    if (a.ataques && arma) {
+      const P = dadosPericia(F, arma.pericia || 'Armas Brancas'); let D1 = 0, soma = 0, acertos = 0, ac1 = null;
+      for (let k = 1; k <= a.ataques; k++) {
+        const ac = a.acerto === 'um' && ac1 ? ac1 : teste(P.dados, P.mod + bn + (+a.bonus || 0)); if (!ac1) ac1 = ac;
+        const crit = ac.nat >= (+arma.margem || 20), acertou = !dt || ac.total >= dt;
+        let dk, txt;
+        if (k === 1 || (a.modo || 'cada') === 'cada') {
+          const base = rolar(arma.dano); let d = crit ? base.total * (+arma.mult || 1) : base.total; txt = `${esc(arma.dano)} ${base.detalhe}${crit ? ` <span class="critico">×${+arma.mult || 1}</span>` : ''}`;
+          for (const ex of [arma.extra, a.danoExtra].filter(Boolean)) { const r2 = rolar(ex); if (r2) { d += r2.total; txt += ` + ${esc(ex)} ${r2.detalhe}`; } }
+          dk = d; if (k === 1) D1 = d;
+        } else if (a.modo === 'metade') { dk = Math.floor(D1 / 2); txt = `metade do primeiro (${D1} ÷ 2)`; }
+        else { dk = D1; txt = `igual ao primeiro`; }
+        if (acertou) { soma += dk; acertos++; }
+        L.push(`Ataque ${k}: acerto ${a.acerto === 'um' && k > 1 ? 'o mesmo' : ac.detalhe} = <b>${ac.total}</b>${veredito(ac.total, dt)}${crit ? ' <span class="critico">Crítico</span>' : ''} · dano ${txt} = <b>${dk}</b>${acertou ? '' : ' <span class="faint">(não conta)</span>'}`);
+      }
+      L.push(`<b>Dano total: ${soma}</b> <span class="faint">(${acertos} de ${a.ataques} ataque${a.ataques > 1 ? 's' : ''} com ${esc(arma.nome)}${dt ? '' : ', sem DT: todos contam'})</span>`);
+      resumo.push(`${acertos}/${a.ataques} acertos com ${arma.nome}`); totalPub = soma;
+    }
+    if (a.expr) { const r = rolar(a.expr); if (r) { L.push(`${esc(a.rotuloExpr || 'Rolagem')}: ${esc(a.expr)} → ${r.detalhe} = <b>${r.total}</b>`); resumo.push(`${a.rotuloExpr || 'Rolagem'} ${r.total}`); if (totalPub === '') totalPub = r.total; } }
+    if (!L.length) L.push(`<span class="faint">${esc(F.nome)} usou ${esc(nome)}.</span>`);
+    mostrar(L.join('<br>'));
+    publicarRolagem(F, `Usou ${nome}`, { total: totalPub, detalhe: esc(resumo.join(' · ') || 'Habilidade') });
+  }
 
   async function checarPermissao() {
     ehMestre = DONO;
@@ -888,7 +975,7 @@ ROTAS.agente = async id => {
     F.atual = F.atual || { ...K.max };
     const C = classe(F.classe), S = subclasse(F.classe, F.subclasse);
     const VA = vetorAtivo(F), VL = vetorLiberado(F), cv = F.vetor?.cor || '#b4333b';
-    app.innerHTML = `<div id="ficha" class="${editando ? 'editando' : ''} ${VA ? 'vestido' : ''}" style="display:grid; gap:22px; --cv:${esc(cv)}">
+    app.innerHTML = `${F.campanhas?.length ? `<button class="btn-hist" id="abrir-hist" aria-label="Histórico de rolagens" title="Histórico de rolagens"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></button>` : ''}<div id="ficha" class="${editando ? 'editando' : ''} ${VA ? 'vestido' : ''}" style="display:grid; gap:22px; --cv:${esc(cv)}">
     <div class="ficha-topo">
       <div class="retrato ${VA ? 'vetor' : ''}" style="${fotoEf(F) ? `background-image:url('${esc(fotoEf(F))}')` : ''}">${fotoEf(F) ? '' : esc(iniciais(F.nome))}</div>
       <div style="display:grid; gap:8px; min-width:0">
@@ -972,7 +1059,7 @@ ROTAS.agente = async id => {
       const habCl = (S?.habilidades || []);
       return `<div style="display:grid; gap:14px">
         <div class="cab-pagina"><h2>Classe · ${esc(F.subclasse)}</h2></div>
-        <div class="grade-hab">${habCl.map(h => `<article class="hab ${h.nivel > F.nivel ? 'bloq' : ''}"><div class="cab"><span class="nm">${esc(h.nome)}</span><span class="tag">Nv ${h.nivel}</span></div><p>${esc(h.texto)}</p></article>`).join('') || '<div class="vazio">Sem subclasse.</div>'}</div>
+        <div class="grade-hab">${habCl.map(h => `<article class="hab ${h.nivel > F.nivel ? 'bloq' : ''}"><div class="cab"><span class="nm">${esc(h.nome)}</span><span class="tag">Nv ${h.nivel}</span></div><p>${esc(h.texto)}</p>${h.nivel > F.nivel ? '' : botoesUso(h.nome)}</article>`).join('') || '<div class="vazio">Sem subclasse.</div>'}</div>
         ${VL_HAB()}
         <div class="cab-pagina"><h2>Passivas</h2>${podeEditar ? '<button class="btn mini" id="add-passiva">Adicionar passiva</button>' : ''}</div>
         <div class="grade-hab">${(F.passivas || []).map((h, i) => cardHab(h, 'passivas', i)).join('') || '<div class="vazio">Nenhuma passiva.</div>'}</div>
@@ -1027,13 +1114,17 @@ ROTAS.agente = async id => {
       ${F.vetor.descricao ? `<p class="dim" style="max-width:70ch; font-style:italic">${nl(F.vetor.descricao)}</p>` : ''}
       <div class="grade-hab">${hs.map(h => `<article class="hab hab-vetor ${vetorAtivo(F) ? '' : 'bloq'}"><span class="nm">${esc(h.nome)}</span><p>${nl(h.texto)}</p></article>`).join('') || '<div class="vazio">O mestre ainda não escreveu habilidades para este vetor.</div>'}</div>`;
   };
-  const cardHab = (h, lista, i) => `<article class="hab"><div class="cab"><span class="nm">${esc(h.nome)}</span>${podeEditar ? `<button class="btn-x" data-rm="${lista}" data-i="${i}" aria-label="Remover">×</button>` : ''}</div>${h.origem ? `<span class="faint" style="font-size:12px">${esc(h.origem)}</span>` : ''}<p>${nl(h.texto)}</p></article>`;
+  const RES_HAB = window._resHab = window._resHab || {};
+  const autoDe = nome => (F.autos || {})[nome];
+  const resumoAuto = a => [a.custo?.pv ? `${a.custo.pv} PV` : '', a.custo?.ps ? `${a.custo.ps} PS` : '', a.custo?.pst ? `${a.custo.pst} PST` : '', a.pericia ? `teste de ${a.pericia}${a.dt ? ' DT ' + a.dt : ''}` : '', a.ataques ? `${a.ataques} ataque${a.ataques > 1 ? 's' : ''}${a.ataques > 1 ? { metade: ', seguintes com metade do dano do primeiro', igual: ', seguintes com o dano do primeiro', cada: '' }[a.modo || 'cada'] : ''}` : '', a.expr ? `${a.rotuloExpr || 'rola'} ${a.expr}` : ''].filter(Boolean).join(' · ');
+  const botoesUso = nome => { const a = autoDe(nome); return `${a ? `<p class="faint" style="font-size:12.5px">Automação: ${esc(resumoAuto(a)) || 'só registra o uso'}</p>` : ''}<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" data-usar-hab="${esc(nome)}">Usar</button>${podeEditar ? `<button class="btn sec mini" data-auto-hab="${esc(nome)}">${a ? 'Editar automação' : 'Automatizar'}</button>` : ''}</div><div class="res" data-res-hab="${esc(nome)}">${RES_HAB[id + '|' + nome] || ''}</div>`; };
+  const cardHab = (h, lista, i) => `<article class="hab"><div class="cab"><span class="nm">${esc(h.nome)}</span>${podeEditar ? `<button class="btn-x" data-rm="${lista}" data-i="${i}" aria-label="Remover">×</button>` : ''}</div>${h.origem ? `<span class="faint" style="font-size:12px">${esc(h.origem)}</span>` : ''}<p>${nl(h.texto)}</p>${botoesUso(h.nome)}</article>`;
   const cardFeitico = (r, i) => `<article class="hab hab-feitico"><div class="cab"><span class="nm">${esc(r.nome)}</span>${podeEditar ? `<button class="btn-x" data-rm="feiticos" data-i="${i}" aria-label="Remover">×</button>` : ''}</div>
     <span style="display:flex; gap:6px; flex-wrap:wrap">${r.divindade ? `<span class="tag" style="color:var(--${r.divindade === 'Destino' ? 'neutro' : r.divindade.toLowerCase()})">${esc(r.divindade)}</span>` : ''}${tagNivelF(r)}</span>
     ${r.preparo ? `<p class="preparo"><b>Preparo.</b> ${esc(r.preparo)}</p>` : ''}${htmlReq(r)}
     <div class="stats">${[['Alvo', r.alvo], ['Alcance', r.alcance], ['Duração', r.duracao], ['DT', r.dt], ['Se falhar', r.falha ? r.falha + ' PS' : (r.custo || '')]].filter(x => x[1]).map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
     ${r.descricao ? `<p style="font-style:italic">${esc(r.descricao)}</p>` : ''}<p>${nl(r.efeito)}</p>${(r.limitacoes || []).length ? `<p class="faint" style="font-size:13px">${r.limitacoes.map(esc).join('<br>')}</p>` : ''}
-    <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" data-lancar="${i}">Usar feitiço (Bruxaria${r.dt ? ' DT ' + esc(r.dt) : ''})</button>${rolaveis(r.efeito).map(x => `<button class="btn ouro mini" data-feit="${i}" data-expr="${esc(x)}">Rolar ${esc(x)}</button>`).join('')}</div><div class="res" id="res-feit-${i}"></div></article>`;
+    <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" data-lancar="${i}">Usar feitiço (Bruxaria${r.dt ? ' DT ' + esc(r.dt) : ''})</button>${rolaveis(r.efeito).map(x => `<button class="btn ouro mini" data-feit="${i}" data-expr="${esc(x)}">Rolar ${esc(x)}</button>`).join('')}</div><div class="res" id="res-feit-${i}">${RES_HAB[id + '|feit|' + r.nome] || ''}</div></article>`;
   const cardRitual = (r, i) => `<article class="hab"><div class="cab"><span class="nm">${esc(r.nome)}</span><span style="display:flex; gap:6px; align-items:center">${r.elemento ? elTag(r.elemento) : ''}${podeEditar ? `<button class="btn-x" data-rm="rituais" data-i="${i}" aria-label="Remover">×</button>` : ''}</span></div>
     <div class="stats">${[['Alvo', r.alvo], ['Custo', r.custo]].filter(x => x[1]).map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
     ${r.descricao ? `<p style="font-style:italic">${esc(r.descricao)}</p>` : ''}<p>${nl(r.efeito)}</p>${(r.limitacoes || []).length ? `<p class="faint" style="font-size:13px">${r.limitacoes.map(esc).join('<br>')}</p>` : ''}
@@ -1107,8 +1198,7 @@ ROTAS.agente = async id => {
       const falhou = dtF && r.total < dtF; let perda = null;
       if (falhou && fe.falha) { perda = rolar(fe.falha); if (perda) txt += `<br>O feitiço cobra: ${esc(fe.falha)} → ${perda.detalhe} = <b>${perda.total} PS</b> ${podeEditar ? `<button class="btn mini" data-cobrar="${perda.total}">Descontar ${perda.total} PS</button>` : ''}`; }
       else if (!falhou) txt += '<br><span class="faint">Deu certo: nenhuma sanidade gasta.</span>';
-      const out = $('#res-feit-' + i); out.innerHTML = txt;
-      out.querySelector('[data-cobrar]')?.addEventListener('click', e => { const n = +e.target.dataset.cobrar; F.atual = { ...F.atual, ps: Math.max(0, (F.atual?.ps ?? calc(F).max.ps) - n) }; pendente = true; salvarVitais(); e.target.replaceWith(Object.assign(document.createElement('span'), { className: 'faint', textContent: `${n} PS descontados.` })); setTimeout(render, 900); });
+      const chaveF = id + '|feit|' + fe.nome; RES_HAB[chaveF] = txt; const out = $('#res-feit-' + i); if (out) out.innerHTML = txt; ligarCobrar();
       publicarRolagem(F, `Feitiço · ${fe.nome}${falhou ? ' (falhou)' : ''}`, r); });
     $$('[data-feit]').forEach(b => b.onclick = () => { const r = rolar(b.dataset.expr); if (!r) return; $('#res-feit-' + b.dataset.feit).innerHTML = `${esc(b.dataset.expr)} → ${r.detalhe} = <b>${r.total}</b>`; publicarRolagem(F, `${F.feiticos[+b.dataset.feit].nome}`, r); });
     $('#add-feit')?.addEventListener('click', async () => { const hb = (await homebrewVisivel('feitico')).map(r => ({ ...r, divindade: r.divindade || 'Homebrew' }));
@@ -1119,6 +1209,13 @@ ROTAS.agente = async id => {
     $$('[data-rit]').forEach(b => b.onclick = () => { const r = rolar(b.dataset.expr); if (!r) return; $('#res-rit-' + b.dataset.rit).innerHTML = `${esc(b.dataset.expr)} → ${r.detalhe} = <b>${r.total}</b>`; publicarRolagem(F, `${F.rituais[+b.dataset.rit].nome}`, r); });
     // remover itens/habilidades/rituais
     $$('[data-rm]').forEach(b => b.onclick = () => { const l = b.dataset.rm; F[l].splice(+b.dataset.i, 1); salvar({ [l]: F[l] }); render(); });
+    $('#abrir-hist')?.addEventListener('click', () => document.querySelector('.hist-gaveta') ? document.querySelector('.hist-gaveta [data-fechar]').click() : abrirHistorico(F.campanhas));
+    function ligarCobrar() { $$('[data-cobrar]').forEach(bt => bt.onclick = () => { const n = +bt.dataset.cobrar, caixa = bt.closest('.res'); F.atual = { ...F.atual, ps: Math.max(0, (F.atual?.ps ?? calc(F).max.ps) - n) }; pendente = true; salvarVitais();
+      bt.replaceWith(Object.assign(document.createElement('span'), { className: 'faint', textContent: `${n} PS descontados.` }));
+      const fe = F.feiticos?.[+(caixa?.id || '').replace('res-feit-', '')]; if (fe) RES_HAB[id + '|feit|' + fe.nome] = caixa.innerHTML; setTimeout(render, 900); }); }
+    ligarCobrar();
+    $$('[data-auto-hab]').forEach(b => b.onclick = () => formAuto(b.dataset.autoHab));
+    $$('[data-usar-hab]').forEach(b => b.onclick = () => usarHab(b.dataset.usarHab));
     $$('[data-ed-item]').forEach(b => b.onclick = () => { const i = +b.dataset.edItem, velho = F.equipamentos[i]; formItem(novo => { F.equipamentos[i] = { ...velho, ...novo }; salvar({ equipamentos: F.equipamentos }); render(); }, velho); });
     $$('[data-rm-item]').forEach(b => b.onclick = () => { F.equipamentos.splice(+b.dataset.rmItem, 1); salvar({ equipamentos: F.equipamentos }); render(); });
     // adicionar
@@ -1589,7 +1686,24 @@ function ouvirCampanha(id, aoMudar) {
   assinar(db.doc(`campanhas/${id}/publico/combate`).onSnapshot(s => { st.combate = s.exists ? s.data() : null; aoMudar(st); }));
   return st;
 }
-const rolHtml = r => `<div class="rol ${r.oculta ? 'oculta' : ''}"><div class="l1"><b>${esc(r.autor)}</b><span class="total">${esc(r.total)}</span></div><span>${esc(r.rotulo)}</span><span class="mono faint" style="font-size:11.5px">${r.detalhe}</span><span class="faint" style="font-size:11px">${horaBR(r.t)}${r.oculta ? ' · só o mestre vê' : ''}</span></div>`;
+const rolHtml = r => `<div class="rol ${r.oculta ? 'oculta' : ''}"><div class="rol-av" style="${r.foto ? `background-image:url('${esc(r.foto)}')` : ''}${r.cor ? `; border-color:${esc(r.cor)}` : ''}">${r.foto ? '' : esc(iniciais(r.autor))}</div><div class="rol-tx"><div class="l1"><b>${esc(r.autor)}</b><span class="total">${esc(r.total)}</span></div><span>${esc(r.rotulo)}</span><span class="mono faint" style="font-size:11.5px">${r.detalhe}</span><span class="faint" style="font-size:11px">${horaBR(r.t)}${r.oculta ? ' · só o mestre vê' : ''}</span></div></div>`;
+function abrirHistorico(camps) {
+  if (!db || !camps?.length) return;
+  document.querySelector('.hist-gaveta')?.remove();
+  const g = document.createElement('aside'); g.className = 'hist-gaveta'; g.setAttribute('aria-label', 'Histórico de rolagens');
+  let atual = camps[0], un = null; const nomes = {};
+  const sair = () => { un?.(); g.remove(); document.removeEventListener('keydown', esc_); };
+  const esc_ = e => { if (e.key === 'Escape') sair(); };
+  const desenhar = rols => { g.querySelector('.hist-lista').innerHTML = rols.map(rolHtml).join('') || '<div class="vazio">Nenhuma rolagem ainda.</div>'; };
+  const ouvir = () => { un?.(); g.querySelector('.hist-lista').innerHTML = '<div class="vazio">Carregando…</div>';
+    un = db.collection(`campanhas/${atual}/rolagens`).orderBy('t', 'desc').limit(40).onSnapshot(sn => desenhar(sn.docs.map(x => x.data()).filter(r => !r.oculta)), () => { g.querySelector('.hist-lista').innerHTML = '<div class="vazio">Não deu para ler as rolagens.</div>'; }); };
+  const cabeca = () => `<div class="hist-cab"><b>Rolagens</b><button class="btn-x" data-fechar aria-label="Fechar">×</button></div>${camps.length > 1 ? `<div class="filtros hist-camps">${camps.map(c => `<button class="chip ${c === atual ? 'aqui' : ''}" data-hc="${esc(c)}">${esc(nomes[c] || 'Campanha')}</button>`).join('')}</div>` : ''}`;
+  g.innerHTML = `<div class="hist-topo">${cabeca()}</div><div class="hist-lista"></div>`;
+  const ligar = () => { g.querySelector('[data-fechar]').onclick = sair; g.querySelectorAll('[data-hc]').forEach(b => b.onclick = () => { atual = b.dataset.hc; g.querySelector('.hist-topo').innerHTML = cabeca(); ligar(); ouvir(); }); };
+  document.body.appendChild(g); ligar(); ouvir(); document.addEventListener('keydown', esc_);
+  assinar(sair);
+  if (camps.length > 1) Promise.all(camps.map(c => db.doc('campanhas/' + c).get().then(x => { nomes[c] = x.data()?.nome || 'Campanha'; }).catch(() => {}))).then(() => { g.querySelector('.hist-topo').innerHTML = cabeca(); ligar(); });
+}
 const vitalMini = (cls, a, m) => `<div class="${cls}"><div class="trilho fino"><div class="cheio" style="width:${Math.min(100, (a / (m || 1)) * 100)}%"></div><div class="txt">${a}/${m}</div></div></div>`;
 
 ROTAS.campanha = async id => {
