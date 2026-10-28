@@ -1536,11 +1536,14 @@ const capDe = c => ELEMS.includes(c.elemento) ? c.elemento : 'Servos';
 // caçadores: 'arthur' (canônico, só o administrador registra) e cada jogador que definiu um personagem principal (cacadores/<uid>)
 const romano = n => ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][n] || n;
 const grausHtml = (n, max = 6) => `<span class="graus" aria-label="Grau ${n} de ${max}">${Array.from({ length: max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span>`;
-let CACS = {}, CAC_SEL = 'arthur';
+let CACS = {}, CAC_SEL = null;
+// O Arthur é o caçador da conta do administrador; os outros jogadores só veem o próprio caçador por padrão.
+const arthurVisivel = () => DONO;
+const cacPadrao = () => (CAC_SEL === 'arthur' ? arthurVisivel() : CAC_SEL && CACS[CAC_SEL]) ? CAC_SEL : (arthurVisivel() ? 'arthur' : CACS[ME] ? ME : null);
 const nomeCac = q => q === 'arthur' ? (CACADOR?.nome || 'Arthur') : (CACS[q]?.nome || 'Caçador');
-const abatesDe = (id, q = CAC_SEL) => +((q === 'arthur' ? ABATES : CACS[q]?.abates || {})[String(id)] || 0);
-const eliminada = (c, q = CAC_SEL) => !c.homebrew && abatesDe(c.id, q) !== 0;
-const textoAbate = (c, q = CAC_SEL) => { const n = abatesDe(c.id, q), quem = nomeCac(q);
+const abatesDe = (id, q = cacPadrao()) => q ? +((q === 'arthur' ? ABATES : CACS[q]?.abates || {})[String(id)] || 0) : 0;
+const eliminada = (c, q = cacPadrao()) => !!q && !c.homebrew && abatesDe(c.id, q) !== 0;
+const textoAbate = (c, q = cacPadrao()) => { const n = abatesDe(c.id, q), quem = nomeCac(q);
   return n < 0 ? `Eliminada por ${quem}. Nem consigo contar mais quantos matei.` : n > 1 ? `Eliminada por ${quem}, com ${n} exemplares abatidos.` : n === 1 ? `Eliminada por ${quem}.` : `${quem}: nenhum abate registrado. Segue em aberto.`; };
 const totalAbates = q => { const a = q === 'arthur' ? ABATES : CACS[q]?.abates || {}; const v = Object.values(a); return { n: v.reduce((t, x) => t + (x < 0 ? 0 : +x || 0), 0), mais: v.some(x => x < 0) }; };
 const podeRegistrar = q => q === 'arthur' ? DONO : (q === ME || DONO);
@@ -1548,9 +1551,9 @@ let abatesOuvindo = false;
 function ouvirAbates() {
   if (abatesOuvindo || !db) return; abatesOuvindo = true;
   db.doc('bestiario/abates').onSnapshot(sn => { const d = sn.data(); if (d?.abates) { ABATES = { ...ABATES, ...d.abates }; window.dispatchEvent(new Event('abates')); } }, () => {});
-  db.collection('cacadores').onSnapshot(sn => { CACS = Object.fromEntries(sn.docs.map(x => [x.id, x.data()]).filter(([, d]) => d?.ficha)); if (CAC_SEL !== 'arthur' && !CACS[CAC_SEL]) CAC_SEL = 'arthur'; window.dispatchEvent(new Event('abates')); }, () => {});
+  db.collection('cacadores').onSnapshot(sn => { CACS = Object.fromEntries(sn.docs.map(x => [x.id, x.data()]).filter(([, d]) => d?.ficha)); if (CAC_SEL && CAC_SEL !== 'arthur' && !CACS[CAC_SEL]) CAC_SEL = null; window.dispatchEvent(new Event('abates')); }, () => {});
 }
-async function registrarAbate(id, delta, q = CAC_SEL) {
+async function registrarAbate(id, delta, q = cacPadrao()) {
   if (!db || !podeRegistrar(q)) return;
   const atual = abatesDe(id, q), novo = atual < 0 ? (delta > 0 ? -1 : 0) : Math.max(0, atual + delta), k = String(id);
   try {
@@ -1559,7 +1562,7 @@ async function registrarAbate(id, delta, q = CAC_SEL) {
   } catch (e) { toast('Não deu para salvar o abate.'); }
   window.dispatchEvent(new Event('abates'));
 }
-const seletorCacador = () => `<div class="filtros" id="f-cac"><span class="rotulo" style="align-self:center">Caçador</span>${[['arthur', CACADOR?.nome || 'Arthur'], ...Object.entries(CACS).map(([u, d]) => [u, d.nome + (u === ME ? ' (você)' : '')])].map(([k, l]) => `<button class="chip ${CAC_SEL === k ? 'aqui' : ''}" data-cac="${esc(k)}">${esc(l)}</button>`).join('')}</div>`;
+const seletorCacador = () => `<div class="filtros" id="f-cac"><span class="rotulo" style="align-self:center">Caçador</span>${[...(arthurVisivel() ? [['arthur', CACADOR?.nome || 'Arthur']] : []), ...Object.entries(CACS).map(([u, d]) => [u, d.nome + (u === ME ? ' (você)' : '')])].map(([k, l]) => `<button class="chip ${cacPadrao() === k ? 'aqui' : ''}" data-cac="${esc(k)}">${esc(l)}</button>`).join('')}</div>`;
 function abrirEscala() {
   let aba = 'graus';
   abrirModal('Escala de perigo e elementos', '<div id="esc"></div>', m => {
@@ -1594,12 +1597,13 @@ ROTAS.ameacas = async () => {
       && (filtroAm.st === 'todas' || (filtroAm.st === 'mortas' ? eliminada(c) : !eliminada(c)))
       && (!filtroAm.nv || +c.nivel === filtroAm.nv) && (!q || (c.nome + ' ' + (c.origem || '')).toLowerCase().includes(q)));
     $('#contagem').textContent = `${fil.length} de ${todas.length} ameaças`;
-    const nEl = CRI.filter(c => eliminada(c)).length;
-    $('#best-stats').innerHTML = `<span><b>${CRI.length}</b> registros</span><span><b>${nEl}</b> eliminadas por ${esc(nomeCac(CAC_SEL).split(' ')[0])}</span><span><b>${CRI.length - nEl}</b> em aberto</span>`;
-    $('#ir-dossie').href = CAC_SEL === 'arthur' ? '#dossie' : '#dossie-' + CAC_SEL;
-    $('#cac-wrap').innerHTML = Object.keys(CACS).length ? seletorCacador() : '';
+    const nEl = CRI.filter(c => eliminada(c)).length, qc = cacPadrao();
+    $('#best-stats').innerHTML = qc ? `<span><b>${CRI.length}</b> registros</span><span><b>${nEl}</b> eliminadas por ${esc(nomeCac(qc).split(' ')[0])}</span><span><b>${CRI.length - nEl}</b> em aberto</span>`
+      : `<span><b>${CRI.length}</b> registros</span><span class="faint">Defina o personagem principal na sua ficha para virar caçador e registrar abates.</span>`;
+    $('#ir-dossie').href = !qc ? '#dossie' : qc === 'arthur' ? '#dossie' : '#dossie-' + qc;
+    $('#cac-wrap').innerHTML = (arthurVisivel() ? 1 : 0) + Object.keys(CACS).length > 1 ? seletorCacador() : '';
     $('#f-cac')?.addEventListener('click', e => { const b = e.target.closest('[data-cac]'); if (!b) return; CAC_SEL = b.dataset.cac; desenhar(); });
-    $('#lista-am').innerHTML = fil.map(c => `<a class="card-am ${eliminada(c) ? 'morta' : ''}" href="#ameaca-${esc(c.id)}" data-modal-am="${esc(c.id)}" style="text-decoration:none">${eliminada(c) ? `<span class="carimbo ${CAC_SEL === 'arthur' ? '' : 'jog'}">Eliminada${abatesDe(c.id) > 1 ? ' ×' + abatesDe(c.id) : abatesDe(c.id) < 0 ? ' ∞' : ''}</span>` : ''}<div class="img" style="${c.imagem ? `background-image:url('${esc(c.imagem)}')` : 'background:var(--painel-3)'}"></div>
+    $('#lista-am').innerHTML = fil.map(c => `<a class="card-am ${eliminada(c) ? 'morta' : ''}" href="#ameaca-${esc(c.id)}" data-modal-am="${esc(c.id)}" style="text-decoration:none">${eliminada(c) ? `<span class="carimbo ${cacPadrao() === 'arthur' ? '' : 'jog'}">Eliminada${abatesDe(c.id) > 1 ? ' ×' + abatesDe(c.id) : abatesDe(c.id) < 0 ? ' ∞' : ''}</span>` : ''}<div class="img" style="${c.imagem ? `background-image:url('${esc(c.imagem)}')` : 'background:var(--painel-3)'}"></div>
       <div class="corpo"><b style="font: 400 19px/1.15 var(--f-disp)">${esc(c.nome)}</b><div style="display:flex; gap:6px; flex-wrap:wrap">${elTag(c.elemento)}<span class="tag">Nv ${c.nivel} · ${esc(nivelAm(c.nivel)[1])}</span></div>
       <span class="mono dim" style="font-size:12px">PV ${c.ficha?.pv ?? '?'} · Def ${c.ficha?.defesa ?? '?'}</span></div></a>`).join('') || '<div class="vazio">Nenhuma criatura com esses filtros.</div>';
   };
@@ -1729,7 +1733,8 @@ ${c.homebrew ? '' : `<div class="registro-am"><span class="rotulo">Registro nº 
       </div>
     </div>`;
   const desenharAbates = () => { const el = $('#abates-cr'); if (!el) return;
-    const quem = ['arthur', ...Object.keys(CACS).filter(u => u === ME || abatesDe(c.id, u) !== 0 || DONO)];
+    const quem = [...(arthurVisivel() ? ['arthur'] : []), ...Object.keys(CACS).filter(u => u === ME || abatesDe(c.id, u) !== 0 || DONO)];
+    if (!quem.length) { el.innerHTML = '<p class="faint" style="font-size:13px">Defina o personagem principal na sua ficha para registrar seus abates aqui.</p>'; return; }
     el.innerHTML = quem.map(q => `<div class="abate-linha"><p class="quem-abate ${eliminada(c, q) ? 'morta' : ''}">${esc(textoAbate(c, q))}</p>${podeRegistrar(q) ? `<span style="display:flex; gap:6px"><button class="btn mini" data-abate="1" data-q="${esc(q)}">+1 abate</button><button class="btn sec mini" data-abate="-1" data-q="${esc(q)}">−1</button></span>` : ''}</div>`).join('');
     el.querySelectorAll('[data-abate]').forEach(b => b.onclick = () => registrarAbate(c.id, +b.dataset.abate, b.dataset.q)); };
   desenharAbates();
@@ -1808,6 +1813,11 @@ const SECOES_DOSSIE = [['Biografia', 'biografia'], ['Aparência', 'aparencia'], 
 let filtroDos = 'mortas';
 ROTAS.dossie = async arg => {
   ouvirAbates();
+  if (!arg && !arthurVisivel()) {
+    if (MEU_PRINCIPAL) { location.hash = 'dossie-' + ME; return; }
+    app.innerHTML = `<a href="#ameacas" class="dim" style="font-size:14px">← Ameaças</a><div class="vazio">Você ainda não é caçador.<br>Abra a ficha do seu personagem e toque em <b>☆ Tornar personagem principal</b>: ele ganha um dossiê aqui e você passa a registrar os próprios abates.<br><a class="btn" href="#agentes" style="margin-top:12px">Meus agentes</a></div>`; return;
+  }
+  if (arg === 'arthur' && !arthurVisivel()) { app.innerHTML = '<div class="vazio">Dossiê restrito.</div>'; return; }
   const q = arg || 'arthur';
   let F = null;
   if (q !== 'arthur') {
@@ -1826,7 +1836,7 @@ ROTAS.dossie = async arg => {
     const sub = c ? [c.ocupacao, c.idade ? c.idade + ' anos' : '', c.genero] : [`${F.classe} · ${F.subclasse}`, `Nível ${+F.nivel || 1}`, patente(+F.nivel || 1).nome, F.idade ? F.idade + ' anos' : '', F.jogador ? 'jogado por ' + F.jogador : ''];
     const secoes = c ? SECOES_DOSSIE.filter(([, k]) => c[k]).map(([tt, k]) => [tt, c[k]]) : [['Aparência', F.aparencia], ['Personalidade', F.personalidade], ['Histórico', F.historico], ['Objetivo', F.objetivo]].filter(x => x[1]);
     app.innerHTML = `<a href="#ameacas" class="dim" style="font-size:14px">← Ameaças</a>
-      ${Object.keys(CACS).length ? seletorCacador() : ''}
+      ${(arthurVisivel() ? 1 : 0) + Object.keys(CACS).length > 1 ? seletorCacador() : ''}
       <div class="dossie-topo">
         <figure class="polaroid">${foto ? `<img src="${esc(foto)}" alt="Retrato de ${esc(nome)}">` : `<div class="polaroid-ph">${esc(iniciais(nome))}</div>`}<figcaption>${esc(String(nome).split(' ')[0])}</figcaption></figure>
         <div style="display:grid; gap:10px; align-content:start; min-width:0">
