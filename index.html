@@ -581,7 +581,7 @@ function teste(qtd, mod) {
   const ds = Array.from({ length: Math.max(1, qtd) }, () => d(20));
   const mx = Math.max(...ds); let marcou = false;
   const lista = ds.map(x => { if (!marcou && x === mx) { marcou = true; return `<span class="melhor">${x}</span>`; } return x; }).join(', ');
-  return { total: mx + mod, nat20: mx === 20, detalhe: `[${lista}] ${mod >= 0 ? '+' : '-'} ${Math.abs(mod)}` };
+  return { total: mx + mod, nat: mx, nat20: mx === 20, detalhe: `[${lista}] ${mod >= 0 ? '+' : '-'} ${Math.abs(mod)}` };
 }
 const veredito = (total, dt) => dt ? (total >= dt ? ` contra DT ${dt}: <span class="ok">Sucesso</span>` : ` contra DT ${dt}: <span class="falha">Falha</span>`) : '';
 
@@ -962,9 +962,9 @@ ROTAS.agente = async id => {
     if (aba === 'combate') {
       const armas = (F.equipamentos || []).map((it, i) => [it, i]).filter(([it]) => it.dano);
       return `<div style="display:grid; gap:12px">${barra}${armas.length ? `<div class="lista">${armas.map(([it, i]) => { const P = dadosPericia(F, it.pericia || 'Armas Brancas');
-        return `<div class="item"><div class="cab"><span class="nm">${esc(it.nome)} <span class="mono dim" style="font-weight:400; font-size:13px">${esc(it.dano)}</span></span><span style="display:flex; gap:6px">${it.mult > 1 ? `<span class="tag crit">×${it.mult}</span>` : ''}<span class="tag">${esc(it.pericia || 'Armas Brancas')} ${P.dados}d20+${P.mod}</span></span></div>
+        return `<div class="item"><div class="cab"><span class="nm">${esc(it.nome)} <span class="mono dim" style="font-weight:400; font-size:13px">${esc(it.dano)}</span></span><span style="display:flex; gap:6px">${it.tipoDano ? `<span class="tag">${esc(it.tipoDano)}</span>` : ''}${it.alcance ? `<span class="tag">${esc(it.alcance)}</span>` : ''}<span class="tag crit">${(+it.margem || 20) < 20 ? `${+it.margem}/` : ''}×${it.mult || 1}</span><span class="tag">${esc(it.pericia || 'Armas Brancas')} ${P.dados}d20+${P.mod}</span></span></div>
         ${it.obs ? `<p class="dim" style="font-size:13.5px">${esc(it.obs)}</p>` : ''}
-        <div class="acoes"><button class="btn mini" data-acerto="${i}">Acerto</button><button class="btn ouro mini" data-dano="${i}">Dano</button><label class="chk"><input type="checkbox" id="crit-${i}"> Crítico ×${it.mult || 1}</label><label class="chk">+ dano extra <input type="text" id="extra-${i}" placeholder="1d6+3" style="width:90px; padding:3px 6px"></label></div>
+        <div class="acoes"><button class="btn mini" data-acerto="${i}">Acerto</button><button class="btn ouro mini" data-dano="${i}">Dano</button><label class="chk"><input type="checkbox" id="crit-${i}"> Crítico ×${it.mult || 1}</label><label class="chk">+ dano extra <input type="text" id="extra-${i}" value="${esc(it.extra || '')}" placeholder="1d6+3" style="width:90px; padding:3px 6px"></label>${podeEditar ? `<button class="btn sec mini" data-ed-item="${i}">Editar arma</button>` : ''}</div>
         <div class="res" id="res-${i}"></div></div>`; }).join('')}</div>` : '<div class="vazio">Nenhuma arma no inventário.</div>'}
         <div class="caixa" style="display:grid; gap:8px"><span class="rotulo">Rolagem livre</span><div style="display:flex; gap:8px"><input type="text" id="livre" placeholder="2d6+3 ou 3d20m+4 (m = fica o maior)"><button class="btn" id="rolar-livre">Rolar</button></div><div class="res" id="res-livre"></div></div></div>`;
     }
@@ -1014,7 +1014,7 @@ ROTAS.agente = async id => {
           <div class="trilho fino"><div class="cheio" style="width:${Math.min(100, pct / 2)}%; background:var(--lua-dim)"></div></div><span class="dim" style="font-size:13px">${esc(est.texto)}</span></div>
         ${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" id="add-item">Adicionar do livro</button><button class="btn sec mini" id="add-item-hb">Adicionar do homebrew</button><button class="btn sec mini" id="novo-item">Novo item</button></div>' : ''}
         <div class="lista">${(F.equipamentos || []).map((it, i) => `<div class="item"><div class="cab"><span class="nm">${esc(it.nome)}${it.qtd > 1 ? ` <span class="faint">×${it.qtd}</span>` : ''}</span>
-          <span style="display:flex; gap:6px; align-items:center">${tagUsos(it)}${it.peso ? `<span class="tag">${fmtKg(it.peso * (it.qtd || 1))}</span>` : ''}${it.alivio ? `<span class="tag">alivia ${fmtKg(it.alivio)}</span>` : ''}${it.rd ? `<span class="tag">RD ${it.rd}</span>` : ''}${it.dano ? `<span class="tag">${esc(it.dano)}${it.mult > 1 ? ' ×' + it.mult : ''}</span>` : ''}${podeEditar ? `<span class="qtd-ctrl"><button class="vbtn" data-qtd="${i}" data-d="-1" aria-label="Menos um">−</button><span class="mono">${+it.qtd || 1}</span><button class="vbtn" data-qtd="${i}" data-d="1" aria-label="Mais um">+</button></span><button class="btn-x" data-rm-item="${i}" aria-label="Remover">×</button>` : ''}</span></div>
+          <span style="display:flex; gap:6px; align-items:center">${tagUsos(it)}${it.peso ? `<span class="tag">${fmtKg(it.peso * (it.qtd || 1))}</span>` : ''}${it.alivio ? `<span class="tag">alivia ${fmtKg(it.alivio)}</span>` : ''}${it.rd ? `<span class="tag">RD ${it.rd}</span>` : ''}${it.dano ? `<span class="tag">${esc(it.dano)}${it.mult > 1 ? ' ×' + it.mult : ''}</span>` : ''}${podeEditar ? `<button class="btn-x" data-ed-item="${i}" aria-label="Editar" title="Editar">✎</button><span class="qtd-ctrl"><button class="vbtn" data-qtd="${i}" data-d="-1" aria-label="Menos um">−</button><span class="mono">${+it.qtd || 1}</span><button class="vbtn" data-qtd="${i}" data-d="1" aria-label="Mais um">+</button></span><button class="btn-x" data-rm-item="${i}" aria-label="Remover">×</button>` : ''}</span></div>
           ${it.obs ? `<p class="dim" style="font-size:13.5px">${esc(it.obs)}</p>` : ''}</div>`).join('') || '<div class="vazio">Inventário vazio.</div>'}</div></div>`;
     }
     return `<div style="display:grid; gap:14px">${[['aparencia', 'Aparência'], ['personalidade', 'Personalidade'], ['historico', 'Histórico'], ['objetivo', 'Objetivo'], ['anotacoes', 'Anotações do jogador']].map(([k, l]) => `<div class="campo"><label class="rotulo" for="d-${k}">${l}</label>
@@ -1085,7 +1085,8 @@ ROTAS.agente = async id => {
     $$('[data-teste]').forEach(b => b.onclick = () => { const n = b.dataset.teste, P = dadosPericia(F, n), mod = P.mod + bnv(); const r = teste(P.dados, mod);
       $(`[data-res="${CSS.escape(n)}"]`).innerHTML = `${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtv())}${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`; publicarRolagem(F, n, r); });
     $$('[data-acerto]').forEach(b => b.onclick = () => { const it = F.equipamentos[+b.dataset.acerto]; const P = dadosPericia(F, it.pericia || 'Armas Brancas'); const r = teste(P.dados, P.mod + bnv());
-      $('#res-' + b.dataset.acerto).innerHTML = `Acerto ${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtv())}${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`; publicarRolagem(F, `Acerto · ${it.nome}`, r); });
+      const critou = r.nat >= (+it.margem || 20); if (critou) { const cb = $('#crit-' + b.dataset.acerto); if (cb) cb.checked = true; }
+      $('#res-' + b.dataset.acerto).innerHTML = `Acerto ${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtv())}${critou ? ` <span class="critico">Crítico (${r.nat} natural)</span>` : ''}`; publicarRolagem(F, `Acerto · ${it.nome}`, r); });
     $$('[data-dano]').forEach(b => b.onclick = () => { const i = +b.dataset.dano, it = F.equipamentos[i]; const base = rolar(it.dano); if (!base) return toast('Dano da arma em formato que não sei rolar.');
       const crit = $('#crit-' + i).checked; let total = crit ? base.total * (it.mult || 1) : base.total; let txt = `${esc(it.dano)} → ${base.detalhe} = ${base.total}`;
       if (crit) txt += ` <span class="critico">× ${it.mult || 1} = ${total}</span>`;
@@ -1118,6 +1119,7 @@ ROTAS.agente = async id => {
     $$('[data-rit]').forEach(b => b.onclick = () => { const r = rolar(b.dataset.expr); if (!r) return; $('#res-rit-' + b.dataset.rit).innerHTML = `${esc(b.dataset.expr)} → ${r.detalhe} = <b>${r.total}</b>`; publicarRolagem(F, `${F.rituais[+b.dataset.rit].nome}`, r); });
     // remover itens/habilidades/rituais
     $$('[data-rm]').forEach(b => b.onclick = () => { const l = b.dataset.rm; F[l].splice(+b.dataset.i, 1); salvar({ [l]: F[l] }); render(); });
+    $$('[data-ed-item]').forEach(b => b.onclick = () => { const i = +b.dataset.edItem, velho = F.equipamentos[i]; formItem(novo => { F.equipamentos[i] = { ...velho, ...novo }; salvar({ equipamentos: F.equipamentos }); render(); }, velho); });
     $$('[data-rm-item]').forEach(b => b.onclick = () => { F.equipamentos.splice(+b.dataset.rmItem, 1); salvar({ equipamentos: F.equipamentos }); render(); });
     // adicionar
     const add = (lista, obj) => { if (lista === 'equipamentos') { const ja = (F.equipamentos || []).find(x => x.nome === obj.nome && !x.dano === !obj.dano && (x.obs || '') === (obj.obs || '')); if (ja) { ja.qtd = (+ja.qtd || 1) + (+obj.qtd || 1); salvar({ equipamentos: F.equipamentos }); render(); return toast(`${obj.nome}: agora ×${ja.qtd}.`); } }
@@ -1203,14 +1205,19 @@ function formItem(salvarFn, it = {}) {
     <div class="campo"><label class="rotulo" for="fi-p">Peso (kg)</label><input type="number" step="0.1" id="fi-p" value="${esc(it.peso ?? 0)}"></div>
     <div class="campo"><label class="rotulo" for="fi-q">Quantidade</label><input type="number" id="fi-q" value="${esc(it.qtd ?? 1)}"></div>
     <div class="campo"><label class="rotulo" for="fi-d">Dano (se for arma)</label><input type="text" id="fi-d" value="${esc(it.dano)}" placeholder="2d8+6"></div>
-    <div class="campo"><label class="rotulo" for="fi-m">Multiplicador de crítico</label><input type="number" id="fi-m" value="${esc(it.mult ?? 2)}"></div>
+    <div class="campo"><label class="rotulo" for="fi-mg">Crítico em (d20 natural)</label><input type="number" min="2" max="20" id="fi-mg" value="${esc(it.margem ?? 20)}"></div>
+    <div class="campo"><label class="rotulo" for="fi-m">Multiplicador de crítico</label><input type="number" min="1" id="fi-m" value="${esc(it.mult ?? 2)}"></div>
+    <div class="campo"><label class="rotulo" for="fi-ex">Dano extra (fora do crítico)</label><input type="text" id="fi-ex" value="${esc(it.extra)}" placeholder="1d6"></div>
+    <div class="campo"><label class="rotulo" for="fi-td">Tipo de dano</label><input type="text" id="fi-td" value="${esc(it.tipoDano)}" placeholder="Perfuração, Fogo…"></div>
+    <div class="campo"><label class="rotulo" for="fi-al">Alcance</label><input type="text" id="fi-al" value="${esc(it.alcance)}" placeholder="Corpo a corpo, 30m…"></div>
     <div class="campo"><label class="rotulo" for="fi-pe">Perícia de acerto</label><select id="fi-pe">${SIS.pericias.map(p => `<option ${(it.pericia || 'Armas Brancas') === p.nome ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select></div>
     <div class="campo"><label class="rotulo" for="fi-r">RD que concede</label><input type="number" id="fi-r" value="${esc(it.rd ?? 0)}"></div>
     <div class="campo"><label class="rotulo" for="fi-a">Alivia peso (kg)</label><input type="number" id="fi-a" value="${esc(it.alivio ?? 0)}"></div></div>
     <div class="campo"><label class="rotulo" for="fi-o">Observação / efeito</label><textarea id="fi-o" style="min-height:80px">${esc(it.obs)}</textarea></div><button class="btn" id="fi-ok">Salvar</button>`, (m, fechar) => {
     m.querySelector('#fi-ok').onclick = () => { const v = id => m.querySelector(id).value.trim(); if (!v('#fi-n')) return toast('Dê um nome ao item.');
       const dano = v('#fi-d'); if (dano && !rolar(dano)) return toast('Dano em formato inválido. Ex.: 2d8+6');
-      salvarFn({ nome: v('#fi-n'), peso: +v('#fi-p') || 0, qtd: +v('#fi-q') || 1, dano, mult: +v('#fi-m') || 1, pericia: v('#fi-pe'), rd: +v('#fi-r') || 0, alivio: +v('#fi-a') || 0, obs: v('#fi-o') }); fechar(); };
+      const extra = v('#fi-ex'); if (extra && !rolar(extra)) return toast('Dano extra em formato inválido. Ex.: 1d6');
+      salvarFn({ nome: v('#fi-n'), peso: +v('#fi-p') || 0, qtd: +v('#fi-q') || 1, dano, mult: +v('#fi-m') || 1, margem: Math.min(20, Math.max(2, +v('#fi-mg') || 20)), extra, tipoDano: v('#fi-td'), alcance: v('#fi-al'), pericia: v('#fi-pe'), rd: +v('#fi-r') || 0, alivio: +v('#fi-a') || 0, obs: v('#fi-o') }); fechar(); };
   });
 }
 
