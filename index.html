@@ -253,17 +253,43 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .lbl-v { color: #b18ee6; }
 .dado-btn { margin-left: auto; background: none; border: none; color: var(--lua); padding: 2px; }
 .dado-btn:hover { color: var(--ouro); }
-.chamada { position: fixed; z-index: 40; right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); width: min(320px, calc(100vw - 32px));
-  background: var(--painel); border: 1px solid var(--linha-2); box-shadow: 0 12px 40px rgba(0,0,0,.5); display: grid; }
-.chamada .cab-ch { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--linha); }
-.chamada .pessoas { display: grid; gap: 2px; padding: 8px; max-height: 260px; overflow: auto; }
-.chamada .pessoa { display: flex; align-items: center; gap: 10px; padding: 6px; }
-.chamada .pessoa .ava { width: 30px; height: 30px; font-size: 11px; box-shadow: 0 0 0 2px transparent; transition: box-shadow .12s; }
-.chamada .pessoa.falando .ava { box-shadow: 0 0 0 2px var(--fole), 0 0 12px var(--fole); }
-.chamada .pessoa .st { margin-left: auto; font-size: 11px; color: var(--lua-faint); }
-.chamada .acoes-ch { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--linha); }
-.chamada .acoes-ch .btn { flex: 1; }
-.chamada.min .pessoas, .chamada.min .acoes-ch { display: none; }
+.voz-barra { position: fixed; z-index: 40; left: max(16px, env(safe-area-inset-left, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); width: min(300px, calc(100vw - 32px));
+  background: #0e1118; border: 1px solid var(--linha-2); box-shadow: 0 12px 40px rgba(0,0,0,.5); padding: 10px 12px; display: flex; gap: 8px; align-items: center; }
+.voz-barra > div:not(.voz-destaque) { flex: 1; }
+.voz-destaque { width: 52px; height: 52px; flex-shrink: 0; border-radius: 50%; background-size: cover; background-position: center; display: grid; place-items: center; font: 700 16px var(--f-body); color: #0b0d14; box-shadow: 0 0 0 2px var(--cor); transition: box-shadow .12s; }
+.voz-destaque.falando { box-shadow: 0 0 0 3px var(--cor), 0 0 18px var(--cor); }
+.voz-mini { display: flex; gap: 4px; margin-top: 5px; flex-wrap: wrap; }
+.voz-mini .ava { width: 22px; height: 22px; font-size: 9px; box-shadow: 0 0 0 1px transparent; }
+.voz-mini .ava.falando { box-shadow: 0 0 0 2px var(--cor), 0 0 8px var(--cor); }
+.voz-ok { color: var(--fole); font-weight: 700; font-size: 13.5px; }
+.vbtn.ativo { color: var(--sangue-hi); border-color: var(--sangue); }
+.vbtn.sair:hover { color: #fff; background: #a52a33; }
+.vbtn:not(.ativo) svg .risco, .pessoa svg .risco { display: none; }
+.vbtn.ativo svg .risco, .tile-mudo svg .risco, .pessoa .faint svg .risco { display: inline; }
+.call { display: grid; grid-template-columns: 1fr 260px; gap: 0; background: #07080d; border: 1px solid var(--linha); min-height: 520px; }
+@media (max-width: 860px) { .call { grid-template-columns: 1fr; } }
+.call-main { display: grid; grid-template-rows: auto 1fr auto; gap: 12px; padding: 14px; min-width: 0; }
+.call-topo { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; }
+.tiles { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); align-content: center; }
+.tiles.n1 { grid-template-columns: minmax(0, 640px); justify-content: center; }
+.tiles.n2 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.tile { position: relative; aspect-ratio: 16 / 10; background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--cor) 22%, #11141e), #0c0e15 72%); border: 2px solid transparent; border-radius: 6px; display: grid; place-items: center; overflow: hidden; transition: border-color .12s, box-shadow .12s; }
+.tile.falando { border-color: var(--cor); box-shadow: 0 0 0 1px var(--cor), 0 0 24px color-mix(in srgb, var(--cor) 55%, transparent); }
+.tile-ava { width: clamp(64px, 30%, 128px); aspect-ratio: 1; border-radius: 50%; background-size: cover; background-position: center; display: grid; place-items: center; font: 700 28px var(--f-body); color: #0b0d14; box-shadow: 0 0 0 3px var(--cor, transparent); }
+.tile-nome { position: absolute; left: 10px; bottom: 10px; background: rgba(5,6,10,.72); padding: 4px 9px; border-radius: 4px; display: grid; max-width: calc(100% - 60px); }
+.tile-nome b { font: 400 16px var(--f-disp); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile-nome span { font-size: 11px; color: var(--lua-dim); }
+.tile-mudo { position: absolute; right: 10px; bottom: 10px; background: rgba(5,6,10,.8); color: var(--sangue-hi); padding: 5px; border-radius: 4px; display: grid; }
+.tile-estado { position: absolute; top: 10px; right: 10px; font-size: 11px; color: var(--lua-dim); background: rgba(5,6,10,.7); padding: 2px 7px; border-radius: 4px; }
+.call-vazia { display: grid; place-items: center; align-content: center; gap: 14px; color: var(--lua-dim); font-family: var(--f-ital); font-style: italic; font-size: 18px; }
+.call-vazia .tile-ava { width: 110px; opacity: .55; }
+.call-bar { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid var(--linha); }
+.call-side { border-left: 1px solid var(--linha); background: var(--painel); padding: 14px; display: grid; gap: 4px; align-content: start; }
+@media (max-width: 860px) { .call-side { border-left: none; border-top: 1px solid var(--linha); } }
+.call-side .pessoa { display: flex; align-items: center; gap: 10px; padding: 6px; border-radius: 4px; }
+.call-side .pessoa .ava { width: 32px; height: 32px; font-size: 11px; box-shadow: 0 0 0 2px transparent; transition: box-shadow .12s; flex-shrink: 0; }
+.call-side .pessoa.falando .ava { box-shadow: 0 0 0 2px var(--cor), 0 0 10px var(--cor); }
+.call-side .pessoa.fora { opacity: .55; }
 .ponto-vivo { width: 8px; height: 8px; border-radius: 50%; background: var(--fole); display: inline-block; margin-right: 6px; }
 /* home */
 .hero { display: grid; grid-template-columns: 1.3fr 1fr; gap: 28px; align-items: center; padding-block: 18px; }
@@ -479,6 +505,7 @@ function seletor(titulo, itens, render, aoEscolher, extra = '') {
 const ROTAS = {};
 async function rotear() {
   limparSubs(); $('#camada').innerHTML = '';
+  if (typeof fecharSala === 'function' && !CH.dentro) { fecharSala(); CH.ctxLig = null; }
   const h = location.hash.slice(1) || 'inicio';
   const [base, ...resto] = h.split('-'); const arg = resto.join('-');
   const sec = { entrar: 'entrar', agente: 'agentes', 'novo': 'agentes', campanha: 'campanhas', escudo: 'campanhas', ameaca: 'ameacas' }[base] || base;
@@ -1262,7 +1289,7 @@ const vitalMini = (cls, a, m) => `<div class="${cls}"><div class="trilho fino"><
 ROTAS.campanha = async id => {
   if (!db) { app.innerHTML = semBanco(); return; }
   await carregarPart();
-  let aba = 'agentes';
+  let aba = ABA_INICIAL || 'agentes'; ABA_INICIAL = null;
   const st = ouvirCampanha(id, (s, tipo) => { if (tipo === 'rolagens' && aba !== 'rolagens') return; if (!document.activeElement?.matches?.('#dados-expr')) render(); });
   async function render() {
     if (st.camp === null) { app.innerHTML = '<div class="vazio">Abrindo a campanha…</div>'; return; }
@@ -1279,10 +1306,10 @@ ROTAS.campanha = async id => {
       : '<div class="vazio">Nenhum combate em andamento.</div>';
     if (aba === 'pistas') corpo = `<div class="lista">${st.pistas.map(p => `<div class="item"><span class="nm">${esc(p.titulo)}</span><p class="dim">${nl(p.texto)}</p>${p.imagem ? `<img src="${esc(p.imagem)}" alt="" style="max-width:420px">` : ''}</div>`).join('') || '<div class="vazio">Nenhuma pista revelada.</div>'}</div>`;
     if (aba === 'relatorios') corpo = `<div class="lista">${st.relatorios.slice().reverse().map(r => `<div class="item"><div class="cab"><span class="nm">${esc(r.titulo)}</span><span class="faint">${dataBR(r.t)}</span></div><p class="dim">${nl(r.texto)}</p></div>`).join('') || '<div class="vazio">Nenhum relatório de missão ainda.</div>'}</div>`;
+    if (aba === 'ligacao') corpo = membro ? '<div id="ligacao"></div>' : '<div class="vazio">Entre na campanha para usar a ligação.</div>';
     if (aba === 'rolagens') corpo = `<div class="caixa" style="display:grid; gap:8px"><span class="rotulo">Rolar dados na mesa</span><div style="display:flex; gap:8px"><input type="text" id="dados-expr" placeholder="2d6+3 ou 3d20m+4 (m = fica o maior)"><button class="btn" id="dados-ok">Rolar</button></div></div>
       <div class="caixa" style="padding:0">${st.rolagens.map(rolHtml).join('') || '<div class="vazio">Nenhuma rolagem ainda.</div>'}</div>`;
     app.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
-        ${membro ? `<span id="slot-chamada">${botaoChamada(id, C.nome)}</span>` : ''}
         ${mestre ? `<button class="btn sec" id="editar-c">Editar campanha</button><a class="btn ouro" href="#escudo-${esc(id)}" style="text-decoration:none">Escudo do mestre</a>` : ''}
         ${membro ? '<button class="btn sec" id="add-ag">Adicionar agente</button><button class="btn sec" id="convidar">Convidar jogadores</button>' : '<button class="btn" id="entrar-c">Entrar nesta campanha</button>'}
         ${membro && !mestre ? '<button class="btn sec" id="sair">Sair da campanha</button>' : ''}</div>
@@ -1290,8 +1317,10 @@ ROTAS.campanha = async id => {
         ${C.capa ? `<img src="${esc(C.capa)}" alt="" style="border:1px solid var(--linha-2); width:100%">` : ''}
         <div style="display:grid; gap:10px"><span class="rotulo">Mestre: ${esc(nomes[C.mestre])}</span><h1>${esc(C.nome)}</h1>${C.descricao ? `<p class="dim" style="font-size:17px; max-width:60ch">${nl(C.descricao)}</p>` : ''}</div>
       </section>
-      <div class="abas">${[['agentes', 'Agentes'], ['jogadores', 'Jogadores'], ['combate', st.combate?.ativo ? 'Combate ●' : 'Combate'], ['pistas', 'Pistas'], ['relatorios', 'Relatórios'], ['rolagens', 'Rolagens']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>${corpo}`;
+      <div class="abas">${[['agentes', 'Agentes'], ['jogadores', 'Jogadores'], ['combate', st.combate?.ativo ? 'Combate ●' : 'Combate'], ['pistas', 'Pistas'], ['relatorios', 'Relatórios'], ['rolagens', 'Rolagens'], ['ligacao', Object.keys(CH.sala === id ? CH.presenca : {}).length ? `Ligação ● ${Object.keys(CH.presenca).length}` : 'Ligação']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>${corpo}`;
     $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
+    atualizarPersona(st);
+    if (aba === 'ligacao' && membro) montarLigacao(id, C, st);
     $('#entrar-c')?.addEventListener('click', () => entrarCampanha(id));
     $('#editar-c')?.addEventListener('click', () => editarCampanha(id, C));
     $('#convidar')?.addEventListener('click', () => abrirModal('Convidar jogadores', `<p>Mande o código abaixo para os jogadores. Eles entram no site com a conta deles e vão em Campanhas, Entrar com código.</p>
@@ -1339,7 +1368,7 @@ ROTAS.escudo = async id => {
   };
   let publico = false;
   app.className = 'pagina';
-  app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Escudo do mestre</span><h1>${esc(camp.data().nome)}</h1></div><div style="display:flex; gap:8px; flex-wrap:wrap"><span id="slot-chamada">${botaoChamada(id, camp.data().nome)}</span><a class="btn sec" href="#campanha-${esc(id)}" style="text-decoration:none">Ver como jogador</a></div></div>
+  app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Escudo do mestre</span><h1>${esc(camp.data().nome)}</h1></div><div style="display:flex; gap:8px; flex-wrap:wrap"><a class="btn sec" href="#campanha-${esc(id)}" style="text-decoration:none">Ver como jogador</a></div></div>
     <div class="escudo" id="escudo"><aside class="feed" id="feed"></aside><div style="display:grid; gap:16px; min-width:0"><div class="abas" id="abas-e"></div><div id="corpo-e"></div></div></div>`;
   function desenharFeed() {
     const todas = [...(st?.rolagens || []), ...(E.ocultas || [])].sort((a, b) => b.t - a.t).slice(0, 40);
@@ -1348,7 +1377,7 @@ ROTAS.escudo = async id => {
   st = ouvirCampanha(id, (s, tipo) => { desenharFeed(); if (tipo === 'rolagens') return; if (!document.activeElement?.closest?.('#corpo-e input, #corpo-e textarea, #corpo-e select')) render(); });
 
   function render() {
-    const ABAS = [['agentes', 'Agentes'], ['combate', 'Combate'], ['investigacao', 'Investigação'], ['relatorios', 'Relatórios'], ['dados', 'Dados'], ['anotacoes', 'Anotações']];
+    const ABAS = [['agentes', 'Agentes'], ['combate', 'Combate'], ['investigacao', 'Investigação'], ['relatorios', 'Relatórios'], ['dados', 'Dados'], ['anotacoes', 'Anotações'], ['ligacao', 'Ligação']];
     $('#abas-e').innerHTML = ABAS.map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('');
     $$('#abas-e [data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
     const fichas = Object.values(st.fichas).filter(Boolean);
@@ -1431,6 +1460,7 @@ ROTAS.escudo = async id => {
       const go = () => { const ex = $('#m-expr').value; const r = rolar(ex); if (!r) return toast('Formato inválido.'); $('#m-res').innerHTML = `${r.detalhe} = <b>${r.total}</b>`; rolarMestre(ex, r, !publico); };
       $('#m-rolar').onclick = go; $('#m-expr').onkeydown = e => { if (e.key === 'Enter') go(); };
     }
+    if (aba === 'ligacao') { corpo.innerHTML = '<div id="ligacao"></div>'; montarLigacao(id, camp.data(), st); }
     if (aba === 'anotacoes') {
       corpo.innerHTML = [['geral', 'Geral', 'Informações gerais ao longo da sessão…'], ['futuras', 'Sessões futuras', 'Notas de possíveis eventos futuros…'], ['anteriores', 'Sessões anteriores', 'O que já aconteceu…']].map(([k, l, ph]) => `<div class="campo" style="margin-bottom:14px"><label class="rotulo" for="an-${k}">${l}</label><textarea id="an-${k}" data-an="${k}" style="min-height:160px" placeholder="${ph}">${esc(E.anotacoes[k])}</textarea></div>`).join('') + '<p class="faint" style="font-size:13px">Salvo automaticamente. Só você lê.</p>';
       $$('[data-an]').forEach(t => t.oninput = () => { E.anotacoes[t.dataset.an] = t.value; salvarE(); });
@@ -1440,30 +1470,66 @@ ROTAS.escudo = async id => {
 };
 
 /* =================================================================
-   CHAMADA DE VOZ (WebRTC, sinalização pelo tempo real do Supabase)
+   LIGAÇÃO (voz por WebRTC, sinalização e presença pelo tempo real do Supabase)
    ================================================================= */
-const CH = { camp: null, nomeCamp: '', canal: null, local: null, pares: new Map(), mudo: false, presenca: {}, ctx: null, medidores: new Map(), timer: null, min: false };
+const CH = { sala: null, nomeSala: '', canal: null, dentro: false, local: null, pares: new Map(), mudo: false, presenca: {}, ctx: null, medidores: new Map(), timer: null, persona: null, ctxLig: null };
 const ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }];
-async function entrarChamada(campId, nomeCamp) {
-  if (!sb || !ME) return toast('Entre na sua conta para usar a chamada.');
-  if (CH.camp === campId) return;
-  if (CH.camp) await sairChamada();
+let ABA_INICIAL = null;
+const MIC_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/><path d="M3 3l18 18" class="risco"/></svg>';
+
+function abrirSala(campId, nome) {
+  if (!sb || !ME) return false;
+  if (CH.sala === campId) return true;
+  if (CH.dentro) return false;           // já está em outra ligação
+  fecharSala();
+  CH.sala = campId; CH.nomeSala = nome;
+  const canal = sb.channel('ligacao-' + campId, { config: { presence: { key: ME }, broadcast: { self: false } } });
+  CH.canal = canal;
+  canal.on('presence', { event: 'sync' }, () => {
+    CH.presenca = Object.fromEntries(Object.entries(canal.presenceState()).map(([k, v]) => [k, v[v.length - 1]]));
+    if (CH.dentro) conferirPares();
+    desenharVoz();
+  });
+  canal.on('broadcast', { event: 'sinal' }, ({ payload }) => { if (CH.dentro && payload?.para === ME) tratarSinal(payload).catch(e => console.warn('sinal', e)); });
+  canal.subscribe(st => { if (st === 'SUBSCRIBED' && CH.dentro) rastrear(); });
+  return true;
+}
+function fecharSala() {
+  if (CH.dentro || !CH.canal) return;
+  try { sb.removeChannel(CH.canal); } catch (e) {}
+  Object.assign(CH, { sala: null, canal: null, presenca: {} });
+}
+function rastrear() { CH.canal?.track({ ...(CH.persona || { nome: PERFIL?.nome || 'Agente' }), jogador: PERFIL?.nome || '', mudo: CH.mudo, t: Date.now() }).catch?.(() => {}); }
+
+async function entrarLigacao(campId, nome) {
+  if (!sb || !ME) return toast('Entre na sua conta para usar a ligação.');
+  if (CH.dentro && CH.sala === campId) return;
+  if (CH.dentro) await sairLigacao(true);
   if (!navigator.mediaDevices?.getUserMedia) return toast('Este navegador não deixa usar o microfone aqui.');
   try { CH.local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); }
-  catch (e) { return toast('Sem acesso ao microfone. Libere a permissão do navegador e tente de novo.'); }
-  CH.camp = campId; CH.nomeCamp = nomeCamp; CH.mudo = false;
+  catch (e) { return toast('Sem acesso ao microfone. Libere a permissão no navegador e tente de novo.'); }
+  abrirSala(campId, nome);
+  CH.dentro = true; CH.mudo = false;
   try { CH.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
   medir(ME, CH.local);
-  const canal = sb.channel('chamada-' + campId, { config: { presence: { key: ME }, broadcast: { self: false } } });
-  CH.canal = canal;
-  canal.on('presence', { event: 'sync' }, () => { CH.presenca = Object.fromEntries(Object.entries(canal.presenceState()).map(([k, v]) => [k, v[v.length - 1]])); conferirPares(); painelChamada(); });
-  canal.on('broadcast', { event: 'sinal' }, ({ payload }) => { if (payload?.para === ME) tratarSinal(payload).catch(e => console.warn('sinal', e)); });
-  canal.subscribe(async st => { if (st === 'SUBSCRIBED') await canal.track({ nome: PERFIL?.nome || 'Agente', mudo: false, t: Date.now() }); });
+  rastrear();
   CH.timer = setInterval(() => { conferirPares(); atualizarFala(); }, 150);
-  painelChamada();
+  desenharVoz();
+}
+async function sairLigacao(manterSala) {
+  clearInterval(CH.timer); CH.timer = null;
+  for (const id of [...CH.pares.keys()]) fecharPar(id);
+  try { await CH.canal?.untrack(); } catch (e) {}
+  CH.local?.getTracks().forEach(t => t.stop()); CH.local = null;
+  try { await CH.ctx?.close(); } catch (e) {} CH.ctx = null; CH.medidores.clear();
+  CH.dentro = false;
+  const naTela = document.getElementById('ligacao')?.dataset.camp === CH.sala;
+  if (!manterSala && !naTela) fecharSala();
+  desenharVoz();
 }
 function enviarSinal(para, dados) { CH.canal?.send({ type: 'broadcast', event: 'sinal', payload: { ...dados, de: ME, para } }); }
 function conferirPares() {
+  if (!CH.dentro) return;
   const ids = Object.keys(CH.presenca).filter(i => i !== ME);
   for (const id of ids) if (!CH.pares.has(id) && ME < id) criarPar(id, true);
   for (const [id, p] of CH.pares) if (!ids.includes(id) || ['failed', 'closed'].includes(p.pc.connectionState)) fecharPar(id);
@@ -1475,20 +1541,19 @@ function criarPar(id, iniciador) {
   CH.pares.set(id, par);
   CH.local.getTracks().forEach(t => pc.addTrack(t, CH.local));
   pc.onicecandidate = e => { if (e.candidate) enviarSinal(id, { tipo: 'ice', cand: e.candidate.toJSON() }); };
-  pc.ontrack = e => { const st = e.streams[0]; par.audio.srcObject = st; par.audio.play().catch(() => {}); medir(id, st); };
-  pc.onconnectionstatechange = () => painelChamada();
+  pc.ontrack = e => { const s = e.streams[0]; par.audio.srcObject = s; par.audio.play().catch(() => {}); medir(id, s); };
+  pc.onconnectionstatechange = () => desenharVoz();
   if (iniciador) (async () => { const of = await pc.createOffer(); await pc.setLocalDescription(of); enviarSinal(id, { tipo: 'offer', sdp: pc.localDescription.toJSON() }); })().catch(e => console.warn(e));
   return par;
 }
 function fecharPar(id) { const p = CH.pares.get(id); if (!p) return; try { p.pc.close(); } catch (e) {} p.audio.srcObject = null; CH.pares.delete(id); CH.medidores.delete(id); }
 async function tratarSinal(m) {
-  if (!CH.camp) return;
   if (m.tipo === 'offer') {
     if (CH.pares.has(m.de)) fecharPar(m.de);
     const par = criarPar(m.de, false);
     await par.pc.setRemoteDescription(m.sdp); par.remoto = true;
     for (const c of par.pendentes) await par.pc.addIceCandidate(c).catch(() => {});
-    const resp = await par.pc.createAnswer(); await par.pc.setLocalDescription(resp);
+    const r = await par.pc.createAnswer(); await par.pc.setLocalDescription(r);
     enviarSinal(m.de, { tipo: 'answer', sdp: par.pc.localDescription.toJSON() });
   } else if (m.tipo === 'answer') {
     const par = CH.pares.get(m.de); if (!par || par.pc.signalingState !== 'have-local-offer') return;
@@ -1503,54 +1568,138 @@ function medir(id, stream) {
   if (!CH.ctx) return;
   try { const src = CH.ctx.createMediaStreamSource(stream); const an = CH.ctx.createAnalyser(); an.fftSize = 512; src.connect(an); CH.medidores.set(id, { an, buf: new Uint8Array(an.fftSize) }); } catch (e) {}
 }
+let ultimoFalante = null;
 function atualizarFala() {
   if (CH.ctx?.state === 'suspended') CH.ctx.resume().catch(() => {});
+  let maior = 0, falante = null;
   for (const [id, m] of CH.medidores) {
     m.an.getByteTimeDomainData(m.buf); let s = 0; for (const v of m.buf) { const x = (v - 128) / 128; s += x * x; }
-    const falando = Math.sqrt(s / m.buf.length) > 0.04 && !(id === ME && CH.mudo);
-    document.querySelector(`.chamada .pessoa[data-uid="${CSS.escape(id)}"]`)?.classList.toggle('falando', falando);
+    const rms = Math.sqrt(s / m.buf.length);
+    const falando = rms > 0.04 && !(id === ME && CH.mudo) && !CH.presenca[id]?.mudo;
+    if (falando && rms > maior) { maior = rms; falante = id; }
+    document.querySelectorAll(`[data-voz="${CSS.escape(id)}"]`).forEach(el => el.classList.toggle('falando', falando));
   }
+  // painel flutuante: mostra quem está falando (ou o seu personagem quando ninguém fala)
+  const ava = document.getElementById('voz-ava'); if (!ava) return;
+  const alvo = falante || ultimoFalanteValido() || ME;
+  if (falante) { ultimoFalante = falante; ultimoFalanteEm = Date.now(); }
+  if (ava.dataset.vozFixo !== alvo) {
+    const p = alvo === ME ? (CH.persona || { nome: PERFIL?.nome || 'Você', cor: corDe(ME) }) : (CH.presenca[alvo] || { nome: '?', cor: corDe(alvo) });
+    const cor = p.cor || corDe(alvo);
+    ava.dataset.vozFixo = alvo; ava.style.setProperty('--cor', cor);
+    ava.style.backgroundImage = p.foto ? `url('${p.foto.replace(/'/g, '%27')}')` : 'none'; ava.style.backgroundColor = p.foto ? '' : cor;
+    ava.textContent = p.foto ? '' : iniciais(p.nome);
+    const q = document.getElementById('voz-quem'); if (q) q.textContent = alvo === ME && !falante ? 'Voz conectada' : p.nome;
+  }
+  ava.classList.toggle('falando', !!falante);
 }
-function alternarMudo() {
-  CH.mudo = !CH.mudo; CH.local?.getAudioTracks().forEach(t => t.enabled = !CH.mudo);
-  CH.canal?.track({ nome: PERFIL?.nome || 'Agente', mudo: CH.mudo, t: Date.now() }); painelChamada();
+let ultimoFalanteEm = 0;
+function ultimoFalanteValido() { return ultimoFalante && Date.now() - ultimoFalanteEm < 1500 && (CH.presenca[ultimoFalante] || ultimoFalante === ME) ? ultimoFalante : null; }
+function alternarMudo() { CH.mudo = !CH.mudo; CH.local?.getAudioTracks().forEach(t => t.enabled = !CH.mudo); rastrear(); desenharVoz(); }
+
+/* persona: quem você interpreta nesta campanha */
+function calcularPersona(st) {
+  const meu = st?.membros?.find(m => m.uid === ME);
+  const p = meu?.persona;
+  if (!p) return { nome: PERFIL?.nome || 'Agente', foto: '', cor: corDe(ME), personagem: false };
+  const f = p.ficha ? st.fichas?.[p.ficha] : null;
+  return { nome: f?.nome || p.nome || PERFIL?.nome || 'Agente', foto: f?.foto || p.foto || '', cor: p.cor || corDe(ME), personagem: !!(p.ficha || p.nome) };
 }
-async function sairChamada() {
-  clearInterval(CH.timer); CH.timer = null;
-  for (const id of [...CH.pares.keys()]) fecharPar(id);
-  try { await CH.canal?.untrack(); await sb.removeChannel(CH.canal); } catch (e) {}
-  CH.local?.getTracks().forEach(t => t.stop());
-  try { await CH.ctx?.close(); } catch (e) {}
-  Object.assign(CH, { camp: null, canal: null, local: null, presenca: {}, ctx: null }); CH.medidores.clear();
-  painelChamada(); if (typeof rotearLeve === 'function') rotearLeve();
+function atualizarPersona(st) {
+  const nova = calcularPersona(st);
+  if (JSON.stringify(nova) !== JSON.stringify(CH.persona)) { CH.persona = nova; if (CH.dentro) rastrear(); }
 }
-function painelChamada() {
-  let el = document.getElementById('chamada');
-  if (!CH.camp) { el?.remove(); return; }
-  if (!el) { el = document.createElement('section'); el.id = 'chamada'; el.className = 'chamada'; el.setAttribute('aria-label', 'Chamada de voz'); document.body.appendChild(el); }
-  el.classList.toggle('min', CH.min);
-  const pessoas = Object.entries(CH.presenca);
-  if (!pessoas.some(([k]) => k === ME)) pessoas.unshift([ME, { nome: PERFIL?.nome || 'Você', mudo: CH.mudo }]);
-  const estado = id => { if (id === ME) return CH.mudo ? 'Mudo' : 'Você'; const p = CH.pares.get(id); const c = p?.pc.connectionState;
-    return CH.presenca[id]?.mudo ? 'Mudo' : c === 'connected' ? '' : c === 'failed' ? 'Sem conexão' : 'Conectando…'; };
-  el.innerHTML = `<div class="cab-ch"><b style="font:400 17px var(--f-disp); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap"><span class="ponto-vivo"></span>${esc(CH.nomeCamp)}</b>
-      <span style="display:flex; gap:2px"><span class="faint mono" style="font-size:12px; align-self:center">${pessoas.length}</span><button class="btn-x" id="ch-min" aria-label="${CH.min ? 'Expandir' : 'Minimizar'}">${CH.min ? '▴' : '▾'}</button></span></div>
-    <div class="pessoas">${pessoas.map(([id, p]) => `<div class="pessoa" data-uid="${esc(id)}"><span class="ava" style="background:${corDe(id)}">${esc(iniciais(p.nome))}</span><span>${esc(p.nome)}</span><span class="st">${esc(estado(id))}</span></div>`).join('')}</div>
-    <div class="acoes-ch"><button class="btn sec" id="ch-mudo">${CH.mudo ? 'Ativar microfone' : 'Silenciar'}</button><button class="btn" id="ch-sair">Sair da chamada</button></div>`;
-  el.querySelector('#ch-min').onclick = () => { CH.min = !CH.min; painelChamada(); };
-  el.querySelector('#ch-mudo').onclick = alternarMudo;
-  el.querySelector('#ch-sair').onclick = sairChamada;
+function interpretarPersonagem(campId, C, st) {
+  const meus = Object.values(st.fichas || {}).filter(f => f && f.dono === ME);
+  const atual = st.membros?.find(m => m.uid === ME)?.persona || {};
+  const mestre = C.mestre === ME;
+  abrirModal('Interpretar personagem', `<p class="dim">Na ligação, todo mundo vê o nome, a foto e a cor de quem você interpreta.</p>
+    <div class="campo"><label class="rotulo" for="ip-f">Personagem</label><select id="ip-f">
+      <option value="">${mestre ? 'Personalizado (mestre, NPC, narrador)' : 'Eu mesmo, sem personagem'}</option>
+      ${meus.map(f => `<option value="${esc(f.id)}" ${atual.ficha === f.id ? 'selected' : ''}>${esc(f.nome)}</option>`).join('')}</select></div>
+    <div id="ip-custom" class="grade-campos"><div class="campo"><label class="rotulo" for="ip-n">Nome exibido</label><input type="text" id="ip-n" value="${esc(atual.nome || '')}" placeholder="${mestre ? 'Narrador' : esc(PERFIL?.nome || '')}"></div>
+      <div class="campo"><label class="rotulo" for="ip-img">Imagem</label><input type="file" id="ip-img" accept="image/*"></div></div>
+    <div class="campo"><label class="rotulo" for="ip-c">Cor do ícone</label><input type="color" id="ip-c" value="${esc(atual.cor || '#b4333b')}" style="width:80px; height:40px; padding:2px"></div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn" id="ip-ok">Interpretar</button>${atual.ficha || atual.nome ? '<button class="btn sec" id="ip-limpar">Voltar a ser eu</button>' : ''}</div>`, (m, fechar) => {
+    const sel = m.querySelector('#ip-f'), custom = m.querySelector('#ip-custom');
+    const mostrar = () => { custom.hidden = !!sel.value; }; sel.onchange = mostrar; mostrar();
+    let foto = atual.foto || '';
+    m.querySelector('#ip-img').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) { foto = u; toast('Imagem enviada.'); } };
+    const gravar = async persona => { try { await db.doc(`campanhas/${campId}/membros/${ME}`).update({ persona }); fechar(); toast('Personagem atualizado na ligação.'); } catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); } };
+    m.querySelector('#ip-ok').onclick = () => gravar(sel.value ? { ficha: sel.value, cor: m.querySelector('#ip-c').value } : { ficha: null, nome: m.querySelector('#ip-n').value.trim(), foto, cor: m.querySelector('#ip-c').value });
+    m.querySelector('#ip-limpar')?.addEventListener('click', () => gravar(null));
+  });
 }
-addEventListener('pagehide', () => { if (CH.camp) { try { CH.canal?.untrack(); } catch (e) {} } });
-function botaoChamada(id, nome) {
-  return CH.camp === id ? `<button class="btn sec" data-sair-chamada>Sair da chamada</button>` : `<button class="btn" data-chamada="${esc(id)}" data-nome-camp="${esc(nome)}">Entrar na chamada</button>`;
+
+/* tela da ligação (aba) */
+function montarLigacao(campId, C, st) {
+  const el = document.getElementById('ligacao'); if (!el) return;
+  el.dataset.camp = campId;
+  CH.ctxLig = { campId, C, st };
+  if (CH.sala !== campId || !CH.dentro) atualizarPersona(st); else atualizarPersona(st);
+  if (!CH.dentro || CH.sala === campId) abrirSala(campId, C.nome);
+  desenharVoz();
 }
-document.addEventListener('click', e => {
-  const b = e.target.closest('[data-chamada]'); if (b) { entrarChamada(b.dataset.chamada, b.dataset.nomeCamp).then(() => rotearLeve()); return; }
-  if (e.target.closest('[data-sair-chamada]')) sairChamada();
-});
-function rotearLeve() { const slot = document.getElementById('slot-chamada'); if (!slot) return; const m = /^#(?:campanha|escudo)-(.+)$/.exec(location.hash); if (!m) return;
-  const nome = slot.querySelector('[data-nome-camp]')?.dataset.nomeCamp || CH.nomeCamp || ''; slot.innerHTML = botaoChamada(m[1], nome); }
+function tileVoz(id, p, conectando) {
+  const cor = p.cor || corDe(id);
+  return `<div class="tile" data-voz="${esc(id)}" style="--cor:${esc(cor)}">
+    <div class="tile-ava" style="${p.foto ? `background-image:url('${esc(p.foto)}')` : `background:${esc(cor)}`}">${p.foto ? '' : esc(iniciais(p.nome))}</div>
+    <div class="tile-nome"><b>${esc(p.nome)}</b>${p.jogador && p.jogador !== p.nome ? `<span>${esc(p.jogador)}</span>` : ''}</div>
+    ${p.mudo ? `<span class="tile-mudo" title="Microfone desligado">${MIC_SVG}</span>` : ''}${conectando ? '<span class="tile-estado">Conectando…</span>' : ''}</div>`;
+}
+function desenharVoz() {
+  // barra compacta quando a ligação está ativa e você está fora da aba
+  const naAba = document.getElementById('ligacao')?.dataset.camp === CH.sala && CH.sala;
+  let barra = document.getElementById('voz-barra');
+  if (CH.dentro && !naAba) {
+    if (!barra) { barra = document.createElement('section'); barra.id = 'voz-barra'; barra.className = 'voz-barra'; barra.setAttribute('aria-label', 'Ligação em andamento'); document.body.appendChild(barra); }
+    const eu = CH.persona || { nome: PERFIL?.nome || 'Você', cor: corDe(ME), foto: '' };
+    const gente = Object.entries(CH.presenca);
+    barra.innerHTML = `<div class="voz-destaque" id="voz-ava" data-voz-fixo="${esc(ME)}" style="--cor:${esc(eu.cor)}; ${eu.foto ? `background-image:url('${esc(eu.foto)}')` : `background-color:${esc(eu.cor)}`}">${eu.foto ? '' : esc(iniciais(eu.nome))}</div>
+      <div style="min-width:0"><div class="voz-ok"><span class="ponto-vivo"></span><span id="voz-quem">Voz conectada</span></div>
+      <div class="voz-mini">${gente.map(([id, p]) => `<span class="ava" data-voz="${esc(id)}" title="${esc(p.nome)}" style="--cor:${esc(p.cor || corDe(id))}; ${p.foto ? `background:center/cover url('${esc(p.foto)}')` : `background:${esc(p.cor || corDe(id))}`}">${p.foto ? '' : esc(iniciais(p.nome))}</span>`).join('')}</div><a href="#campanha-${esc(CH.sala)}" id="voz-abrir" class="faint" style="font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block">${esc(CH.nomeSala)} · abrir ligação</a></div>
+      <button class="vbtn ${CH.mudo ? 'ativo' : ''}" id="voz-mudo" aria-label="${CH.mudo ? 'Ligar microfone' : 'Silenciar'}">${MIC_SVG}</button><button class="vbtn sair" id="voz-sair" aria-label="Sair da ligação">✕</button>`;
+    barra.querySelector('#voz-abrir').onclick = () => { ABA_INICIAL = 'ligacao'; };
+    barra.querySelector('#voz-mudo').onclick = alternarMudo;
+    barra.querySelector('#voz-sair').onclick = () => sairLigacao();
+  } else barra?.remove();
+
+  const el = document.getElementById('ligacao'); if (!el || !CH.ctxLig) return;
+  const { campId, C, st } = CH.ctxLig;
+  if (CH.dentro && CH.sala !== campId) {
+    el.innerHTML = `<div class="vazio">Você está na ligação de <b>${esc(CH.nomeSala)}</b>.<br><button class="btn" id="trocar" style="margin-top:12px">Sair dela e entrar nesta</button></div>`;
+    el.querySelector('#trocar').onclick = async () => { await sairLigacao(); abrirSala(campId, C.nome); entrarLigacao(campId, C.nome); };
+    return;
+  }
+  const naLig = Object.entries(CH.presenca);
+  const membros = [...new Set([C.mestre, ...(st.membros || []).map(m => m.uid)])];
+  const fora = membros.filter(u => !CH.presenca[u]);
+  const eu = CH.persona || calcularPersona(st);
+  el.innerHTML = `<div class="call">
+    <div class="call-main">
+      <div class="call-topo"><span class="rotulo"><span class="ponto-vivo" style="${naLig.length ? '' : 'background:var(--lua-faint)'}"></span>Ligação · ${esc(C.nome)}</span>
+        <span class="dim" style="font-size:13px">Você aparece como <b style="color:${esc(eu.cor)}">${esc(eu.nome)}</b></span></div>
+      ${naLig.length ? `<div class="tiles n${Math.min(naLig.length, 9)}">${naLig.map(([id, p]) => tileVoz(id, p, CH.dentro && id !== ME && CH.pares.get(id)?.pc.connectionState !== 'connected')).join('')}</div>`
+        : `<div class="call-vazia"><div class="tile-ava" style="${eu.foto ? `background-image:url('${esc(eu.foto)}')` : `background:${esc(eu.cor)}`}; --cor:${esc(eu.cor)}">${eu.foto ? '' : esc(iniciais(eu.nome))}</div><p>Ninguém na ligação ainda.</p></div>`}
+      <div class="call-bar">
+        <button class="btn sec" id="lg-persona">Interpretar personagem</button>
+        ${CH.dentro ? `<button class="btn sec ${CH.mudo ? 'ouro' : ''}" id="lg-mudo">${CH.mudo ? 'Ligar microfone' : 'Silenciar'}</button><button class="btn" id="lg-sair" style="background:#a52a33">Sair da ligação</button>`
+          : `<button class="btn" id="lg-entrar" style="background:var(--fole); border-color:var(--fole); color:#0b0d14">Entrar na ligação</button>`}
+      </div>
+    </div>
+    <aside class="call-side">
+      <div class="rotulo">Na ligação · ${naLig.length}</div>
+      ${naLig.map(([id, p]) => `<div class="pessoa" data-voz="${esc(id)}" style="--cor:${esc(p.cor || corDe(id))}"><span class="ava" style="${p.foto ? `background:center/cover url('${esc(p.foto)}')` : `background:${esc(p.cor || corDe(id))}`}">${p.foto ? '' : esc(iniciais(p.nome))}</span><span style="min-width:0"><b style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(p.nome)}</b>${p.jogador && p.jogador !== p.nome ? `<span class="faint" style="font-size:11.5px">${esc(p.jogador)}</span>` : ''}</span>${p.mudo ? `<span class="faint" style="margin-left:auto">${MIC_SVG}</span>` : ''}</div>`).join('') || '<p class="faint" style="font-size:13px">Vazia.</p>'}
+      <div class="rotulo" style="margin-top:14px">Fora da ligação · ${fora.length}</div>
+      <div id="lg-fora">${fora.map(u => `<div class="pessoa fora"><span class="ava" style="background:${corDe(u)}">·</span><span data-nome-uid="${esc(u)}">…</span></div>`).join('')}</div>
+    </aside></div>`;
+  nomeDe(fora).then(n => fora.forEach(u => { const s = el.querySelector(`[data-nome-uid="${CSS.escape(u)}"]`); if (s) { s.textContent = n[u] + (u === C.mestre ? ' (mestre)' : ''); s.previousElementSibling.textContent = iniciais(n[u]); } }));
+  el.querySelector('#lg-persona').onclick = () => interpretarPersonagem(campId, C, st);
+  el.querySelector('#lg-entrar')?.addEventListener('click', () => entrarLigacao(campId, C.nome));
+  el.querySelector('#lg-mudo')?.addEventListener('click', alternarMudo);
+  el.querySelector('#lg-sair')?.addEventListener('click', () => sairLigacao(true));
+}
+addEventListener('pagehide', () => { if (CH.dentro) { try { CH.canal?.untrack(); } catch (e) {} } });
 
 /* =================================================================
    LOGIN
