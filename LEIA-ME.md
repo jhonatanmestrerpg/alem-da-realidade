@@ -55,3 +55,12 @@ Imagens vão para o bucket público `imagens`, cada pessoa na pasta do próprio 
 - A chave `sb_publishable_…` pode ficar no `config.js`: ela só faz o que as regras de RLS deixam.
 - **Nunca** coloque no site a chave `secret`/`service_role` nem a senha do banco.
 - A senha do banco foi colada no chat: troque em *Project Settings › Database › Reset database password*.
+
+## Ligação de voz (TURN)
+
+A voz vai direto de uma pessoa para a outra. Quando a rede não deixa (4G de algumas operadoras, Wi-Fi de empresa), ela passa por um servidor de retransmissão TURN.
+O site já usa o Open Relay da Metered, gratuito até 20 GB por mês, com credencial temporária gerada no navegador.
+Para trocar por um TURN próprio (Metered com conta, Cloudflare, coturn), ponha no `config.js`:
+```js
+turn: [{ urls: ['turn:seu-servidor:3478', 'turns:seu-servidor:443?transport=tcp'], username: '...', credential: '...' }],
+```

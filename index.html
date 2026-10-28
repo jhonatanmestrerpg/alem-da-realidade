@@ -1946,6 +1946,21 @@ ROTAS.escudo = async id => {
    ================================================================= */
 const CH = { sala: null, nomeSala: '', canal: null, dentro: false, local: null, pares: new Map(), mudo: false, presenca: {}, ctx: null, medidores: new Map(), timer: null, persona: null, ctxLig: null };
 const ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }];
+// TURN: retransmite a voz quando a rede (4G, empresa) não deixa as pessoas se ligarem direto.
+// Padrão: Open Relay (Metered), grátis até 20 GB/mês, credencial temporária gerada aqui (TURN REST, HMAC-SHA1).
+// Para usar um TURN próprio, ponha em config.js: turn: [{ urls: [...], username, credential }]
+const TURN_PADRAO = { host: 'staticauth.openrelay.metered.ca', segredo: 'openrelayprojectsecret' };
+async function montarIce() {
+  const proprio = window.ADR_CONFIG?.turn; if (Array.isArray(proprio) && proprio.length) return [...ICE, ...proprio];
+  try {
+    const username = `${Math.floor(Date.now() / 1000) + 24 * 3600}:${ME || 'adr'}`;
+    const chave = await crypto.subtle.importKey('raw', new TextEncoder().encode(TURN_PADRAO.segredo), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+    const assinatura = await crypto.subtle.sign('HMAC', chave, new TextEncoder().encode(username));
+    const credential = btoa(String.fromCharCode(...new Uint8Array(assinatura)));
+    const h = TURN_PADRAO.host;
+    return [...ICE, { urls: [`turn:${h}:80`, `turn:${h}:80?transport=tcp`, `turn:${h}:443`, `turns:${h}:443?transport=tcp`], username, credential }];
+  } catch (e) { return ICE; }
+}
 let ABA_INICIAL = null;
 const FONE_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><rect x="3" y="14" width="4" height="7" rx="1.5"/><rect x="17" y="14" width="4" height="7" rx="1.5"/><path d="M3 3l18 18" class="risco"/></svg>';
 const DESLIGAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 14.5c5-4.7 13-4.7 18 0l-2.3 2.3-3.4-1.6v-2.5c-2.2-.7-4.4-.7-6.6 0v2.5l-3.4 1.6z" fill="currentColor"/></svg>';
@@ -1983,6 +1998,7 @@ async function entrarLigacao(campId, nome) {
   if (!navigator.mediaDevices?.getUserMedia) return toast('Este navegador não deixa usar o microfone aqui.');
   try { CH.local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1, sampleRate: 48000, latency: 0 }, video: false }); }
   catch (e) { return toast('Sem acesso ao microfone. Libere a permissão no navegador e tente de novo.'); }
+  CH.ice = await montarIce();
   abrirSala(campId, nome);
   CH.dentro = true; CH.mudo = false;
   try { CH.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
@@ -2019,7 +2035,7 @@ function opusAfinado(sdp) {
 }
 function afinarEnvio(pc) { pc.getSenders().forEach(snd => { if (snd.track?.kind !== 'audio') return; const pr = snd.getParameters(); pr.encodings = pr.encodings?.length ? pr.encodings : [{}]; pr.encodings[0].maxBitrate = 64000; pr.encodings[0].priority = 'high'; pr.encodings[0].networkPriority = 'high'; snd.setParameters(pr).catch(() => {}); }); }
 function criarPar(id, iniciador) {
-  const pc = new RTCPeerConnection({ iceServers: ICE });
+  const pc = new RTCPeerConnection({ iceServers: CH.ice || ICE });
   const par = { pc, audio: new Audio(), pendentes: [], remoto: false };
   par.audio.autoplay = true; par.audio.playsInline = true; par.audio.muted = !!CH.surdo;
   CH.pares.set(id, par);
