@@ -1204,6 +1204,25 @@ ROTAS.campanhas = async () => {
       await entrarCampanha(id); fechar(); location.hash = 'campanha-' + id; };
   });
 };
+const linkDiscordValido = u => !u || /^https:\/\/(discord\.com\/channels\/\d+\/\d+|discord\.gg\/[\w-]+|discord\.com\/invite\/[\w-]+)\/?$/.test(u);
+function editarCampanha(id, C) {
+  abrirModal('Editar campanha', `<div class="campo"><label class="rotulo" for="ec-n">Nome</label><input type="text" id="ec-n" value="${esc(C.nome)}"></div>
+    <div class="campo"><label class="rotulo" for="ec-d">Descrição</label><textarea id="ec-d">${esc(C.descricao)}</textarea></div>
+    <div class="campo"><label class="rotulo" for="ec-ds">Chamada do Discord</label><input type="text" id="ec-ds" value="${esc(C.discord)}" placeholder="https://discord.com/channels/…  ou  https://discord.gg/…">
+      <span class="faint" style="font-size:12.5px">No Discord, clique com o botão direito no canal de voz da mesa e escolha Copiar link. Convite (discord.gg) também serve para quem ainda não está no servidor.</span></div>
+    <div class="campo"><label class="rotulo" for="ec-c">Nova capa</label><input type="file" id="ec-c" accept="image/*"></div>
+    <button class="btn" id="ec-ok">Salvar</button>`, (m, fechar) => {
+    let capa = C.capa || '';
+    m.querySelector('#ec-c').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) { capa = u; toast('Capa enviada.'); } };
+    m.querySelector('#ec-ok').onclick = async () => {
+      const nome = m.querySelector('#ec-n').value.trim(), discord = m.querySelector('#ec-ds').value.trim();
+      if (!nome) return toast('Dê um nome à campanha.');
+      if (!linkDiscordValido(discord)) return toast('Link do Discord inválido. Use o link do canal (discord.com/channels/…) ou um convite (discord.gg/…).');
+      try { await db.doc('campanhas/' + id).update({ nome, descricao: m.querySelector('#ec-d').value.trim(), discord, capa }); toast('Campanha salva.'); fechar(); }
+      catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); }
+    };
+  });
+}
 async function entrarCampanha(id) {
   try { await db.doc(`campanhas/${id}/membros/${ME}`).set({ uid: ME, entrou: Date.now(), papel: 'jogador' }); } catch (e) { toast('Não deu para entrar: ' + (e.message || e.code)); return; }
   if (!PART.campanhas.includes(id)) { PART.campanhas.push(id); await salvarPart(); }
@@ -1255,7 +1274,8 @@ ROTAS.campanha = async id => {
     if (aba === 'rolagens') corpo = `<div class="caixa" style="display:grid; gap:8px"><span class="rotulo">Rolar dados na mesa</span><div style="display:flex; gap:8px"><input type="text" id="dados-expr" placeholder="2d6+3 ou 3d20m+4 (m = fica o maior)"><button class="btn" id="dados-ok">Rolar</button></div></div>
       <div class="caixa" style="padding:0">${st.rolagens.map(rolHtml).join('') || '<div class="vazio">Nenhuma rolagem ainda.</div>'}</div>`;
     app.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
-        ${mestre ? `<a class="btn ouro" href="#escudo-${esc(id)}" style="text-decoration:none">Escudo do mestre</a>` : ''}
+        ${C.discord ? `<a class="btn" href="${esc(C.discord)}" target="_blank" rel="noopener" style="text-decoration:none; background:#5865F2; border-color:#5865F2">Entrar na chamada do Discord</a>` : ''}
+        ${mestre ? `<button class="btn sec" id="editar-c">Editar campanha</button><a class="btn ouro" href="#escudo-${esc(id)}" style="text-decoration:none">Escudo do mestre</a>` : ''}
         ${membro ? '<button class="btn sec" id="add-ag">Adicionar agente</button><button class="btn sec" id="convidar">Convidar jogadores</button>' : '<button class="btn" id="entrar-c">Entrar nesta campanha</button>'}
         ${membro && !mestre ? '<button class="btn sec" id="sair">Sair da campanha</button>' : ''}</div>
       <section class="camp-topo ${C.capa ? 'com-capa' : ''}">
@@ -1265,6 +1285,7 @@ ROTAS.campanha = async id => {
       <div class="abas">${[['agentes', 'Agentes'], ['jogadores', 'Jogadores'], ['combate', st.combate?.ativo ? 'Combate ●' : 'Combate'], ['pistas', 'Pistas'], ['relatorios', 'Relatórios'], ['rolagens', 'Rolagens']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>${corpo}`;
     $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
     $('#entrar-c')?.addEventListener('click', () => entrarCampanha(id));
+    $('#editar-c')?.addEventListener('click', () => editarCampanha(id, C));
     $('#convidar')?.addEventListener('click', () => abrirModal('Convidar jogadores', `<p>Mande o código abaixo para os jogadores. Eles entram no site com a conta deles e vão em Campanhas, Entrar com código.</p>
       <div style="display:flex; gap:8px"><input type="text" id="cod-c" readonly value="${esc(id)}"><button class="btn" id="copiar">Copiar</button></div>`, m => {
       m.querySelector('#copiar').onclick = async () => { const i = m.querySelector('#cod-c'); try { await navigator.clipboard.writeText(i.value); toast('Código copiado.'); } catch (e) { i.select(); toast('Selecionei o código, copie com Ctrl+C.'); } }; }));
@@ -1310,7 +1331,7 @@ ROTAS.escudo = async id => {
   };
   let publico = false;
   app.className = 'pagina';
-  app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Escudo do mestre</span><h1>${esc(camp.data().nome)}</h1></div><a class="btn sec" href="#campanha-${esc(id)}" style="text-decoration:none">Ver como jogador</a></div>
+  app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Escudo do mestre</span><h1>${esc(camp.data().nome)}</h1></div><div style="display:flex; gap:8px; flex-wrap:wrap">${camp.data().discord ? `<a class="btn" href="${esc(camp.data().discord)}" target="_blank" rel="noopener" style="text-decoration:none; background:#5865F2; border-color:#5865F2">Chamada do Discord</a>` : ''}<a class="btn sec" href="#campanha-${esc(id)}" style="text-decoration:none">Ver como jogador</a></div></div>
     <div class="escudo" id="escudo"><aside class="feed" id="feed"></aside><div style="display:grid; gap:16px; min-width:0"><div class="abas" id="abas-e"></div><div id="corpo-e"></div></div></div>`;
   function desenharFeed() {
     const todas = [...(st?.rolagens || []), ...(E.ocultas || [])].sort((a, b) => b.t - a.t).slice(0, 40);
