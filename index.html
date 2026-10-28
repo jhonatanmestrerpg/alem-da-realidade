@@ -111,6 +111,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 
 .caixa { background: var(--painel); border: 1px solid var(--linha); padding: 16px; }
 .aviso { background: rgba(123,92,168,.14); border: 1px solid rgba(123,92,168,.45); padding: 12px 16px; font-size: 14px; }
+.aviso-pts { display: flex; gap: 10px 14px; align-items: center; flex-wrap: wrap; border-color: rgba(200,163,90,.5); background: rgba(200,163,90,.1); }
 .vazio { padding: 36px 16px; text-align: center; color: var(--lua-dim); font-family: var(--f-ital); font-style: italic; font-size: 18px; }
 
 /* cards de agente / campanha */
@@ -464,6 +465,10 @@ const patente = n => SIS.patentes.find(p => n >= p.de && n <= p.ate) || SIS.pate
 const vontade = n => SIS.vontades.find(v => v.nome === n);
 const nivelAm = n => SIS.niveisAmeaca.find(x => x[0] === +n) || [n, '?', ''];
 function pontosAtributo(nivel) { let p = 12; if (nivel >= 4) p += 2; if (nivel >= 8) p += 3; if (nivel >= 12) p += 5; return p; }
+// Pontos de perícia: a base da classe (+ Int) na criação e de novo a cada patente alcançada (Veterano no 5, Alto Escalão no 9)
+const patentesAlcancadas = nivel => SIS.patentes.filter(p => nivel >= p.de).length;
+function pontosPericiaTotal(cls, intel, nivel) { const C = classe(cls); return ((C?.pericias || 0) + (intel || 0)) * patentesAlcancadas(nivel); }
+function pontosPericia(f) { const total = pontosPericiaTotal(f.classe, f.atributos?.inteligencia, +f.nivel || 1); const gastos = (f.pericias || []).reduce((a, p) => a + (+p.pontos || 0), 0); return { total, gastos, livres: total - gastos }; }
 function qtdPassivas(nivel) { return [2, 6, 9, 11].filter(x => nivel >= x).length; }
 
 /* ---------- regras de cálculo ---------- */
@@ -745,10 +750,10 @@ ROTAS.novo = async () => {
         <div class="lista">${R.passivas.map((p, i) => `<div class="item"><div class="cab"><span class="nm">${esc(p.nome)}</span><button class="btn-x" data-rp="${i}" aria-label="Remover">×</button></div><p class="dim" style="font-size:13.5px">${esc(p.texto)}</p></div>`).join('')}</div>
         ${R.passivas.length < qtdPassivas(R.nivel) ? '<button class="btn sec" id="add-pas">Escolher passiva</button>' : ''}` : ''}`;
     } else if (R.passo === 3) {
-      const C = classe(R.classe); const tot = (C?.pericias || 0) + R.atributos.inteligencia;
+      const C = classe(R.classe); const tot = pontosPericiaTotal(R.classe, R.atributos.inteligencia, R.nivel); const nPat = patentesAlcancadas(R.nivel);
       const gastos = Object.values(R.pericias).reduce((a, b) => a + b, 0);
       const vt = vontade(R.vontade)?.pericias || [];
-      corpo = `<p>Você tem <b>${tot} pontos</b> de perícia (${C?.pericias || 0} da classe + ${R.atributos.inteligencia} de Inteligência). Cada ponto é um d20 no teste, fica o maior e soma o atributo. Limite por perícia: <b>${pat.limite}</b>.</p>
+      corpo = `<p>Você tem <b>${tot} pontos</b> de perícia (${C?.pericias || 0} da classe + ${R.atributos.inteligencia} de Inteligência${nPat > 1 ? `, vezes ${nPat} por ter alcançado ${esc(pat.nome)}` : ''}). Cada ponto é um d20 no teste, fica o maior e soma o atributo. Limite por perícia: <b>${pat.limite}</b>.</p>
       <div class="campo"><span class="rotulo">Pontos restantes</span><div class="mono" style="font-size:26px; color:${gastos > tot ? 'var(--sangue-hi)' : 'var(--ouro)'}">${tot - gastos}</div></div>
       <div class="grade-per">${SIS.pericias.map(p => { const v = R.pericias[p.nome] || 0, b = vt.includes(p.nome) ? 1 : 0;
         return `<div class="per ${v || b ? '' : 'zero'}"><div class="topo-p"><b>${esc(p.nome)}</b><span class="faint mono" style="font-size:11px">${SIGLA[p.atributo]}</span></div>
@@ -786,7 +791,7 @@ ROTAS.novo = async () => {
     $$('[data-rp]').forEach(b => b.onclick = () => { R.passivas.splice(+b.dataset.rp, 1); render(); });
     $('#add-pas')?.addEventListener('click', () => seletor('Habilidades passivas', SIS.passivas.filter(p => !R.passivas.some(x => x.nome === p.nome)),
       p => `<b>${esc(p.nome)}</b><p>${esc(p.texto)}</p>`, p => { if (R.passivas.length < qtdPassivas(R.nivel)) { R.passivas.push(p); render(); $('#camada').innerHTML = ''; } }));
-    $$('[data-pr]').forEach(b => b.onclick = () => { const C = classe(R.classe); const tot = (C?.pericias || 0) + R.atributos.inteligencia;
+    $$('[data-pr]').forEach(b => b.onclick = () => { const tot = pontosPericiaTotal(R.classe, R.atributos.inteligencia, R.nivel);
       const gastos = Object.values(R.pericias).reduce((a, x) => a + x, 0); const n = b.dataset.pr, v = (R.pericias[n] || 0) + +b.dataset.d;
       if (v < 0 || v > patente(R.nivel).limite) return; if (+b.dataset.d > 0 && gastos >= tot) return; R.pericias[n] = v; if (!v) delete R.pericias[n]; render(); });
     $$('[data-t]').forEach(i => i.addEventListener('input', () => { R[i.dataset.t] = i.value; guardar(); if (i.dataset.t === 'nome') $('#finalizar').disabled = !R.nome.trim(); }));
@@ -814,15 +819,16 @@ ROTAS.agente = async id => {
   if (!db) { app.innerHTML = semBanco(); return; }
   app.innerHTML = '<div class="vazio">Abrindo dossiê…</div>';
   const ref = db.doc('fichas/' + id);
-  let F = null, aba = 'pericias', editando = false, mostrarTodas = false, podeEditar = false, pendente = false;
+  let F = null, aba = 'pericias', editando = false, mostrarTodas = false, podeEditar = false, ehMestre = false, pendente = false;
   const salvarVitais = debounce(async () => { try { await ref.update({ atual: F.atual }); } catch (e) { toast('Não deu para salvar os vitais.'); } pendente = false; }, 500);
   async function salvar(campos) { try { await ref.update(campos); } catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); } }
 
   async function checarPermissao() {
-    podeEditar = F.dono === ME || DONO;
-    if (!podeEditar && F.campanhas?.length) {
-      for (const c of F.campanhas) { try { const s = await db.doc('campanhas/' + c).get(); if (s.exists && s.data().mestre === ME) { podeEditar = true; break; } } catch (e) {} }
+    ehMestre = DONO;
+    if (F.campanhas?.length) {
+      for (const c of F.campanhas) { try { const s = await db.doc('campanhas/' + c).get(); if (s.exists && s.data().mestre === ME) { ehMestre = true; break; } } catch (e) {} }
     }
+    podeEditar = F.dono === ME || ehMestre;
   }
   assinar(ref.onSnapshot(async s => {
     if (!s.exists) { app.innerHTML = '<div class="vazio">Esta ficha não existe ou foi apagada.</div>'; return; }
@@ -891,7 +897,11 @@ ROTAS.agente = async id => {
     const barra = `<div class="caixa barra-teste"><div class="campo"><label class="rotulo" for="dt">DT do teste</label><input type="number" id="dt" value="${window._dt ?? 20}"></div><div class="campo"><label class="rotulo" for="bonus">Bônus extra</label><input type="number" id="bonus" value="${window._bonus ?? 0}"></div><span class="dim" style="font-size:13px; margin-left:auto">${esc(K.pat.nome)}: limite <b class="mono" style="color:var(--ouro)">${K.pat.limite}</b> por perícia</span></div>`;
     if (aba === 'pericias') {
       const nomes = mostrarTodas || editando || vetorAtivo(F) ? SIS.pericias.map(p => p.nome) : [...new Set([...(F.pericias || []).filter(p => p.pontos > 0).map(p => p.nome), ...(vontade(F.vontade)?.pericias || [])])];
-      return `<div style="display:grid; gap:12px">${barra}
+      const PP = pontosPericia(F), nPat = patentesAlcancadas(+F.nivel || 1);
+      const avisoPts = PP.livres > 0 ? `<div class="aviso aviso-pts"><b>${PP.livres} ponto(s) de perícia para distribuir.</b> ${nPat > 1 ? `Você alcançou ${esc(K.pat.nome)} e ganhou de novo os pontos da classe. ` : ''}${podeEditar ? (editando ? 'Use o + nas perícias.' : '<button class="btn mini" id="dist-pts">Distribuir agora</button>') : ''}</div>`
+        : PP.livres < 0 ? `<div class="aviso" style="border-color:var(--sangue)">Esta ficha usa ${-PP.livres} ponto(s) de perícia a mais do que o permitido.</div>` : '';
+      const contPts = `<span class="dim" style="font-size:13px">Pontos de perícia: <b class="mono" style="color:var(--ouro)">${PP.gastos}/${PP.total}</b> · ${(classe(F.classe)?.pericias || 0)} da classe + ${F.atributos?.inteligencia || 0} Int${nPat > 1 ? ` × ${nPat} patentes` : ''}</span>`;
+      return `<div style="display:grid; gap:12px">${avisoPts}${barra}${contPts}
         <div class="grade-per">${nomes.map(n => { const P = dadosPericia(F, n);
           return `<div class="per ${P.pontos + P.vt ? '' : 'zero'}"><div class="topo-p"><b>${esc(n)}</b><div class="pips">${Array.from({ length: Math.max(K.pat.limite, P.pontos) }, (_, k) => `<span class="pip ${k < P.pontos ? 'on' : ''}"></span>`).join('')}${P.vt ? '<span class="pip vt" title="+1 da Vontade"></span>' : ''}</div></div>
           <div class="mono dim" style="font-size:12px">${P.dados}d20 + ${P.mod} (${SIGLA[P.atr]})</div>
@@ -975,13 +985,21 @@ ROTAS.agente = async id => {
     $$('[data-v]').forEach(b => b.onclick = () => { const k = b.dataset.v; F.atual[k] = Math.max(0, Math.min(K.max[k], (F.atual[k] ?? K.max[k]) + +b.dataset.d)); pendente = true; render(); salvarVitais(); });
     // edição
     $$('[data-at]').forEach(b => b.onclick = () => { const k = b.dataset.at; const v = (F.atributos[k] || 0) + +b.dataset.d; if (v < 0 || v > 9) return; F.atributos[k] = v; salvar({ atributos: F.atributos }); render(); });
-    $('#e-nivel')?.addEventListener('change', e => salvar({ nivel: +e.target.value }));
+    $('#e-nivel')?.addEventListener('change', e => { const novo = +e.target.value, velho = +F.nivel || 1;
+      const ganho = pontosPericiaTotal(F.classe, F.atributos?.inteligencia, novo) - pontosPericiaTotal(F.classe, F.atributos?.inteligencia, velho);
+      if (ganho > 0) toast(`Subiu para ${patente(novo).nome}: +${ganho} pontos de perícia para distribuir.`);
+      salvar({ nivel: novo }); });
     $('#e-vont')?.addEventListener('change', e => salvar({ vontade: e.target.value }));
     $('#e-vetor')?.addEventListener('change', e => salvar({ vetor: e.target.value }));
     $('#e-foto')?.addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; const u = await enviarImagem(f); if (u) salvar({ foto: u }); });
-    $$('[data-pp]').forEach(b => b.onclick = () => { const n = b.dataset.pp; const lista = F.pericias || []; let p = lista.find(x => x.nome === n);
+    $('#dist-pts')?.addEventListener('click', () => { editando = true; mostrarTodas = true; render(); });
+    $$('[data-pp]').forEach(b => b.onclick = () => { const n = b.dataset.pp, dd = +b.dataset.d; const lista = F.pericias || []; let p = lista.find(x => x.nome === n);
       if (!p) { p = { nome: n, pontos: 0, atributo: SIS.pericias.find(x => x.nome === n)?.atributo || 'inteligencia' }; lista.push(p); }
-      p.pontos = Math.max(0, Math.min(9, p.pontos + +b.dataset.d)); F.pericias = lista; salvar({ pericias: lista }); render(); });
+      if (dd > 0 && !ehMestre) {
+        if (pontosPericia(F).livres <= 0) return toast('Sem pontos de perícia livres. Ganha mais ao subir de patente.');
+        if (p.pontos + 1 > K.pat.limite) return toast(`${K.pat.nome} tem limite ${K.pat.limite} por perícia.`);
+      }
+      p.pontos = Math.max(0, Math.min(9, p.pontos + dd)); F.pericias = lista; salvar({ pericias: lista }); render(); });
     $$('[data-patr]').forEach(s => s.onchange = () => { const n = s.dataset.patr; const lista = F.pericias || []; let p = lista.find(x => x.nome === n);
       if (!p) { p = { nome: n, pontos: 0 }; lista.push(p); } p.atributo = s.value; salvar({ pericias: lista }); render(); });
     // testes
