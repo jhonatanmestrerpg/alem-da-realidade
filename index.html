@@ -162,6 +162,18 @@ input[type=text], input[type=number], input[type=search], select, textarea {
 textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ouro); }
 .campo { display: grid; gap: 5px; min-width: 0; }
+.inv-item { padding: 0; }
+.inv-sum { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 14px; cursor: pointer; list-style: none; }
+.inv-sum::-webkit-details-marker { display: none; }
+.inv-seta { color: var(--ouro); font-size: 22px; line-height: 1; transition: transform .15s; }
+.inv-item[open] .inv-seta { transform: rotate(90deg); }
+.inv-nome { display: grid; gap: 3px; min-width: 0; } .inv-nome > b { overflow: hidden; text-overflow: ellipsis; }
+.inv-resumo { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--lua-dim); } .inv-resumo b { color: var(--lua); font-family: var(--f-mono); font-weight: 600; }
+.inv-ctrl { display: flex; gap: 6px; align-items: center; cursor: default; }
+.inv-corpo { display: grid; gap: 10px; padding: 4px 14px 14px 14px; border-top: 1px solid var(--linha); margin: 0 14px; padding-left: 0; padding-right: 0; padding-top: 12px; }
+.inv-det { display: grid; grid-template-columns: max-content 1fr; gap: 3px 14px; margin: 0; font-size: 13.5px; } .inv-det dt { color: var(--ouro); } .inv-det dd { margin: 0; }
+.inv-desc { margin: 0; font-style: italic; color: var(--lua-dim); font-size: 13.5px; border-left: 2px solid var(--linha-2); padding-left: 10px; }
+@media (max-width: 600px) { .inv-sum { grid-template-columns: auto minmax(0, 1fr) auto; } .inv-sum .moldura-it { display: none; } .inv-ctrl { grid-column: 1 / -1; justify-content: flex-end; } }
 .atr-rolar { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; width: 100%; border-radius: 6px; transition: color .15s, background .15s; }
 .atr-rolar:hover, .atr-rolar:focus-visible { color: var(--ouro); background: color-mix(in srgb, var(--ouro) 10%, transparent); }
 .editando .atr-rolar { cursor: default; }
@@ -658,6 +670,26 @@ html, body { overflow-x: clip; max-width: 100%; }
 .al-pips span.on { background: var(--ca); border-color: var(--ca); color: #0b0d14; box-shadow: 0 0 12px color-mix(in srgb, var(--ca) 55%, transparent); }
 .al-hab { border-left: 3px solid var(--ca); }
 .al-hab.bloq { border-left-color: var(--linha-2); }
+/* ---------- itens ---------- */
+.grade-itens { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.grade-itens .sep-cat { grid-column: 1 / -1; margin-top: 10px; }
+.card-it { display: grid; grid-template-columns: 112px 1fr; background: var(--painel); border: 1px solid var(--linha); min-height: 112px; }
+.moldura-it { position: relative; background: radial-gradient(circle at 50% 40%, #1b2032, #0c0e15 75%); border-right: 1px solid var(--linha); display: grid; place-items: center; overflow: hidden; aspect-ratio: 1; align-self: start; width: 100%; }
+.moldura-it::after { content: ""; position: absolute; inset: 6px; border: 1px dashed rgba(200,163,90,.22); pointer-events: none; }
+.moldura-it .ph { width: 46%; height: 46%; color: rgba(200,163,90,.38); }
+.moldura-it img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+.moldura-it.tem-foto::after, .moldura-it.tem-foto .ph { display: none; }
+.corpo-it { padding: 12px 14px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.cab-it { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.cab-it b { font: 400 19px/1.15 var(--f-disp); }
+.stats-it { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.stats-it > div { display: grid; gap: 1px; }
+.stats-it .mono { font-size: 14px; }
+.corpo-it p { font-size: 13.5px; }
+.item-com-foto { grid-template-columns: 52px 1fr; gap: 12px; align-items: start; }
+.item-com-foto .mini-it { border: 1px solid var(--linha); }
+.mini-it { width: 52px; flex-shrink: 0; aspect-ratio: 1; }
+.mini-it::after { inset: 3px; }
 
 /* ---------- vetor ---------- */
 .btn-vetor { background: transparent; color: var(--lua); border-color: var(--cv, var(--sangue)); }
@@ -708,6 +740,9 @@ button, a, input, select, textarea { touch-action: manipulation; }
   .grade-cards, .grade-hab, .grade-per { grid-template-columns: 1fr; }
   .card-ag { grid-template-columns: 92px 1fr; }
   .card-am { grid-template-columns: 96px 1fr; }
+  .grade-itens { grid-template-columns: 1fr; gap: 10px; }
+  .card-it { grid-template-columns: 96px 1fr; min-height: 96px; }
+  .cab-it b { font-size: 17px; }
   .cab-pagina > div:last-child:not(:first-child) { width: 100%; }
   .retrato { width: 132px; font-size: 48px; }
   .ficha-topo { justify-items: start; }
@@ -806,7 +841,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261102201751';
+const BUILD = '20261102210027';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -837,6 +872,7 @@ function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTi
 
 /* ---------- dados estáticos do sistema ---------- */
 const UI_ARMA = {};
+const INV_ABERTO = new Set(); // itens do inventário abertos (fica entre redesenhos)
 let SIS = null, CRI = [], RIT = [], LORE = null, FEIT = [], CACADOR = null, ABATES = {};
 async function carregarBase() {
   let [s, c, r, f, k] = await Promise.all(['dados/sistema.json', 'dados/criaturas.json', 'dados/rituais.json', 'dados/feiticos.json', 'dados/cacador.json'].map(u => fetch(u).then(x => x.json())));
@@ -1822,9 +1858,16 @@ ROTAS.agente = async id => {
         <div class="caixa" style="display:grid; gap:6px"><div class="cab-pagina"><span><b class="mono">${fmtKg(K.carga)}</b> de ${fmtKg(K.cc)} <span class="faint">· CC = (For + Con) × 2</span></span><span class="el" style="color:${pct <= 100 ? 'var(--fole)' : pct <= 150 ? 'var(--ouro)' : 'var(--sangue-hi)'}">${pct > 200 ? 'Acima do limite' : esc(est.nome)}</span></div>
           <div class="trilho fino"><div class="cheio" style="width:${Math.min(100, pct / 2)}%; background:var(--lua-dim)"></div></div><span class="dim" style="font-size:13px">${esc(est.texto)}</span></div>
         ${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" id="add-item">Adicionar do livro</button><button class="btn sec mini" id="add-item-hb">Adicionar do homebrew</button><button class="btn sec mini" id="novo-item">Novo item</button></div>' : ''}
-        <div class="lista">${(F.equipamentos || []).map((it, i) => `<div class="item"><div class="cab"><span class="nm">${esc(it.nome)}${it.qtd > 1 ? ` <span class="faint">×${it.qtd}</span>` : ''}</span>
-          <span style="display:flex; gap:6px; align-items:center">${tagUsos(it)}${it.peso ? `<span class="tag">${fmtKg(it.peso * (it.qtd || 1))}</span>` : ''}${it.alivio ? `<span class="tag">alivia ${fmtKg(it.alivio)}</span>` : ''}${it.rd ? `<span class="tag">RD ${it.rd}</span>` : ''}${it.dano ? `<span class="tag">${esc(it.dano)}${it.mult > 1 ? ' ×' + it.mult : ''}</span>` : ''}${podeEditar ? `<button class="btn-x" data-ed-item="${i}" aria-label="Editar" title="Editar">✎</button><span class="qtd-ctrl"><button class="vbtn" data-qtd="${i}" data-d="-1" aria-label="Menos um">−</button><span class="mono">${+it.qtd || 1}</span><button class="vbtn" data-qtd="${i}" data-d="1" aria-label="Mais um">+</button></span><button class="btn-x" data-rm-item="${i}" aria-label="Remover">×</button>` : ''}</span></div>
-          ${tagsMods(it) ? `<div style="display:flex; gap:6px; flex-wrap:wrap">${tagsMods(it)}</div>` : ''}${it.obs ? `<p class="dim" style="font-size:13.5px">${esc(it.obs)}</p>` : ''}</div>`).join('') || '<div class="vazio">Inventário vazio.</div>'}</div></div>`;
+        <div class="lista">${(F.equipamentos || []).map((it, i) => { const ab = INV_ABERTO.has(id + '|' + i);
+          const det = [['Categoria', it.categoria], ['Alcance', it.alcance], ['Tipo', it.tipoDano], ['Teste', it.dano ? it.pericia || 'Armas Brancas' : ''], ['Peso', it.peso ? fmtKg(it.peso) + (it.qtd > 1 ? ` cada (${fmtKg(it.peso * it.qtd)})` : '') : ''], ['RD', it.rd || ''], ['Alivia', it.alivio ? fmtKg(it.alivio) : ''], ['Dano extra', it.extra]].filter(x => x[1]);
+          return `<details class="item inv-item" data-inv="${i}" ${ab ? 'open' : ''}><summary class="inv-sum">${molduraItem(it, 'moldura-it mini-it')}<span class="inv-seta" aria-hidden="true">›</span><span class="inv-nome"><b>${esc(it.nome)}${it.qtd > 1 ? ` <span class="faint">×${it.qtd}</span>` : ''}</b>
+            <span class="inv-resumo">${it.dano ? `<span>Dano: <b>${esc(it.dano)}</b></span><span>Crítico: <b>${(+it.margem || 20) < 20 ? (+it.margem) + '/' : ''}×${fmtMult(+it.mult || 2)}</b></span>` : ''}${it.rd ? `<span>RD: <b>${it.rd}</b></span>` : ''}${it.alivio ? `<span>Alivia: <b>${fmtKg(it.alivio)}</b></span>` : ''}${!it.dano && !it.rd && !it.alivio && it.peso ? `<span>Peso: <b>${fmtKg(it.peso * (it.qtd || 1))}</b></span>` : ''}</span></span>
+            <span class="inv-ctrl">${tagUsos(it)}${podeEditar ? `<button class="btn-x" data-ed-item="${i}" aria-label="Editar" title="Editar">✎</button><span class="qtd-ctrl"><button class="vbtn" data-qtd="${i}" data-d="-1" aria-label="Menos um">−</button><span class="mono">${+it.qtd || 1}</span><button class="vbtn" data-qtd="${i}" data-d="1" aria-label="Mais um">+</button></span><button class="btn-x" data-rm-item="${i}" aria-label="Remover">×</button>` : ''}</span></summary>
+            <div class="inv-corpo">${det.length ? `<dl class="inv-det">${det.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : ''}
+            ${tagsMods(it) ? `<div style="display:flex; gap:6px; flex-wrap:wrap">${tagsMods(it)}</div>` : ''}
+            ${it.obs ? `<div><span class="rotulo">Efeito</span><p class="dim" style="margin:2px 0 0; font-size:13.5px">${esc(it.obs)}</p></div>` : ''}
+            ${it.descricao ? `<p class="inv-desc">${nl(it.descricao)}</p>` : ''}
+            ${!det.length && !it.obs && !it.descricao && !tagsMods(it) ? '<span class="faint" style="font-size:13px">Sem detalhes.</span>' : ''}</div></details>`; }).join('') || '<div class="vazio">Inventário vazio.</div>'}</div></div>`;
     }
     return `<div style="display:grid; gap:14px">${[['aparencia', 'Aparência'], ['personalidade', 'Personalidade'], ['historico', 'Histórico'], ['objetivo', 'Objetivo'], ['anotacoes', 'Anotações do jogador']].map(([k, l]) => `<div class="campo"><label class="rotulo" for="d-${k}">${l}</label>
       ${podeEditar ? `<textarea id="d-${k}" data-texto="${k}">${esc(F[k])}</textarea>` : `<p class="dim">${nl(F[k]) || '—'}</p>`}</div>`).join('')}</div>`;
@@ -1984,6 +2027,8 @@ ROTAS.agente = async id => {
     // testes
     $$('[data-giro]').forEach(sel => sel.onchange = () => { UI_ARMA['giro|' + sel.dataset.giro] = sel.value; render(); });
     // clicar no número do atributo rola o teste puro dele: 1d20 + valor do atributo (+ bônus do campo)
+    $$('.inv-item').forEach(dt => { dt.addEventListener('toggle', () => { const k = id + '|' + dt.dataset.inv; dt.open ? INV_ABERTO.add(k) : INV_ABERTO.delete(k); });
+      dt.querySelector('summary').addEventListener('click', e => { if (e.target.closest('.inv-ctrl')) e.preventDefault(); }); });
     $$('[data-rolar-atr]').forEach(b => b.onclick = () => { if (editando) return; const k = b.dataset.rolarAtr, nome = ATR.find(a => a[0] === k)[1], v = +(F.atributos?.[k]) || 0, mod = v + bnv();
       const r = teste(1, mod);
       popRolagem({ quem: F.nome, titulo: nome, tipo: 'Teste de atributo', expr: `1d20${mod ? (mod > 0 ? '+' : '') + mod : ''}`, linhas: [{ det: r.detalhe, total: r.total }], total: r.total, nat20: r.nat20 });
@@ -2264,7 +2309,7 @@ function armaEf(it) {
 }
 const tagsMods = it => { const m = modsDe(it); return [...m.melhorias.map(n => `<span class="tag mod-m" title="Melhoria">${esc(n)}</span>`), ...m.bencaos.map(n => `<span class="tag mod-b" title="Bênção: vale para quem empunha">${esc(n.replace(/^Bênção d[aoe]s? /, ''))}</span>`), ...m.maldicoes.map(n => `<span class="tag mod-x" title="Maldição: vale para o alvo atingido · custa 3 PS por golpe">${esc(n.replace(/^Maldição d[aoe]s? /, ''))}</span>`)].join(''); };
 function formItem(salvarFn, it = {}) {
-  abrirModal(it.nome ? 'Editar item' : 'Novo item', `<div class="grade-campos"><div class="campo"><label class="rotulo" for="fi-n">Nome</label><input type="text" id="fi-n" value="${esc(it.nome)}"></div>
+  abrirModal(it.nome ? 'Editar item' : 'Novo item', `${campoImagem('fi-img', it.imagem || '', 'Imagem do item')}<div class="grade-campos"><div class="campo"><label class="rotulo" for="fi-n">Nome</label><input type="text" id="fi-n" value="${esc(it.nome)}"></div>
     <div class="campo"><label class="rotulo" for="fi-p">Peso (kg)</label><input type="number" step="0.1" id="fi-p" value="${esc(it.peso ?? 0)}"></div>
     <div class="campo"><label class="rotulo" for="fi-q">Quantidade</label><input type="number" id="fi-q" value="${esc(it.qtd ?? 1)}"></div>
     <div class="campo"><label class="rotulo" for="fi-d">Dano (se for arma)</label><input type="text" id="fi-d" value="${esc(it.dano)}" placeholder="2d8+6"></div>
@@ -2277,8 +2322,10 @@ function formItem(salvarFn, it = {}) {
     <div class="campo"><label class="rotulo" for="fi-pe">Perícia de acerto</label><select id="fi-pe">${SIS.pericias.map(p => `<option ${(it.pericia || 'Armas Brancas') === p.nome ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select></div>
     <div class="campo"><label class="rotulo" for="fi-r">RD que concede</label><input type="number" id="fi-r" value="${esc(it.rd ?? 0)}"></div>
     <div class="campo"><label class="rotulo" for="fi-a">Alivia peso (kg)</label><input type="number" id="fi-a" value="${esc(it.alivio ?? 0)}"></div></div>
-    <div class="campo"><label class="rotulo" for="fi-o">Observação / efeito</label><textarea id="fi-o" style="min-height:80px">${esc(it.obs)}</textarea></div>
+    <div class="campo"><label class="rotulo" for="fi-o">Efeito</label><textarea id="fi-o" style="min-height:80px" placeholder="O que o item faz na mesa: regras, custos, testes.">${esc(it.obs)}</textarea></div>
+    <div class="campo"><label class="rotulo" for="fi-ds">Descrição</label><textarea id="fi-ds" style="min-height:70px" placeholder="Como ele é, de onde veio, a história dele.">${esc(it.descricao)}</textarea></div>
     <div class="caixa" id="fi-mods" style="display:grid; gap:4px"></div><button class="btn" id="fi-ok">Salvar</button>`, (m, fechar) => {
+    const IMG = ligarImagem(m, 'fi-img', it.imagem || '');
     // melhorias, bênçãos e maldições direto no formulário (mesmas regras do botão da aba Combate)
     let mods = modsDe(it);
     const caixa = m.querySelector('#fi-mods');
@@ -2298,10 +2345,11 @@ function formItem(salvarFn, it = {}) {
     desenharMods();
     m.querySelector('#fi-d').addEventListener('input', desenharMods);
     m.querySelector('#fi-pe').addEventListener('change', () => { const tmp = { ...it, dano: 'x', pericia: m.querySelector('#fi-pe').value }; mods = { ...mods, melhorias: mods.melhorias.filter(n => modCabe(tmp, (SIS.melhorias || []).find(x => x.nome === n) || {})) }; desenharMods(); });
-    m.querySelector('#fi-ok').onclick = () => { const v = id => m.querySelector(id).value.trim(); if (!v('#fi-n')) return toast('Dê um nome ao item.');
+    m.querySelector('#fi-ok').onclick = async () => { const v = id => m.querySelector(id).value.trim(); if (!v('#fi-n')) return toast('Dê um nome ao item.');
+      const bt = m.querySelector('#fi-ok'); bt.disabled = true; bt.textContent = 'Esperando a imagem…'; await IMG.pronto(); bt.disabled = false; bt.textContent = 'Salvar';
       const dano = v('#fi-d'); if (dano && !rolar(dano)) return toast('Dano em formato inválido. Ex.: 2d8+6');
       const extra = v('#fi-ex'); if (extra && !rolar(extra)) return toast('Dano extra em formato inválido. Ex.: 1d6');
-      salvarFn({ nome: v('#fi-n'), peso: +v('#fi-p') || 0, qtd: +v('#fi-q') || 1, mods: dano ? mods : modsDe({}), dano, mult: +v('#fi-m') || 1, margem: Math.min(20, Math.max(2, +v('#fi-mg') || 20)), multExtra: +String(v('#fi-mx')).replace(',', '.') || 0, extra, tipoDano: v('#fi-td'), alcance: v('#fi-al'), pericia: v('#fi-pe'), rd: +v('#fi-r') || 0, alivio: +v('#fi-a') || 0, obs: v('#fi-o') }); fechar(); };
+      salvarFn({ nome: v('#fi-n'), peso: +v('#fi-p') || 0, qtd: +v('#fi-q') || 1, mods: dano ? mods : modsDe({}), dano, mult: +v('#fi-m') || 1, margem: Math.min(20, Math.max(2, +v('#fi-mg') || 20)), multExtra: +String(v('#fi-mx')).replace(',', '.') || 0, extra, tipoDano: v('#fi-td'), alcance: v('#fi-al'), pericia: v('#fi-pe'), rd: +v('#fi-r') || 0, alivio: +v('#fi-a') || 0, obs: v('#fi-o'), descricao: v('#fi-ds'), imagem: IMG.valor || '' }); fechar(); };
   });
 }
 
@@ -2876,7 +2924,33 @@ ${c.homebrew ? '' : `<div class="registro-am"><span class="rotulo">Registro nº 
 /* =================================================================
    GRIMÓRIO
    ================================================================= */
-let abaGr = 'rituais', elGr = 'Todos';
+let abaGr = 'rituais', elGr = 'Todos', catIt = 'Todos';
+/* imagem do item: img/itens/<nome-sem-acento>.webp (ou o campo imagem do item) */
+const slug = n => String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\(.*?\)/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const imgItem = it => it.imagem || `img/itens/${slug(it.nome)}.webp`;
+const ICONE_CAT = {
+  'Armas Brancas': '<path d="M14.5 3 21 3v6.5L9 21.5 2.5 15z"/><path d="m5 13 6 6M3 21l3-3"/>',
+  'Armas de Fogo': '<path d="M2 9h16l2 2h2v3h-7l-1 2h-3l-1 4H5l2-6H2z"/><path d="M14 9V7"/>',
+  'Granadas': '<circle cx="12" cy="14" r="7"/><path d="M10 7V4h4v3M14 4h3l1 2"/>',
+  'Gerais': '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V4h8v3M3 12h18"/>',
+  'Bolsas': '<path d="M6 8h12l1 13H5z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  'Proteções': '<path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/>',
+  'Especiais': '<path d="m12 2 3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z"/>',
+};
+function molduraItem(it, cls = 'moldura-it') {
+  const ic = ICONE_CAT[it.categoria] || ICONE_CAT.Gerais;
+  return `<div class="${cls}"><svg class="ph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round">${ic}</svg><img src="${esc(imgItem(it))}" alt="" loading="lazy" onload="this.parentNode.classList.add('tem-foto')" onerror="this.remove()"></div>`;
+}
+function cardItem(it) {
+  const stats = [
+    it.dano ? ['Dano', it.dano] : null, it.mult > 1 ? ['Crítico', '×' + it.mult] : null,
+    it.alivio ? ['Alivia', fmtKg(it.alivio)] : it.peso ? ['Peso', fmtKg(it.peso)] : null,
+    it.rd ? ['RD', '+' + it.rd] : null, it.dano ? ['Teste', it.pericia || 'Armas Brancas'] : null,
+  ].filter(Boolean);
+  return `<article class="card-it">${molduraItem(it)}<div class="corpo-it"><div class="cab-it"><b>${esc(it.nome)}</b>${it.leve ? '<span class="tag">Leve</span>' : ''}</div>
+    ${stats.length ? `<div class="stats-it">${stats.map(([k, v]) => `<div><span class="rotulo">${k}</span><span class="mono">${esc(v)}</span></div>`).join('')}</div>` : ''}
+    ${it.obs ? `<p class="dim">${esc(it.obs)}</p>` : ''}</div></article>`;
+}
 ROTAS.grimorio = async () => {
   const ABAS = [['rituais', 'Rituais'], ['feiticos', 'Feitiços'], ['arquivo', 'Arquivo de rituais'], ['condicoes', 'Condições'], ['maldicoes', 'Maldições'], ['bencaos', 'Bênçãos'], ['melhorias', 'Melhorias'], ['alquimia', 'Alquimia'], ['itens', 'Itens']];
   async function render() {
@@ -2892,8 +2966,10 @@ ROTAS.grimorio = async () => {
         <div class="busca">${ICON_BUSCA}<input type="search" id="busca" placeholder="Buscar ritual"></div>
         ${abaGr === 'arquivo' ? `<p class="dim" style="max-width:75ch; font-family:var(--f-ital); font-style:italic; font-size:17px">${nl(LORE.intro)}</p>` : ''}<div class="grade-hab" id="lista-r"></div>`;
     } else if (abaGr === 'itens') {
-      const cats = [...new Set(SIS.itens.map(i => i.categoria))];
-      corpo = cats.map(c => `<h2>${esc(c)}</h2><div class="rolavel"><table class="tabela"><thead><tr><th>Item</th><th>Dano</th><th>Crítico</th><th>Peso</th><th>Observação</th></tr></thead><tbody>${SIS.itens.filter(i => i.categoria === c).map(i => `<tr><td><b>${esc(i.nome)}</b></td><td class="mono">${esc(i.dano || '—')}</td><td class="mono">${i.mult > 1 ? '×' + i.mult : '—'}</td><td class="mono">${i.alivio ? '−' + fmtKg(i.alivio) : i.peso ? fmtKg(i.peso) : '—'}</td><td class="dim">${esc(i.obs || '')}</td></tr>`).join('')}</tbody></table></div>`).join('');
+      const cats = ['Todos', ...new Set(SIS.itens.map(i => i.categoria))];
+      corpo = `<div class="filtros" id="f-cat">${cats.map(c => `<button class="chip ${catIt === c ? 'aqui' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+        <div class="busca">${ICON_BUSCA}<input type="search" id="busca-it" placeholder="Buscar item"></div><div id="lista-it" class="grade-itens"></div>
+        <p class="faint" style="font-size:12px; margin-top:14px">Ícones dos itens: <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a>, licença <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>, por Delapouite, Lorc, Skoll, Sbed, Carl Olsen, John Colburn, DarkZaitzev, Willdabeast, Lord Berandas, Seregacthtuf e Starseeker. Cores alteradas.</p>`;
     } else if (abaGr === 'alquimia') {
       corpo = `<div class="grade-hab">${SIS.alquimia.map(a => `<article class="hab"><span class="nm">${esc(a.nome)}</span><p>${esc(a.efeito)}</p><span class="faint" style="font-size:13px">Componente: ${esc(a.componente)}</span></article>`).join('')}</div>`;
     } else {
@@ -2902,7 +2978,16 @@ ROTAS.grimorio = async () => {
     }
     app.innerHTML = `<div><span class="rotulo">O que o Caos e o Destino deixaram escrito</span><h1>Grimório</h1></div>
       <div class="abas">${ABAS.map(([k, n]) => `<button class="${abaGr === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>${corpo}`;
+    $('.abas .aqui')?.scrollIntoView({ inline: 'center', block: 'nearest' });
     $$('[data-aba]').forEach(b => b.onclick = () => { abaGr = b.dataset.aba; elGr = 'Todos'; render(); });
+    if ($('#lista-it')) {
+      const desenharIt = () => { const q = $('#busca-it').value.toLowerCase();
+        const fil = SIS.itens.filter(i => (catIt === 'Todos' || i.categoria === catIt) && (!q || (i.nome + ' ' + (i.obs || '')).toLowerCase().includes(q)));
+        const grupos = catIt === 'Todos' && !q ? [...new Set(fil.map(i => i.categoria))] : [null];
+        $('#lista-it').innerHTML = fil.length ? grupos.map(g => `${g ? `<h2 class="sep-cat">${esc(g)}</h2>` : ''}${fil.filter(i => !g || i.categoria === g).map(cardItem).join('')}`).join('') : '<div class="vazio">Nenhum item encontrado.</div>'; };
+      $('#f-cat').onclick = e => { const b = e.target.closest('[data-cat]'); if (!b) return; catIt = b.dataset.cat; $$('#f-cat .chip').forEach(x => x.classList.toggle('aqui', x === b)); desenharIt(); };
+      $('#busca-it').oninput = desenharIt; desenharIt();
+    }
     if ($('#lista-fe')) {
       const corDv = d => `var(--${d === 'Destino' ? 'neutro' : d.toLowerCase()})`;
       const desenharFe = () => { const q = $('#busca-fe').value.toLowerCase();
