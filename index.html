@@ -272,6 +272,27 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .lbl-v { color: #b18ee6; }
 .dado-btn { margin-left: auto; background: none; border: none; color: var(--lua); padding: 2px; }
 .dado-btn:hover { color: var(--ouro); }
+.best-stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13.5px; color: var(--lua-dim); margin-top: 4px; }
+.best-stats b { font: 700 18px var(--f-mono); color: var(--lua); margin-right: 3px; }
+.best-stats.grande b { font-size: 24px; }
+.card-am { position: relative; }
+.carimbo { position: absolute; z-index: 2; top: 10px; left: 8px; transform: rotate(-12deg); border: 2px solid var(--sangue-hi); color: var(--sangue-hi); font: 700 12px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; padding: 2px 7px; background: rgba(10,6,8,.78); pointer-events: none; }
+.card-am.morta .img { filter: grayscale(.7) brightness(.8); }
+.graus { display: inline-flex; gap: 3px; vertical-align: middle; } .graus i { width: 9px; height: 9px; border: 1px solid var(--ouro); transform: rotate(45deg); } .graus i.on { background: var(--ouro); }
+.registro-am { display: grid; gap: 8px; border: 1px solid var(--linha); background: var(--painel); padding: 12px 14px; }
+.ficha-reg { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 14px; } .ficha-reg dt { color: var(--lua-dim); font: 600 11px var(--f-body); letter-spacing: .12em; text-transform: uppercase; align-self: center; } .ficha-reg dd { margin: 0; }
+.quem-abate { margin: 0; font-family: var(--f-ital); font-style: italic; font-size: 17px; color: var(--lua-dim); } .quem-abate.morta { color: var(--sangue-hi); }
+.esc-lista { display: grid; gap: 8px; } .esc-l { display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: start; border-bottom: 1px solid var(--linha); padding-bottom: 8px; } .esc-l p { margin: 4px 0 0; font-size: 13.5px; } .esc-n { font: 700 18px var(--f-disp); color: var(--ouro); text-align: center; }
+.dossie-topo { display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: start; }
+.polaroid { margin: 0; background: #ece6d8; padding: 10px 10px 34px; transform: rotate(-2deg); box-shadow: 0 10px 30px rgba(0,0,0,.5); position: relative; }
+.polaroid img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+.polaroid figcaption { position: absolute; bottom: 6px; left: 0; right: 0; text-align: center; font: 600 22px 'Caveat', var(--f-ital), cursive; color: #2b2118; }
+.foto-campo { margin: 4px 0 0; max-width: 320px; border: 1px solid var(--linha-2); position: relative; } .foto-campo img { width: 100%; display: block; } .foto-campo figcaption { position: absolute; left: 8px; bottom: 6px; font: 600 11px var(--f-body); letter-spacing: .14em; text-transform: uppercase; color: var(--sangue-hi); background: rgba(5,6,10,.7); padding: 2px 6px; }
+.dossie-secoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; } .dossie-secoes h3 { margin-top: 0; } .dossie-secoes p { margin: 0; line-height: 1.55; }
+.galeria-abates { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.ga-item { display: grid; gap: 4px; text-decoration: none; color: inherit; } .ga-item b { font: 400 15px/1.2 var(--f-disp); }
+.ga-img { position: relative; aspect-ratio: 1; background: #f2efe6 center/contain no-repeat; border: 1px solid var(--linha); } .ga-item.morta .ga-img { filter: grayscale(.6); } .ga-item:not(.morta) .ga-img { opacity: .85; }
+@media (max-width: 720px) { .dossie-topo { grid-template-columns: 1fr; } .polaroid { max-width: 240px; justify-self: center; } }
 .pessoa:has(.vol-linha) { flex-wrap: wrap; }
 .vol-linha { flex-basis: 100%; display: grid; grid-template-columns: auto 1fr 44px; gap: 8px; align-items: center; padding: 2px 0 4px 32px; }
 .vol-linha.geral { padding-left: 0; margin-top: 10px; border-top: 1px solid var(--linha); padding-top: 10px; }
@@ -508,7 +529,7 @@ const ATR = [['forca','Força','FOR'],['destreza','Destreza','DES'],['constituic
 const SIGLA = Object.fromEntries(ATR.map(a => [a[0], a[2]]));
 const ELEMS = ['Guerra','Fome','Peste','Morte','Neutro','Conquista','Karma','Destino','Caos'];
 const elDe = nomeAl => String(nomeAl || '').replace(/ \(.*\)$/, '');
-const elTag = e => `<span class="el ${e ? 'el-' + esc(e) : 'el-x'}">${esc(e || 'Indefinido')}</span>`;
+const elTag = e => `<span class="el ${e ? 'el-' + esc(e) : 'el-x'}">${esc(e || 'Sem elemento')}</span>`;
 const iniciais = n => (n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
 const fmtKg = n => (Math.round(n * 10) / 10).toLocaleString('pt-BR') + 'kg';
 const corDe = id => { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return `hsl(${h % 360} 45% 62%)`; };
@@ -519,10 +540,10 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
 /* ---------- dados estáticos do sistema ---------- */
-let SIS = null, CRI = [], RIT = [], LORE = null, FEIT = [];
+let SIS = null, CRI = [], RIT = [], LORE = null, FEIT = [], CACADOR = null, ABATES = {};
 async function carregarBase() {
-  const [s, c, r, f] = await Promise.all(['dados/sistema.json', 'dados/criaturas.json', 'dados/rituais.json', 'dados/feiticos.json'].map(u => fetch(u).then(x => x.json())));
-  SIS = s; CRI = c; RIT = r; FEIT = f;
+  const [s, c, r, f, k] = await Promise.all(['dados/sistema.json', 'dados/criaturas.json', 'dados/rituais.json', 'dados/feiticos.json', 'dados/cacador.json'].map(u => fetch(u).then(x => x.json())));
+  SIS = s; CRI = c; RIT = r; FEIT = f; CACADOR = k.cacador; ABATES = { ...k.abates };
 }
 const classe = n => SIS.classes.find(c => c.nome === n);
 const subclasse = (c, s) => classe(c)?.subclasses.find(x => x.nome === s);
@@ -704,7 +725,7 @@ async function rotear() {
   if (typeof fecharSala === 'function' && !CH.dentro) { fecharSala(); CH.ctxLig = null; }
   const h = location.hash.slice(1) || 'inicio';
   const [base, ...resto] = h.split('-'); const arg = resto.join('-');
-  const sec = { entrar: 'entrar', agente: 'agentes', 'novo': 'agentes', campanha: 'campanhas', escudo: 'campanhas', ameaca: 'ameacas' }[base] || base;
+  const sec = { entrar: 'entrar', agente: 'agentes', 'novo': 'agentes', campanha: 'campanhas', escudo: 'campanhas', ameaca: 'ameacas', dossie: 'ameacas' }[base] || base;
   $$('#nav a').forEach(a => a.classList.toggle('aqui', a.dataset.sec === sec));
   const fn = ROTAS[base] || ROTAS.inicio;
   app.className = 'pagina';
@@ -1448,26 +1469,68 @@ function formAmeaca(x, salvarFn) {
 /* =================================================================
    AMEAÇAS (bestiário)
    ================================================================= */
-let filtroAm = { el: 'Todos', nv: 0, q: '' };
+let filtroAm = { el: 'Todos', nv: 0, q: '', st: 'todas' };
+/* ---------- abates do caçador (vale para todo mundo; só o administrador registra) ---------- */
+const capDe = c => ELEMS.includes(c.elemento) ? c.elemento : 'Servos';
+const abatesDe = id => +(ABATES[String(id)] || 0);
+const eliminada = c => !c.homebrew && abatesDe(c.id) !== 0;
+const textoAbate = (c, q = abatesDe(c.id)) => q < 0 ? `Eliminada por ${CACADOR?.nome || 'Arthur'}. Nem consigo contar mais quantos matei.` : q > 1 ? `Eliminada por ${CACADOR?.nome || 'Arthur'}, com ${q} exemplares abatidos.` : q === 1 ? `Eliminada por ${CACADOR?.nome || 'Arthur'}.` : 'Nenhum abate registrado. Segue em aberto.';
+const romano = n => ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][n] || n;
+const grausHtml = (n, max = 6) => `<span class="graus" aria-label="Grau ${n} de ${max}">${Array.from({ length: max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span>`;
+let abatesOuvindo = false;
+function ouvirAbates() {
+  if (abatesOuvindo || !db) return; abatesOuvindo = true;
+  db.doc('bestiario/abates').onSnapshot(sn => { const d = sn.data(); if (d?.abates) { ABATES = { ...ABATES, ...d.abates }; window.dispatchEvent(new Event('abates')); } }, () => {});
+}
+async function registrarAbate(id, delta) {
+  if (!DONO || !db) return;
+  const atual = abatesDe(id); let novo = atual < 0 ? (delta > 0 ? -1 : 0) : Math.max(0, atual + delta);
+  ABATES[String(id)] = novo;
+  try { const ref = db.doc('bestiario/abates'); const sn = await ref.get(); await ref.set({ abates: { ...(sn.data()?.abates || {}), [String(id)]: novo } }); } catch (e) { toast('Não deu para salvar o abate.'); }
+  window.dispatchEvent(new Event('abates'));
+}
+function abrirEscala() {
+  let aba = 'graus';
+  abrirModal('Escala de perigo e elementos', '<div id="esc"></div>', m => {
+    const el = m.querySelector('#esc');
+    const desenhar = () => {
+      const linhas = aba === 'graus' ? SIS.niveisAmeaca.map(n => `<div class="esc-l"><span class="esc-n">${romano(n[0])}</span><div><b>${esc(n[1])}</b> ${grausHtml(n[0])}<p class="dim">${esc(n[2])} Ícone: ${esc(n[3] || '')}.</p></div><span class="faint mono">${CRI.filter(c => +c.nivel === n[0]).length}</span></div>`)
+        : SIS.elementos.map(([k, d]) => `<div class="esc-l"><span class="esc-n el-${esc(k === 'Servos' ? 'x' : k)}">◆</span><div><b class="${k === 'Servos' ? '' : 'el-' + esc(k)}">${k === 'Servos' ? 'Sem elemento (Servos e Inclassificados)' : esc(k)}</b><p class="dim">${esc(d)}</p></div><span class="faint mono">${CRI.filter(c => capDe(c) === k).length}</span></div>`);
+      el.innerHTML = `<div class="abas">${[['graus', 'Graus de perigo'], ['elem', 'Elementos']].map(([k, l]) => `<button class="${aba === k ? 'aqui' : ''}" data-ea="${k}">${l}</button>`).join('')}</div>
+        <p class="dim" style="font-size:13.5px">${aba === 'graus' ? 'O grau diz até onde o estrago de uma criatura alcança, não o quanto ela é feia.' : 'As criaturas são separadas pela inclinação que carregam, porque é ela que diz como caçam e como morrem.'}</p><div class="esc-lista">${linhas.join('')}</div>`;
+      el.querySelectorAll('[data-ea]').forEach(b => b.onclick = () => { aba = b.dataset.ea; desenhar(); });
+    };
+    desenhar();
+  });
+}
 ROTAS.ameacas = async () => {
   const hb = (await homebrewVisivel('ameaca')).map(x => ({ ...x, id: 'hb' + x.id, homebrew: true }));
   const todas = [...CRI, ...hb];
-  app.innerHTML = `<div><span class="rotulo">Bestiário Senna · relatos de Arthur Henrique Senna</span><h1>Ameaças</h1></div>
+  ouvirAbates();
+  const nEl = CRI.filter(eliminada).length;
+  app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Bestiário Senna · relatos de Arthur Henrique Senna</span><h1>Ameaças</h1>
+      <div class="best-stats"><span><b>${CRI.length}</b> registros</span><span><b>${nEl}</b> eliminadas</span><span><b>${CRI.length - nEl}</b> em aberto</span></div></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap"><a class="btn sec" href="#dossie">Dossiê do caçador</a><button class="btn sec" id="ver-escala">Escala e elementos</button></div></div>
     <div class="aviso">Esta página é para consulta. Para usar uma ameaça em jogo, abra o escudo do mestre da campanha, vá em Combate e adicione a criatura.</div>
-    <div class="filtros" id="f-el">${['Todos', ...ELEMS.filter(e => todas.some(c => c.elemento === e)), ...(todas.some(c => !c.elemento) ? ['Indefinido'] : []), 'Homebrew'].map(e => `<button class="chip ${filtroAm.el === e ? 'aqui' : ''}" data-el="${e}">${e}</button>`).join('')}</div>
+    <div class="filtros" id="f-el">${['Todos', ...ELEMS.filter(e => todas.some(c => c.elemento === e)), ...(todas.some(c => capDe(c) === 'Servos') ? ['Servos'] : []), 'Homebrew'].map(e => `<button class="chip ${filtroAm.el === e ? 'aqui' : ''}" data-el="${e}">${e}</button>`).join('')}</div>
     <div class="filtros" id="f-nv"><button class="chip ${!filtroAm.nv ? 'aqui' : ''}" data-nv="0">Todo nível</button>${SIS.niveisAmeaca.map(n => `<button class="chip ${filtroAm.nv === n[0] ? 'aqui' : ''}" data-nv="${n[0]}">${n[0]} · ${n[1]}</button>`).join('')}</div>
+    <div class="filtros" id="f-st">${[['todas', 'Todas'], ['abertas', 'Em aberto'], ['mortas', 'Eliminadas']].map(([k, l]) => `<button class="chip ${filtroAm.st === k ? 'aqui' : ''}" data-st="${k}">${l}</button>`).join('')}</div>
     <div class="busca">${ICON_BUSCA}<input type="search" id="busca" placeholder="Buscar criatura" value="${esc(filtroAm.q)}"></div>
     <div class="dim" id="contagem"></div><div class="grade-cards" id="lista-am"></div>`;
   const desenhar = () => {
     const q = filtroAm.q.toLowerCase();
-    const fil = todas.filter(c => (filtroAm.el === 'Todos' || (filtroAm.el === 'Homebrew' ? c.homebrew : filtroAm.el === 'Indefinido' ? !c.elemento : c.elemento === filtroAm.el))
+    const fil = todas.filter(c => (filtroAm.el === 'Todos' || (filtroAm.el === 'Homebrew' ? c.homebrew : filtroAm.el === 'Servos' ? capDe(c) === 'Servos' : c.elemento === filtroAm.el))
+      && (filtroAm.st === 'todas' || (filtroAm.st === 'mortas' ? eliminada(c) : !eliminada(c)))
       && (!filtroAm.nv || +c.nivel === filtroAm.nv) && (!q || (c.nome + ' ' + (c.origem || '')).toLowerCase().includes(q)));
     $('#contagem').textContent = `${fil.length} de ${todas.length} ameaças`;
-    $('#lista-am').innerHTML = fil.map(c => `<a class="card-am" href="#ameaca-${esc(c.id)}" data-modal-am="${esc(c.id)}" style="text-decoration:none"><div class="img" style="${c.imagem ? `background-image:url('${esc(c.imagem)}')` : 'background:var(--painel-3)'}"></div>
+    $('#lista-am').innerHTML = fil.map(c => `<a class="card-am ${eliminada(c) ? 'morta' : ''}" href="#ameaca-${esc(c.id)}" data-modal-am="${esc(c.id)}" style="text-decoration:none">${eliminada(c) ? `<span class="carimbo">Eliminada${abatesDe(c.id) > 1 ? ' ×' + abatesDe(c.id) : abatesDe(c.id) < 0 ? ' ∞' : ''}</span>` : ''}<div class="img" style="${c.imagem ? `background-image:url('${esc(c.imagem)}')` : 'background:var(--painel-3)'}"></div>
       <div class="corpo"><b style="font: 400 19px/1.15 var(--f-disp)">${esc(c.nome)}</b><div style="display:flex; gap:6px; flex-wrap:wrap">${elTag(c.elemento)}<span class="tag">Nv ${c.nivel} · ${esc(nivelAm(c.nivel)[1])}</span></div>
       <span class="mono dim" style="font-size:12px">PV ${c.ficha?.pv ?? '?'} · Def ${c.ficha?.defesa ?? '?'}</span></div></a>`).join('') || '<div class="vazio">Nenhuma criatura com esses filtros.</div>';
   };
   $('#f-el').onclick = e => { const b = e.target.closest('[data-el]'); if (!b) return; filtroAm.el = b.dataset.el; $$('#f-el .chip').forEach(x => x.classList.toggle('aqui', x === b)); desenhar(); };
+  $('#f-st').onclick = e => { const b = e.target.closest('[data-st]'); if (!b) return; filtroAm.st = b.dataset.st; $$('#f-st .chip').forEach(x => x.classList.toggle('aqui', x === b)); desenhar(); };
+  $('#ver-escala').onclick = abrirEscala;
+  const aoAbate = () => { if (location.hash.startsWith('#ameacas')) desenhar(); }; addEventListener('abates', aoAbate); assinar(() => removeEventListener('abates', aoAbate));
   $('#f-nv').onclick = e => { const b = e.target.closest('[data-nv]'); if (!b) return; filtroAm.nv = +b.dataset.nv; $$('#f-nv .chip').forEach(x => x.classList.toggle('aqui', x === b)); desenhar(); };
   $('#busca').oninput = e => { filtroAm.q = e.target.value; desenhar(); };
   $('#lista-am').addEventListener('click', e => { const a = e.target.closest('[data-modal-am]'); if (!a) return; e.preventDefault(); const c = todas.find(x => String(x.id) === a.dataset.modalAm); if (c) fichaAmeacaModal(c); });
@@ -1572,17 +1635,26 @@ ROTAS.ameaca = async id => {
   const c = await acharAmeaca(id);
   if (!c) { app.innerHTML = '<div class="vazio">Ameaça não encontrada.</div>'; return; }
   const sec = (t, v) => v ? `<div><h3>${t}</h3><p>${nl(v)}</p></div>` : '';
+  ouvirAbates();
+  const nv = nivelAm(c.nivel);
   app.innerHTML = `<a href="#ameacas" class="dim" style="font-size:14px">← Todas as ameaças</a>
+
     <div class="cab-pagina"><div style="display:grid; gap:8px"><div style="display:flex; gap:8px; flex-wrap:wrap">${elTag(c.elemento)}<span class="tag">Nível ${c.nivel} · ${esc(nivelAm(c.nivel)[1])}</span>${c.homebrew ? '<span class="tag crit">Homebrew</span>' : ''}</div><h1>${esc(c.nome)}</h1>${c.origem ? `<p class="dim">${esc(c.origem)}</p>` : ''}</div></div>
     <div class="det-am">
       <div style="display:grid; gap:16px; align-content:start">${c.imagem ? `<div class="img"><img src="${esc(c.imagem)}" alt="${esc(c.nome)}"></div>` : ''}${blocoFicha(c, 'res-am')}</div>
       <div class="relato">
+${c.homebrew ? '' : `<div class="registro-am"><span class="rotulo">Registro nº ${String(c.id).padStart(3, '0')}</span>
+      <dl class="ficha-reg"><dt>Grau</dt><dd>${grausHtml(+c.nivel)} ${esc(nv[1])}${nv[3] ? ` <span class="faint">· ícone ${esc(nv[3])}</span>` : ''}</dd><dt>Elemento</dt><dd>${elTag(c.elemento)} <span class="faint">${esc(SIS.capitulos?.[capDe(c)] || '')}</span></dd><dt>Origem</dt><dd>${esc(c.origem || 'Desconhecida')}</dd></dl>
+      <p class="quem-abate ${eliminada(c) ? 'morta' : ''}" id="quem-abate">${esc(textoAbate(c))}</p>
+      ${DONO ? `<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" data-abate="1">Registrar abate</button><button class="btn sec mini" data-abate="-1">Tirar um abate</button></div>` : ''}</div>`}
         ${c.anotacoes ? `<p class="nota-arthur">“${esc(c.anotacoes)}”</p>` : ''}
-        ${sec('Descrição', c.descricao)}${sec('Encontro', c.encontro)}${sec('Hábitos', c.habitos)}${sec('Comportamento', c.comportamento)}${sec('Modus operandi', c.modus)}
+        ${sec('Descrição', c.descricao)}${sec('Como encontrei', c.encontro)}${sec('Hábitos e vítimas', c.habitos)}${sec('Comportamento', c.comportamento)}${sec('Modus operandi', c.modus)}
         ${sec('Ponto forte', c.ponto_forte)}${sec('Ponto fraco', c.ponto_fraco)}${sec('Forma de abate', c.forma_de_abate)}
         ${c.uv ? `<div><button class="btn sec mini" id="luz">Acender a luz UV</button><div class="uv" id="uv" hidden>${nl(c.uv)}</div></div>` : ''}
       </div>
     </div>`;
+  app.querySelectorAll('[data-abate]').forEach(b => b.onclick = () => registrarAbate(c.id, +b.dataset.abate));
+  const aoAbate = () => { const q = $('#quem-abate'); if (q) { q.textContent = textoAbate(c); q.classList.toggle('morta', eliminada(c)); } }; addEventListener('abates', aoAbate); assinar(() => removeEventListener('abates', aoAbate));
   $('#luz')?.addEventListener('click', e => { const u = $('#uv'); u.hidden = !u.hidden; e.target.textContent = u.hidden ? 'Acender a luz UV' : 'Apagar a luz UV'; });
 };
 
@@ -1653,6 +1725,35 @@ ROTAS.grimorio = async () => {
 /* =================================================================
    PATENTE (progressão e regras de personagem)
    ================================================================= */
+const SECOES_DOSSIE = [['Biografia', 'biografia'], ['Aparência', 'aparencia'], ['Personalidade', 'personalidade'], ['Cicatrizes', 'cicatrizes'], ['Perdas', 'perdas'], ['Missões na Delta Green', 'missoes'], ['Estilo de caça', 'estilo'], ['Rituais', 'rituais'], ['Equipamento', 'equipamento'], ['Aliados e afetos', 'aliados'], ['Viagens', 'viagens'], ['Limites', 'limites']];
+let filtroDos = 'mortas';
+ROTAS.dossie = async () => {
+  const c = CACADOR; if (!c) { app.innerHTML = '<div class="vazio">Nenhum caçador registrado.</div>'; return; }
+  ouvirAbates();
+  const desenhar = () => {
+    const total = Object.values(ABATES).reduce((t, q) => t + (q < 0 ? 0 : +q || 0), 0), mais = Object.values(ABATES).some(q => q < 0);
+    const nEl = CRI.filter(eliminada).length;
+    const ordem = [...ELEMS, 'Servos'];
+    const G = [...CRI].sort((a, b) => ordem.indexOf(capDe(a)) - ordem.indexOf(capDe(b)) || a.nivel - b.nivel || a.nome.localeCompare(b.nome, 'pt'))
+      .filter(x => filtroDos === 'todas' || (filtroDos === 'mortas' ? eliminada(x) : !eliminada(x)));
+    app.innerHTML = `<a href="#ameacas" class="dim" style="font-size:14px">← Ameaças</a>
+      <div class="dossie-topo">
+        <figure class="polaroid"><img src="${esc(c.foto)}" alt="Retrato de ${esc(c.nome)}"><figcaption>${esc(c.nome.split(' ')[0])}</figcaption></figure>
+        <div style="display:grid; gap:10px; align-content:start; min-width:0">
+          <span class="rotulo">Ficha de caçador nº ${String(c.id || 1).padStart(3, '0')}</span><h1 style="margin:0">${esc(c.nome)}</h1>
+          <p class="dim" style="margin:0">${[c.ocupacao, c.idade ? c.idade + ' anos' : '', c.genero].filter(Boolean).map(esc).join(' · ')}</p>
+          <div class="best-stats grande"><span><b>${total}${mais ? '+' : ''}</b> monstros mortos</span><span><b>${CRI.length}</b> encontradas</span><span><b>${nEl}</b> espécies eliminadas</span><span><b>${CRI.length - nEl}</b> em aberto</span></div>
+          ${c.foto_campo ? `<figure class="foto-campo"><img src="${esc(c.foto_campo)}" alt="${esc(c.nome)} em campo"><figcaption>Em campo</figcaption></figure>` : ''}
+        </div>
+      </div>
+      <div class="dossie-secoes">${SECOES_DOSSIE.filter(([, k]) => c[k]).map(([t, k]) => `<section class="caixa"><h3>${t}</h3><p>${nl(c[k])}</p></section>`).join('')}</div>
+      <div class="cab-pagina" style="margin-top:8px"><h2>Histórico de abates</h2><div class="filtros" id="f-dos">${[['mortas', 'Eliminadas'], ['abertas', 'Em aberto'], ['todas', 'Todas']].map(([k, l]) => `<button class="chip ${filtroDos === k ? 'aqui' : ''}" data-fd="${k}">${l}</button>`).join('')}</div></div>
+      <div class="galeria-abates">${G.map(x => `<a class="ga-item ${eliminada(x) ? 'morta' : ''}" href="#ameaca-${esc(x.id)}"><div class="ga-img" style="${x.imagem ? `background-image:url('${esc(x.imagem)}')` : ''}">${eliminada(x) ? `<span class="carimbo">${abatesDe(x.id) < 0 ? '∞' : '×' + abatesDe(x.id)}</span>` : ''}</div><b>${esc(x.nome)}</b><span class="faint" style="font-size:12px">${esc(capDe(x) === 'Servos' ? 'Sem elemento' : capDe(x))} · ${esc(nivelAm(x.nivel)[1])}</span></a>`).join('') || '<div class="vazio">Nada aqui.</div>'}</div>`;
+    $$('[data-fd]').forEach(b => b.onclick = () => { filtroDos = b.dataset.fd; desenhar(); });
+  };
+  desenhar();
+  const aoAbate = () => { if (location.hash === '#dossie') desenhar(); }; addEventListener('abates', aoAbate); assinar(() => removeEventListener('abates', aoAbate));
+};
 ROTAS.patente = async () => {
   app.className = 'pagina estreita';
   app.innerHTML = `<div><span class="rotulo">Da recruta ao alto escalão</span><h1>Patente</h1></div>
