@@ -250,6 +250,25 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .rol .l1 { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
 .rol .total { font: 700 22px var(--f-mono); }
 .rol.oculta { background: rgba(123,92,168,.12); }
+.rol2 { padding: 12px 14px 10px; display: grid; gap: 6px; }
+.rol2.oculta { background: rgba(123,92,168,.10); }
+.rc-autor { font: 400 19px var(--f-disp); color: var(--lua); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-card { --rc: var(--ouro); position: relative; display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: center; padding: 12px 14px; border: 1.5px solid color-mix(in srgb, var(--rc) 70%, transparent);
+  background: radial-gradient(circle at 12% 50%, color-mix(in srgb, var(--rc) 14%, transparent), transparent 60%), #10131c; }
+.rc-card.crit { --rc: var(--sangue-hi); box-shadow: 0 0 18px rgba(196,48,60,.35); }
+.rc-ico { width: 64px; height: 64px; clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%); background: color-mix(in srgb, var(--rc) 55%, #1a1d27) center/cover no-repeat; display: grid; place-items: center; color: #0b0d14; }
+.rc-ico svg { width: 30px; height: 30px; }
+.rc-meio { min-width: 0; display: grid; gap: 4px; justify-items: center; }
+.rc-tit { font: 700 17px var(--f-body); color: var(--lua); text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-par { display: grid; grid-template-columns: 1fr 1px 1fr; gap: 14px; align-items: center; width: 100%; } .rc-par.um { grid-template-columns: 1fr; }
+.rc-par > i { width: 1px; height: 46px; background: var(--linha-2); }
+.rc-par div { display: grid; justify-items: center; gap: 2px; } .rc-par b { font: 700 34px/1 var(--f-mono); color: #fff; } .rc-par b.crit { color: var(--fole); }
+.rc-par span { font: 700 11px var(--f-body); letter-spacing: .14em; text-transform: uppercase; color: var(--lua-dim); }
+.rc-det summary { cursor: pointer; font-size: 11.5px; color: var(--lua-faint); } .rc-det .mono { display: block; font-size: 11.5px; color: var(--lua-dim); overflow-wrap: anywhere; margin-top: 4px; }
+.bonus-atq { display: grid; gap: 8px; } .bonus-lista { display: flex; gap: 8px; flex-wrap: wrap; }
+.bonus-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--linha-2); background: var(--painel-2); cursor: pointer; }
+.bonus-chip span { display: grid; } .bonus-chip small { font-size: 11.5px; color: var(--lua-dim); } .bonus-chip.on { border-color: var(--fole); background: rgba(80,160,120,.12); }
+.rc-data { justify-self: end; font-size: 11.5px; color: var(--lua-faint); }
 .combatente { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; background: var(--painel); border: 1px solid var(--linha); padding: 10px 12px; }
 .combatente.vez { border-color: var(--ouro); box-shadow: inset 3px 0 0 var(--ouro); }
 .combatente .ini { width: 64px; text-align: center; font: 700 20px var(--f-mono); }
@@ -887,13 +906,13 @@ async function salvarPart() { try { await refPart().set({ campanhas: [...new Set
 /* rolagens enviadas para as campanhas da ficha */
 // histórico da própria ficha (fica neste aparelho; serve mesmo sem campanha)
 const histLocal = fid => { try { return JSON.parse(localStorage.getItem('adr-hist-' + fid) || '[]'); } catch (e) { return []; } };
-function guardarLocal(f, rotulo, r) { if (!f?.id) return; const l = [{ autor: f.nome || 'Agente', foto: (typeof fotoEf === 'function' ? fotoEf(f) : f.foto) || '', rotulo, detalhe: r.detalhe, total: r.total ?? '', t: Date.now() }, ...histLocal(f.id)].slice(0, 60);
+function guardarLocal(f, rotulo, r) { if (!f?.id) return; const l = [{ autor: f.nome || 'Agente', foto: (typeof fotoEf === 'function' ? fotoEf(f) : f.foto) || '', rotulo, detalhe: r.detalhe, total: r.total ?? '', tipo: r.tipo || '', titulo: r.titulo || '', ataque: r.ataque ?? '', dano: r.dano ?? '', critico: !!r.critico, t: Date.now() }, ...histLocal(f.id)].slice(0, 60);
   try { localStorage.setItem('adr-hist-' + f.id, JSON.stringify(l)); } catch (e) {} window.dispatchEvent(new CustomEvent('hist-local', { detail: f.id })); }
 async function publicarRolagem(f, rotulo, r) {
   guardarLocal(f, rotulo, r);
   if (!db || !f?.campanhas?.length) return;
   for (const c of f.campanhas) {
-    try { await db.collection(`campanhas/${c}/rolagens`).add({ uid: ME, autor: f.nome || 'Agente', foto: (typeof fotoEf === 'function' ? fotoEf(f) : f.foto) || '', cor: (vetorAtivo(f) && f.vetor?.cor) || '', ficha: f.id || '', rotulo, detalhe: r.detalhe, total: r.total ?? '', t: Date.now() }); } catch (e) {}
+    try { await db.collection(`campanhas/${c}/rolagens`).add({ uid: ME, autor: f.nome || 'Agente', foto: (typeof fotoEf === 'function' ? fotoEf(f) : f.foto) || '', cor: (vetorAtivo(f) && f.vetor?.cor) || '', ficha: f.id || '', rotulo, detalhe: r.detalhe, total: r.total ?? '', tipo: r.tipo || '', titulo: r.titulo || '', ataque: r.ataque ?? '', dano: r.dano ?? '', critico: !!r.critico, t: Date.now() }); } catch (e) {}
   }
 }
 
@@ -1349,11 +1368,15 @@ ROTAS.agente = async id => {
     }
     if (aba === 'combate') {
       const armas = (F.equipamentos || []).map((it, i) => [it, i]).filter(([it]) => it.dano);
-      return `<div style="display:grid; gap:12px">${barra}${armas.length ? `<div class="lista">${armas.map(([it, i]) => { const P = dadosPericia(F, it.pericia || 'Armas Brancas');
+      const BA = somaBonus(F.bonusAtaque);
+      const painelBonus = `<div class="caixa bonus-atq"><div class="cab-pagina"><span class="rotulo">Bônus de ataque · habilidades que somam no ataque e no dano</span>${podeEditar ? '<button class="btn mini sec" id="novo-bonus">Adicionar bônus</button>' : ''}</div>
+        <div class="bonus-lista">${(F.bonusAtaque || []).map((b, j) => `<label class="bonus-chip ${b.ligado ? 'on' : ''}"><input type="checkbox" data-bon="${j}" ${b.ligado ? 'checked' : ''} ${podeEditar ? '' : 'disabled'}><span><b>${esc(b.nome)}</b><small>${esc(resumoBonus(b))}</small></span>${podeEditar ? `<button class="btn-x" data-bon-ed="${j}" aria-label="Editar ${esc(b.nome)}">✎</button>` : ''}</label>`).join('') || '<span class="faint" style="font-size:13px">Nenhum. Adicione as habilidades que mexem no ataque (Modo Experimental, Esforço Máximo…) e ligue antes de rolar.</span>'}</div>
+        ${BA.nomes.length ? `<p class="mono" style="font-size:12px; color:var(--fole); margin:0">Ligado: ${esc(resumoBonus({ acerto: BA.acerto, margem: BA.margem, dano: BA.dano.join(' + '), mult: BA.mult, multTotal: BA.multTotal, custo: BA.custo, custoPs: BA.custoPs }))}</p>` : ''}</div>`;
+      return `<div style="display:grid; gap:12px">${barra}${painelBonus}${armas.length ? `<div class="lista">${armas.map(([it, i]) => { const P = dadosPericia(F, it.pericia || 'Armas Brancas');
         return `<div class="item"><div class="cab"><span class="nm">${esc(it.nome)} <span class="mono dim" style="font-weight:400; font-size:13px">${esc(it.dano)}</span></span><span style="display:flex; gap:6px; flex-wrap:wrap">${it.tipoDano ? `<span class="tag">${esc(it.tipoDano)}</span>` : ''}${it.alcance ? `<span class="tag">${esc(it.alcance)}</span>` : ''}<span class="tag crit">${armaEf(it).margem < 20 ? `${armaEf(it).margem}/` : ''}×${armaEf(it).mult}</span><span class="tag">${esc(it.pericia || 'Armas Brancas')} ${P.dados}d20+${P.mod + armaEf(it).acerto}</span></span></div>
         ${tagsMods(it) ? `<div style="display:flex; gap:6px; flex-wrap:wrap">${tagsMods(it)}</div>` : ''}${armaEf(it).notas.length ? `<p class="mono faint" style="font-size:12px">Aplicado: ${esc(armaEf(it).notas.join(' · '))}</p>` : ''}
         ${it.obs ? `<p class="dim" style="font-size:13.5px">${esc(it.obs)}</p>` : ''}
-        <div class="acoes"><button class="btn mini" data-acerto="${i}">Acerto</button><button class="btn ouro mini" data-dano="${i}">Dano</button><label class="chk"><input type="checkbox" id="crit-${i}" data-crit="${i}" ${UI_ARMA[id + '|c|' + i] ? 'checked' : ''}> Crítico ×${armaEf(it).mult}</label>${+it.multExtra && +it.multExtra !== 1 ? `<label class="chk" title="Multiplica todos os dados de dano, inclusive os extras (crítico Brutal, dano extra, habilidade)"><input type="checkbox" data-mx="${i}" ${it.multExtraOn ? 'checked' : ''}> Dano ×${fmtMult(it.multExtra)}</label>` : ''}<label class="chk">+ dano extra <input type="text" id="extra-${i}" data-extra="${i}" value="${esc(UI_ARMA[id + '|x|' + i] ?? it.extra ?? '')}" placeholder="1d6+3" style="width:90px; padding:3px 6px"></label>${podeEditar ? `<button class="btn sec mini" data-ed-item="${i}">Editar arma</button>${ehArma(it) ? `<button class="btn sec mini" data-mods="${i}">Melhorias e bênçãos</button>` : ''}` : ''}</div>
+        <div class="acoes"><button class="btn mini" data-atacar="${i}" title="Rola acerto e dano juntos">Atacar</button><button class="btn sec mini" data-acerto="${i}">Acerto</button><button class="btn ouro mini" data-dano="${i}">Dano</button><label class="chk"><input type="checkbox" id="crit-${i}" data-crit="${i}" ${UI_ARMA[id + '|c|' + i] ? 'checked' : ''}> Crítico ×${armaEf(it).mult}</label>${+it.multExtra && +it.multExtra !== 1 ? `<label class="chk" title="Multiplica todos os dados de dano, inclusive os extras (crítico Brutal, dano extra, habilidade)"><input type="checkbox" data-mx="${i}" ${it.multExtraOn ? 'checked' : ''}> Dano ×${fmtMult(it.multExtra)}</label>` : ''}<label class="chk">+ dano extra <input type="text" id="extra-${i}" data-extra="${i}" value="${esc(UI_ARMA[id + '|x|' + i] ?? it.extra ?? '')}" placeholder="1d6+3" style="width:90px; padding:3px 6px"></label>${podeEditar ? `<button class="btn sec mini" data-ed-item="${i}">Editar arma</button>${ehArma(it) ? `<button class="btn sec mini" data-mods="${i}">Melhorias e bênçãos</button>` : ''}` : ''}</div>
         <div class="res" id="res-${i}">${UI_ARMA[id + '|r|' + i] || ''}</div></div>`; }).join('')}</div>` : '<div class="vazio">Nenhuma arma no inventário.</div>'}
         <div class="caixa" style="display:grid; gap:8px"><span class="rotulo">Rolagem livre</span><div style="display:flex; gap:8px"><input type="text" id="livre" placeholder="2d6+3, 3d20m+4 (m = fica o maior) ou 3#2d10+6 (# = rola 3 vezes e soma)"><button class="btn" id="rolar-livre">Rolar</button></div><div class="res" id="res-livre"></div></div></div>`;
     }
@@ -1419,18 +1442,18 @@ ROTAS.agente = async id => {
   const RES_HAB = window._resHab = window._resHab || {};
   const autoDe = nome => (F.autos || {})[nome];
   const resumoAuto = a => [a.custo?.pv ? `${a.custo.pv} PV` : '', a.custo?.ps ? `${a.custo.ps} PS` : '', a.custo?.pst ? `${a.custo.pst} PST` : '', a.pericia ? `teste de ${a.pericia}${a.dt ? ' DT ' + a.dt : ''}` : '', a.ataques ? `${a.ataques} ataque${a.ataques > 1 ? 's' : ''}${a.ataques > 1 ? { metade: ', seguintes com metade do dano do primeiro', igual: ', seguintes com o dano do primeiro', cada: '' }[a.modo || 'cada'] : ''}` : '', a.expr ? `${a.rotuloExpr || 'rola'} ${a.expr}` : ''].filter(Boolean).join(' · ');
-  const botoesUso = nome => { const a = autoDe(nome); return `${a ? `<p class="faint" style="font-size:12.5px">Automação: ${esc(resumoAuto(a)) || 'só registra o uso'}</p>` : ''}<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" data-usar-hab="${esc(nome)}">Usar</button>${podeEditar ? `<button class="btn sec mini" data-auto-hab="${esc(nome)}">${a ? 'Editar automação' : 'Automatizar'}</button>` : ''}</div><div class="res" data-res-hab="${esc(nome)}">${RES_HAB[id + '|' + nome] || ''}</div>`; };
+  const botoesUso = nome => { const a = autoDe(nome); return `${a ? `<p class="faint" style="font-size:12.5px">Automação: ${esc(resumoAuto(a)) || 'só registra o uso'}</p>` : ''}<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" data-usar-hab="${esc(nome)}">Usar</button>${podeEditar ? `<button class="btn sec mini" data-somar="${esc(nome)}" title="Vira um bônus de ataque na aba Combate">Somar no ataque</button>` : ''}${podeEditar ? `<button class="btn sec mini" data-auto-hab="${esc(nome)}">${a ? 'Editar automação' : 'Automatizar'}</button>` : ''}</div><div class="res" data-res-hab="${esc(nome)}">${RES_HAB[id + '|' + nome] || ''}</div>`; };
   const cardHab = (h, lista, i) => `<article class="hab"><div class="cab"><span class="nm">${esc(h.nome)}</span>${podeEditar ? `<button class="btn-x" data-rm="${lista}" data-i="${i}" aria-label="Remover">×</button>` : ''}</div>${h.origem ? `<span class="faint" style="font-size:12px">${esc(h.origem)}</span>` : ''}<p>${nl(h.texto)}</p>${botoesUso(h.nome)}</article>`;
   const cardFeitico = (r, i) => `<article class="hab hab-feitico"><div class="cab"><span class="nm">${esc(r.nome)}</span>${podeEditar ? `<button class="btn-x" data-rm="feiticos" data-i="${i}" aria-label="Remover">×</button>` : ''}</div>
     <span style="display:flex; gap:6px; flex-wrap:wrap">${r.divindade ? `<span class="tag" style="color:var(--${r.divindade === 'Destino' ? 'neutro' : r.divindade.toLowerCase()})">${esc(r.divindade)}</span>` : ''}${tagNivelF(r)}</span>
     ${r.preparo ? `<p class="preparo"><b>Preparo.</b> ${esc(r.preparo)}</p>` : ''}${htmlReq(r)}
     <div class="stats">${[['Alvo', r.alvo], ['Alcance', r.alcance], ['Duração', r.duracao], ['DT', ehOposto(r) ? 'Oposto' : r.dt], ['Se falhar', r.falha ? r.falha + ' PS' : (r.custo || '')]].filter(x => x[1]).map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
     ${r.descricao ? `<p style="font-style:italic">${esc(r.descricao)}</p>` : ''}<p>${nl(efeitoOposto(r.efeito))}</p>${(r.limitacoes || []).length ? `<p class="faint" style="font-size:13px">${r.limitacoes.map(esc).join('<br>')}</p>` : ''}
-    <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" data-lancar="${i}">Usar feitiço (${periciaConj(F)}${ehOposto(r) ? ' contra o alvo' : r.dt ? ' DT ' + esc(r.dt) : ''})</button>${rolaveis(r.efeito).map(x => `<button class="btn ouro mini" data-feit="${i}" data-expr="${esc(x)}">Rolar ${esc(x)}</button>`).join('')}</div><div class="res" id="res-feit-${i}">${RES_HAB[id + '|feit|' + r.nome] || ''}</div></article>`;
+    <div style="display:flex; gap:8px; flex-wrap:wrap">${podeEditar ? `<button class="btn sec mini" data-somar="${esc(r.nome)}" title="Vira um bônus de ataque na aba Combate">Somar no ataque</button>` : ''}<button class="btn mini" data-lancar="${i}">Usar feitiço (${periciaConj(F)}${ehOposto(r) ? ' contra o alvo' : r.dt ? ' DT ' + esc(r.dt) : ''})</button>${rolaveis(r.efeito).map(x => `<button class="btn ouro mini" data-feit="${i}" data-expr="${esc(x)}">Rolar ${esc(x)}</button>`).join('')}</div><div class="res" id="res-feit-${i}">${RES_HAB[id + '|feit|' + r.nome] || ''}</div></article>`;
   const cardRitual = (r, i) => `<article class="hab"><div class="cab"><span class="nm">${esc(r.nome)}</span><span style="display:flex; gap:6px; align-items:center">${r.elemento ? elTag(r.elemento) : ''}${podeEditar ? `<button class="btn-x" data-rm="rituais" data-i="${i}" aria-label="Remover">×</button>` : ''}</span></div>
     <div class="stats">${[['Alvo', r.alvo], ['Custo', r.custo]].filter(x => x[1]).map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
     ${r.descricao ? `<p style="font-style:italic">${esc(r.descricao)}</p>` : ''}<p>${nl(r.efeito)}</p>${(r.limitacoes || []).length ? `<p class="faint" style="font-size:13px">${r.limitacoes.map(esc).join('<br>')}</p>` : ''}
-    ${rolaveis(r.efeito).map(x => `<button class="btn ouro mini" style="justify-self:start" data-rit="${i}" data-expr="${esc(x)}">Rolar ${esc(x)}</button>`).join('')}<div class="res" id="res-rit-${i}"></div></article>`;
+    <div style="display:flex; gap:8px; flex-wrap:wrap">${rolaveis(r.efeito).map(x => `<button class="btn ouro mini" data-rit="${i}" data-expr="${esc(x)}">Rolar ${esc(x)}</button>`).join('')}${podeEditar ? `<button class="btn sec mini" data-somar="${esc(r.nome)}" title="Vira um bônus de ataque na aba Combate">Somar no ataque</button>` : ''}</div><div class="res" id="res-rit-${i}"></div></article>`;
 
   function ligarFicha(K) {
     const dtv = () => +($('#dt')?.value || 0), bnv = () => +($('#bonus')?.value || 0);
@@ -1528,15 +1551,56 @@ ROTAS.agente = async id => {
     // testes
     $$('[data-teste]').forEach(b => b.onclick = () => { const n = b.dataset.teste, P = dadosPericia(F, n), mod = P.mod + bnv(); const r = teste(P.dados, mod);
       $(`[data-res="${CSS.escape(n)}"]`).innerHTML = `${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtv())}${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`; publicarRolagem(F, n, r); });
-    $$('[data-acerto]').forEach(b => b.onclick = () => { const it = F.equipamentos[+b.dataset.acerto], E = armaEf(it); const P = dadosPericia(F, it.pericia || 'Armas Brancas'); const r = teste(P.dados, P.mod + bnv() + E.acerto);
-      const critou = r.nat >= E.margem; { const cb = $('#crit-' + b.dataset.acerto); if (cb) cb.checked = critou; UI_ARMA[id + '|c|' + b.dataset.acerto] = critou; }
-      $('#res-' + b.dataset.acerto).innerHTML = UI_ARMA[id + '|r|' + b.dataset.acerto] = `Acerto ${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtv())}${critou ? ` <span class="critico">Crítico (${r.nat} natural)</span>` : ''}`; publicarRolagem(F, `Acerto · ${it.nome}`, r); });
-    $$('[data-dano]').forEach(b => b.onclick = () => { const i = +b.dataset.dano, it = F.equipamentos[i], E = armaEf(it), mx = $(`[data-mx="${i}"]`)?.checked ? +it.multExtra : 1; const base = rolar(multDados(E.dano, mx)); if (!base) return toast('Dano da arma em formato que não sei rolar.');
-      const crit = $('#crit-' + i).checked; let total = crit ? base.total * E.mult : base.total; let txt = `${esc(E.dano)}${mx !== 1 ? ` (dados ×${fmtMult(mx)})` : ''} → ${base.detalhe} = ${base.total}`;
-      if (crit) txt += ` <span class="critico">× ${E.mult} = ${total}</span>`;
+    const rolarAcerto = i => { const it = F.equipamentos[i], E = armaEf(it), B = somaBonus(F.bonusAtaque); const P = dadosPericia(F, it.pericia || 'Armas Brancas'); const r = teste(P.dados, P.mod + bnv() + E.acerto + B.acerto);
+      const margem = Math.max(2, E.margem - B.margem), critou = r.nat >= margem; { const cb = $('#crit-' + i); if (cb) cb.checked = critou; UI_ARMA[id + '|c|' + i] = critou; }
+      return { r, critou, html: `Acerto ${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtv())}${critou ? ` <span class="critico">Crítico (${r.nat} natural, margem ${margem})</span>` : ''}` }; };
+    const rolarDano = (i, crit) => { const it = F.equipamentos[i], E = armaEf(it), B = somaBonus(F.bonusAtaque), mx = $(`[data-mx="${i}"]`)?.checked ? +it.multExtra : 1;
+      if (B.custo || B.custoPs) { const a = { ...calc(F).max, ...(F.atual || {}) }; if (a.pst < B.custo) { toast(`Sem PST para os bônus ligados (precisa de ${B.custo}).`); return null; } if (a.ps < (B.custoPs || 0)) { toast(`Sem PS para os bônus ligados (precisa de ${B.custoPs}).`); return null; }
+        F.atual = { ...a, pst: a.pst - B.custo, ps: a.ps - (B.custoPs || 0) }; ajustarQueda(F); pendente = true; salvarVitais(); }
+      const expr = [E.dano, ...B.dano.map(x => danoBonus(x, it.dano))].join('+').replace(/\+-/g, '-');
+      const base = rolar(multDados(expr, mx)); if (!base) { toast('Dano em formato que não sei rolar.'); return null; }
+      const mult = E.mult + B.mult; let total = crit ? Math.floor(base.total * mult) : base.total; let txt = `${esc(expr)}${mx !== 1 ? ` (dados ×${fmtMult(mx)})` : ''} → ${base.detalhe} = ${base.total}`;
+      if (crit) txt += ` <span class="critico">× ${fmtMult(mult)} = ${total}</span>`;
       if (crit && E.critExtra) { const rb = rolar(multDados(E.critExtra, mx)); if (rb) { total += rb.total; txt += `<br>+ ${esc(E.critExtra)} Brutal → ${rb.detalhe} = ${rb.total}`; } }
       const ex = $('#extra-' + i).value.trim(); if (ex) { const r2 = rolar(multDados(ex, mx)); if (r2) { total += r2.total; txt += `<br>+ ${esc(ex)} → ${r2.detalhe} = ${r2.total} <span class="faint">(fora do crítico)</span>`; } }
-      $('#res-' + i).innerHTML = UI_ARMA[id + '|r|' + i] = `${txt}<br>Dano total: <b>${total}</b>`; publicarRolagem(F, `Dano · ${it.nome}${crit ? ' (crítico)' : ''}`, { total, detalhe: txt.replace(/<br>/g, ' · ').replace(/<(?!\/?span)[^>]+>/g, '') }); });
+      if (B.multTotal !== 1) { const t2 = Math.floor(total * B.multTotal); txt += `<br>× ${fmtMult(B.multTotal)} (${esc(B.nomes.filter(n => +(F.bonusAtaque.find(b => b.nome === n)?.multTotal) > 1).join(', '))}) = ${t2}`; total = t2; }
+      if (B.nomes.length) txt += `<br><span class="faint">Bônus: ${esc(B.nomes.join(', '))}${B.custo ? ` · −${B.custo} PST` : ''}${B.custoPs ? ` · −${B.custoPs} PS` : ''}</span>`;
+      return { total, txt, crit }; };
+    const limparTxt = t => t.replace(/<br>/g, ' · ').replace(/<(?!\/?span)[^>]+>/g, '');
+    $$('[data-acerto]').forEach(b => b.onclick = () => { const i = +b.dataset.acerto, it = F.equipamentos[i], a = rolarAcerto(i);
+      $('#res-' + i).innerHTML = UI_ARMA[id + '|r|' + i] = a.html; publicarRolagem(F, `Acerto · ${it.nome}`, { ...a.r, tipo: 'acerto', titulo: it.nome, critico: a.critou }); });
+    $$('[data-atacar]').forEach(b => b.onclick = () => { const i = +b.dataset.atacar, it = F.equipamentos[i], a = rolarAcerto(i), dn = rolarDano(i, a.critou); if (!dn) return;
+      $('#res-' + i).innerHTML = UI_ARMA[id + '|r|' + i] = `${a.html}<br>${dn.txt}<br>Dano total: <b>${dn.total}</b>`;
+      publicarRolagem(F, `Ataque · ${it.nome}`, { tipo: 'ataque', titulo: it.nome, ataque: a.r.total, dano: dn.total, critico: a.critou, total: dn.total, detalhe: limparTxt(`${a.html} · ${dn.txt}`) }); });
+    $$('[data-dano]').forEach(b => b.onclick = () => { const i = +b.dataset.dano, it = F.equipamentos[i], crit = $('#crit-' + i).checked, dn = rolarDano(i, crit); if (!dn) return;
+      $('#res-' + i).innerHTML = UI_ARMA[id + '|r|' + i] = `${dn.txt}<br>Dano total: <b>${dn.total}</b>`; publicarRolagem(F, `Dano · ${it.nome}${crit ? ' (crítico)' : ''}`, { total: dn.total, tipo: 'dano', titulo: it.nome, critico: crit, detalhe: limparTxt(dn.txt) }); });
+    // bônus de ataque
+    $$('[data-bon]').forEach(c => c.onchange = () => { F.bonusAtaque[+c.dataset.bon].ligado = c.checked; salvar({ bonusAtaque: F.bonusAtaque }); render(); });
+    const formBonus = (j, pre) => { const b0 = j == null ? { nome: pre || '' } : F.bonusAtaque[j];
+      const hab = [...(subclasse(F.classe, F.subclasse)?.habilidades || []).filter(h => h.nivel <= (+F.nivel || 1)), ...(F.passivas || []), ...(F.habilidades || []), ...(F.rituais || []).map(r => ({ nome: r.nome, texto: `Ritual (${r.elemento || ''}). ${r.efeito || ''} Custo: ${r.custo || ''}` })), ...(F.feiticos || []).map(r => ({ nome: r.nome, texto: `Feitiço. ${r.efeito || ''}` }))];
+      abrirModal(j == null ? 'Novo bônus de ataque' : 'Editar bônus', `<div class="campo"><label class="rotulo" for="bo-de">Vem da habilidade</label><select id="bo-de"><option value="">Escolha ou escreva o nome abaixo</option>${hab.map(h => `<option ${h.nome === b0.nome ? 'selected' : ''}>${esc(h.nome)}</option>`).join('')}</select><p class="faint" id="bo-txt" style="font-size:12.5px; margin:4px 0 0"></p></div>
+        <div class="grade-campos"><div class="campo"><label class="rotulo" for="bo-n">Nome</label><input type="text" id="bo-n" value="${esc(b0.nome || '')}"></div>
+        <div class="campo"><label class="rotulo" for="bo-a">Bônus no acerto</label><input type="number" id="bo-a" value="${esc(b0.acerto || '')}" placeholder="0"></div>
+        <div class="campo"><label class="rotulo" for="bo-m">Margem de crítico</label><input type="number" id="bo-m" value="${esc(b0.margem || '')}" placeholder="+2 = crítico 2 números antes"></div>
+        <div class="campo"><label class="rotulo" for="bo-d">Dados de dano a mais</label><input type="text" id="bo-d" value="${esc(b0.dano || '')}" placeholder="2d10 · 1d = um dado da arma"></div>
+        <div class="campo"><label class="rotulo" for="bo-c">Soma no multiplicador de crítico</label><input type="number" step="0.5" id="bo-c" value="${esc(b0.mult || '')}" placeholder="0,5"></div>
+        <div class="campo"><label class="rotulo" for="bo-t">Multiplica o dano total</label><input type="number" step="0.5" id="bo-t" value="${esc(b0.multTotal || '')}" placeholder="2 = dobra"></div>
+        <div class="campo"><label class="rotulo" for="bo-p">Custo em PST por ataque</label><input type="number" id="bo-p" value="${esc(b0.custo || '')}" placeholder="0"></div>
+        <div class="campo"><label class="rotulo" for="bo-s">Custo em PS por ataque</label><input type="number" id="bo-s" value="${esc(b0.custoPs || '')}" placeholder="0"></div></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn" id="bo-ok">Salvar</button>${j == null ? '' : '<button class="btn sec perigo" id="bo-rm">Tirar</button>'}</div>`, (m, fechar) => {
+        const v = q => m.querySelector(q).value.trim(), num = q => +String(v(q)).replace(',', '.') || 0;
+        const mostrar = () => { const h = hab.find(x => x.nome === v('#bo-de')); m.querySelector('#bo-txt').textContent = h?.texto || ''; };
+        m.querySelector('#bo-de').onchange = () => { const n = v('#bo-de'); mostrar(); if (!n) return; m.querySelector('#bo-n').value = n; const pr = BONUS_PRESET[n.split(':')[0].trim()];
+          if (pr) { m.querySelector('#bo-a').value = pr.acerto || ''; m.querySelector('#bo-m').value = pr.margem || ''; m.querySelector('#bo-d').value = pr.dano || ''; m.querySelector('#bo-c').value = pr.mult || ''; m.querySelector('#bo-t').value = pr.multTotal || ''; m.querySelector('#bo-p').value = pr.custo || ''; } };
+        mostrar(); if (pre) { m.querySelector('#bo-de').value = pre; m.querySelector('#bo-de').dispatchEvent(new Event('change')); const h = hab.find(x => x.nome === pre); const ds = rolaveis(h?.texto || ''); if (ds.length && !m.querySelector('#bo-d').value) m.querySelector('#bo-d').value = ds[0]; }
+        m.querySelector('#bo-ok').onclick = () => { if (!v('#bo-n')) return toast('Dê um nome ao bônus.'); if (v('#bo-d') && !rolar(danoBonus(v('#bo-d'), '1d6'))) return toast('Dados de dano em formato inválido. Ex.: 2d10');
+          const nb = { nome: v('#bo-n'), acerto: num('#bo-a'), margem: num('#bo-m'), dano: v('#bo-d'), mult: num('#bo-c'), multTotal: num('#bo-t') || 1, custo: num('#bo-p'), custoPs: num('#bo-s'), ligado: !!b0.ligado };
+          const l = [...(F.bonusAtaque || [])]; if (j == null) l.push(nb); else l[j] = nb; F.bonusAtaque = l; salvar({ bonusAtaque: l }); fechar(); render(); };
+        m.querySelector('#bo-rm')?.addEventListener('click', () => { const l = (F.bonusAtaque || []).filter((_, k) => k !== j); F.bonusAtaque = l; salvar({ bonusAtaque: l }); fechar(); render(); });
+      }); };
+    $('#novo-bonus')?.addEventListener('click', () => formBonus(null));
+    $$('[data-somar]').forEach(b => b.onclick = () => { const n = b.dataset.somar, j = (F.bonusAtaque || []).findIndex(x => x.nome === n); formBonus(j >= 0 ? j : null, n); });
+    $$('[data-bon-ed]').forEach(b => b.onclick = e => { e.preventDefault(); formBonus(+b.dataset.bonEd); });
     $('#rolar-livre')?.addEventListener('click', () => { const ex = $('#livre').value; const r = rolar(ex); $('#res-livre').innerHTML = r ? `${r.detalhe} = <b>${r.total}</b>` : '<span class="falha">Formato inválido. Ex.: 2d6+3, 3d20m+4, 3#2d10+6</span>'; if (r) publicarRolagem(F, ex, r); });
     $$('[data-lancar]').forEach(b => b.onclick = () => { const i = b.dataset.lancar, fe = F.feiticos[+i];
       const inv = F.equipamentos || [], acha = n => inv.findIndex(it => (it.nome || '').trim().toLowerCase() === n.toLowerCase());
@@ -1688,6 +1752,34 @@ const modCabe = (it, m) => { const t = /\((Armas de Fogo|Armas Brancas)\)/.exec(
 // multiplicador extra (ex.: ×1,5 da Arma Favorita): multiplica só os dados, não os números fixos
 const multDados = (expr, k) => !expr || !(+k) || +k === 1 ? expr : String(expr).replace(/(\d*d\d+m?)/gi, `($1)*${+k}`);
 const fmtMult = k => String(+k).replace('.', ',');
+/* Bônus de ataque: habilidades que somam ao ataque e ao dano da arma (Modo Experimental, Esforço Máximo…).
+   Cada bônus ligado entra em todos os ataques: acerto, margem, dados de dano, multiplicador de crítico, multiplicador do total e custo em PST. */
+const BONUS_PRESET = {
+  'Modo Experimental': { acerto: 5, margem: 2, dano: '2d10' },
+  'Engenheiro de Guerra': { margem: 3, dano: '3d10' },
+  'Esforço Máximo': { multTotal: 2 },
+  'Pressão Mortal': { mult: 0.5 },
+  'Arma Favorita': { margem: 1 },
+  'Brutalidade': { acerto: 3, dano: '1d', custo: 7 },
+  'Dependência de Força': { dano: '2d' },
+  'Servo da Loucura': { dano: '1d' },
+  'Execução Perfeita': { dano: '3d8' },
+  'Golpe das Sombras': { dano: '2d6' },
+  'Caçador de Alinhamentos': { dano: '2d8' },
+  'Julgamento Radiante': { dano: '3d8' },
+  'Carne Profanada': { dano: '1d8' },
+  'Instinto de Luta': { acerto: 5 },
+  'Golpe Preciso': { acerto: 3 },
+  'Passo Fantasma': { dano: '1d' },
+};
+function somaBonus(lista) {
+  const B = { acerto: 0, margem: 0, dano: [], mult: 0, multTotal: 1, custo: 0, nomes: [] };
+  for (const b of (lista || []).filter(x => x.ligado)) { B.acerto += +b.acerto || 0; B.margem += +b.margem || 0; if (b.dano) B.dano.push(b.dano); B.mult += +b.mult || 0; B.multTotal *= +b.multTotal || 1; B.custo += +b.custo || 0; B.custoPs = (B.custoPs || 0) + (+b.custoPs || 0); B.nomes.push(b.nome); }
+  return B;
+}
+// "+1d" ou "+2d" (dado da própria arma): vira o dado da arma
+const danoBonus = (expr, armaDano) => String(expr).replace(/(^|[+-])(\d*)d(?!\d)/g, (m, s, n) => { const f = /d(\d+)/.exec(armaDano || '')?.[1] || '6'; return `${s}${n || 1}d${f}`; });
+const resumoBonus = b => [b.acerto ? `${b.acerto > 0 ? '+' : ''}${b.acerto} acerto` : '', b.margem ? `+${b.margem} margem` : '', b.dano ? `+${b.dano} dano` : '', b.mult ? `+${fmtMult(b.mult)} no crítico` : '', +b.multTotal && +b.multTotal !== 1 ? `dano ×${fmtMult(b.multTotal)}` : '', b.custo ? `${b.custo} PST` : '', b.custoPs ? `${b.custoPs} PS` : ''].filter(Boolean).join(' · ');
 function armaEf(it) {
   const m = modsDe(it), tem = n => m.melhorias.filter(x => x === n).length + m.bencaos.filter(x => x === n).length;
   const fogo = tipoArma(it) === 'Armas de Fogo';
@@ -2278,7 +2370,17 @@ function ouvirCampanha(id, aoMudar) {
   assinar(db.doc(`campanhas/${id}/publico/combate`).onSnapshot(s => { st.combate = s.exists ? s.data() : null; aoMudar(st); }));
   return st;
 }
-const rolHtml = r => `<div class="rol ${r.oculta ? 'oculta' : ''}"><div class="rol-av" style="${r.foto ? `background-image:url('${esc(r.foto)}')` : ''}${r.cor ? `; border-color:${esc(r.cor)}` : ''}">${r.foto ? '' : esc(iniciais(r.autor))}</div><div class="rol-tx"><div class="l1"><b>${esc(r.autor)}</b><span class="total">${esc(r.total)}</span></div><span>${esc(r.rotulo)}</span><span class="mono faint" style="font-size:11.5px">${r.detalhe}</span><span class="faint" style="font-size:11px">${horaBR(r.t)}${r.oculta ? ' · só o mestre vê' : ''}</span></div></div>`;
+const rolHtml = r => { const tit = r.titulo || String(r.rotulo || '').replace(/^(Acerto|Dano) · /, '');
+  const tipo = r.tipo || (/^Acerto · /.test(r.rotulo || '') ? 'acerto' : /^Dano · /.test(r.rotulo || '') ? 'dano' : '');
+  const corpo = tipo === 'ataque'
+    ? `<div class="rc-par"><div><b class="${r.critico ? 'crit' : ''}">${esc(r.ataque)}</b><span>Ataque</span></div><i aria-hidden="true"></i><div><b>${esc(r.dano)}</b><span>Dano</span></div></div>`
+    : `<div class="rc-par um"><div><b class="${r.critico || /crítico/i.test(r.rotulo || '') ? 'crit' : ''}">${esc(r.total)}</b><span>${tipo === 'acerto' ? 'Ataque' : tipo === 'dano' ? 'Dano' : 'Total'}</span></div></div>`;
+  return `<div class="rol2 ${r.oculta ? 'oculta' : ''}"><div class="rc-autor">${esc(r.autor)}</div>
+    <div class="rc-card ${r.critico || /crítico/i.test(r.rotulo || '') ? 'crit' : ''}" style="${r.cor ? `--rc:${esc(r.cor)}` : ''}">
+      <div class="rc-ico" style="${r.foto ? `background-image:url('${esc(r.foto)}')` : ''}">${r.foto ? '' : DADO_SVG}</div>
+      <div class="rc-meio"><div class="rc-tit">${esc(tit)}</div>${corpo}</div></div>
+    ${r.detalhe ? `<details class="rc-det"><summary>dados</summary><span class="mono">${r.detalhe}</span></details>` : ''}
+    <div class="rc-data">${horaBR(r.t)}${r.oculta ? ' · só o mestre vê' : ''}</div></div>`; };
 function abrirHistorico(camps0, fid) {
   const camps = [...(fid ? ['__ficha'] : []), ...(db ? camps0 || [] : [])]; if (!camps.length) return;
   document.querySelector('.hist-gaveta')?.remove();

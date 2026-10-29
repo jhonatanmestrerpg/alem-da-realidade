@@ -95,7 +95,7 @@
    "alvo": "Uma arma de longo alcance",
    "custo": "Ver preço",
    "descricao": "O olho que mira acende e a arma esquenta.",
-   "efeito": "A fúria entra na arma, e cada disparo fica mais forte quanto mais longe está o alvo. Quem mata com ele pode ser tomado por um êxtase e continuar atirando em qualquer coisa viva.",
+   "efeito": "A fúria entra na arma, e cada disparo fica mais forte quanto mais longe está o alvo. Quem mata com ele pode ser tomado por um êxtase e continuar atirando em qualquer coisa viva. No site: ligue o bônus \"Mira Sangrenta\" na aba Combate (+2d10 de dano por disparo, 2 PS por disparo; aumente os dados com a distância a critério do mestre).",
    "limitacoes": [
     "Custo médio para ativar, e cada disparo cobra um pedaço da cabeça de quem atira."
    ]
@@ -323,5 +323,58 @@
  "objetivo": "Arthur não recua diante de terror cósmico nem de monstro distorcido: ele bota a cara. Matou a Hydra Falsa com o grupo e enfrentou o Sumo Sacerdote sozinho. As exceções são o Karma, que reescreve a realidade, e os Cavaleiros novos, que nenhum humano matou até hoje. Dos antigos, já derrubou com a equipe a Hydra Falsa, antigo Cavaleiro da Fome, e The Skull, antigo Cavaleiro da Morte. Isso não quer dizer respeito. Ele odeia cada um dos Cavaleiros, e se um dia tiver a chance, vai provar que não existe nada que não sangre.",
  "anotacoes": "Arma de fogo em qualquer distância. De longe, tiro de precisão de posição elevada e com o terreno a favor. Na média e na curta, submetralhadora, pistolas e espingarda, sem trocar para a lâmina enquanto houver bala. Estuda a criatura antes de puxar o gatilho, lê o padrão, a fraqueza e a resistência dela, e escolhe o instante em que ela está mais exposta.\nO tiro dele é pesado, do tipo que derruba de primeira o que muita gente precisa de um pente inteiro para parar. Mesmo assim, Arthur nunca dá um tiro só. Nunca. O dedo não para no primeiro disparo, nem quando o primeiro já resolveu, e a Eclipsa cospe em sequência. Quem sobrevive ao primeiro não tem tempo de sobreviver ao resto.\nQuando precisa sumir, some: sai da linha de visão e reaparece em outro ponto antes que o alvo entenda de onde veio o disparo. Usa os rituais sem anunciar nada: a Mira Sangrenta acende o símbolo no olho esquerdo e a arma esquenta, e é só isso que o alvo vê. A Lâmina de Sangue e a katana são o extra para quando a munição acaba.",
  "foto": "img/cacador/arthur.webp",
- "campanhas": []
+ "campanhas": [],
+ "bonusAtaque": [
+  {
+   "nome": "Modo Experimental",
+   "acerto": 5,
+   "margem": 2,
+   "dano": "2d10",
+   "mult": 0,
+   "multTotal": 1,
+   "custo": 0,
+   "ligado": false
+  },
+  {
+   "nome": "Esforço Máximo",
+   "acerto": 0,
+   "margem": 0,
+   "dano": "",
+   "mult": 0,
+   "multTotal": 2,
+   "custo": 0,
+   "ligado": false
+  },
+  {
+   "nome": "Pressão Mortal",
+   "acerto": 0,
+   "margem": 0,
+   "dano": "",
+   "mult": 0.5,
+   "multTotal": 1,
+   "custo": 0,
+   "ligado": false
+  },
+  {
+   "nome": "Especialidade: Êxtase (×5)",
+   "acerto": 0,
+   "margem": 0,
+   "dano": "5d6",
+   "mult": 0,
+   "multTotal": 1,
+   "custo": 5,
+   "ligado": false
+  },
+  {
+   "nome": "Mira Sangrenta",
+   "acerto": 0,
+   "margem": 0,
+   "dano": "2d10",
+   "mult": 0,
+   "multTotal": 1,
+   "custo": 0,
+   "custoPs": 2,
+   "ligado": false
+  }
+ ]
 }
