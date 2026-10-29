@@ -95,7 +95,7 @@
    "alvo": "Uma arma de longo alcance",
    "custo": "Ver preço",
    "descricao": "O olho que mira acende e a arma esquenta.",
-   "efeito": "A fúria entra na arma, e cada disparo fica mais forte quanto mais longe está o alvo. Quem mata com ele pode ser tomado por um êxtase e continuar atirando em qualquer coisa viva. No site: ligue o bônus \"Mira Sangrenta\" na aba Combate (+2d10 de dano por disparo, 2 PS por disparo; aumente os dados com a distância a critério do mestre).",
+   "efeito": "A fúria entra na arma, e cada disparo fica mais forte quanto mais longe está o alvo. Quem mata com ele pode ser tomado por um êxtase e continuar atirando em qualquer coisa viva. Regra: 1d4 de dano a cada 2 m de distância do alvo. Alcance até o dobro do deslocamento, então o teto é deslocamento d4 (Arthur: 18 m, 9d4). No site: ligue o bônus \"Mira Sangrenta\" na aba Combate e informe a distância.",
    "limitacoes": [
     "Custo médio para ativar, e cada disparo cobra um pedaço da cabeça de quem atira."
    ]
@@ -369,12 +369,13 @@
    "nome": "Mira Sangrenta",
    "acerto": 0,
    "margem": 0,
-   "dano": "2d10",
+   "dano": "",
    "mult": 0,
    "multTotal": 1,
    "custo": 0,
    "custoPs": 2,
-   "ligado": false
+   "ligado": false,
+   "distancia": true
   }
  ]
 }
