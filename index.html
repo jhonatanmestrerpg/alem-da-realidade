@@ -807,6 +807,10 @@ const d = s => 1 + Math.floor(Math.random() * s);
 function rolar(expr) {
   const limpo = String(expr).replace(/\s/g, '').toLowerCase();
   if (!limpo) return null;
+  // N#expr: rola a expressão N vezes e soma tudo no final (ex.: 3#2d10+6)
+  const rep = /^(\d+)#(.+)$/.exec(limpo);
+  if (rep) { const n = Math.min(50, +rep[1]); if (!n) return null; const rs = Array.from({ length: n }, () => rolar(rep[2])); if (rs.some(x => !x)) return null;
+    return { total: rs.reduce((t, r) => t + r.total, 0), detalhe: rs.map((r, i) => `${i + 1}º ${r.detalhe} = ${r.total}`).join(' · '), vezes: rs }; }
   let total = 0; const partes = [];
   const termos = limpo.match(/[+-]?[^+-]+/g) || [];
   for (const t of termos) {
@@ -818,7 +822,7 @@ function rolar(expr) {
       const ds = Array.from({ length: q }, () => d(f));
       if (m[3]) { const mx = Math.max(...ds); let marcou = false; total += s * mx;
         partes.push(`[${ds.map(x => { if (!marcou && x === mx) { marcou = true; return `<span class="melhor">${x}</span>`; } return x; }).join(', ')}]`);
-      } else { total += s * ds.reduce((a, b) => a + b, 0); partes.push(`${s < 0 ? '-' : ''}[${ds.join(', ')}]`); }
+      } else { total += s * ds.reduce((a, b) => a + b, 0); partes.push(`${s < 0 ? '- ' : partes.length ? '+ ' : ''}[${ds.join(', ')}]`); }
     } else if (/^\d+$/.test(c)) { total += s * +c; partes.push(`${s < 0 ? '- ' : '+ '}${c}`); }
     else return null;
   }
@@ -1328,7 +1332,7 @@ ROTAS.agente = async id => {
         ${it.obs ? `<p class="dim" style="font-size:13.5px">${esc(it.obs)}</p>` : ''}
         <div class="acoes"><button class="btn mini" data-acerto="${i}">Acerto</button><button class="btn ouro mini" data-dano="${i}">Dano</button><label class="chk"><input type="checkbox" id="crit-${i}"> Crítico ×${armaEf(it).mult}</label><label class="chk">+ dano extra <input type="text" id="extra-${i}" value="${esc(it.extra || '')}" placeholder="1d6+3" style="width:90px; padding:3px 6px"></label>${podeEditar ? `<button class="btn sec mini" data-ed-item="${i}">Editar arma</button>${ehArma(it) ? `<button class="btn sec mini" data-mods="${i}">Melhorias e bênçãos</button>` : ''}` : ''}</div>
         <div class="res" id="res-${i}"></div></div>`; }).join('')}</div>` : '<div class="vazio">Nenhuma arma no inventário.</div>'}
-        <div class="caixa" style="display:grid; gap:8px"><span class="rotulo">Rolagem livre</span><div style="display:flex; gap:8px"><input type="text" id="livre" placeholder="2d6+3 ou 3d20m+4 (m = fica o maior)"><button class="btn" id="rolar-livre">Rolar</button></div><div class="res" id="res-livre"></div></div></div>`;
+        <div class="caixa" style="display:grid; gap:8px"><span class="rotulo">Rolagem livre</span><div style="display:flex; gap:8px"><input type="text" id="livre" placeholder="2d6+3, 3d20m+4 (m = fica o maior) ou 3#2d10+6 (# = rola 3 vezes e soma)"><button class="btn" id="rolar-livre">Rolar</button></div><div class="res" id="res-livre"></div></div></div>`;
     }
     if (aba === 'habilidades') {
       const habCl = (S?.habilidades || []);
@@ -1510,7 +1514,7 @@ ROTAS.agente = async id => {
       if (crit && E.critExtra) { const rb = rolar(E.critExtra); if (rb) { total += rb.total; txt += `<br>+ ${esc(E.critExtra)} Brutal → ${rb.detalhe} = ${rb.total}`; } }
       const ex = $('#extra-' + i).value.trim(); if (ex) { const r2 = rolar(ex); if (r2) { total += r2.total; txt += `<br>+ ${esc(ex)} → ${r2.detalhe} = ${r2.total} <span class="faint">(fora do crítico)</span>`; } }
       $('#res-' + i).innerHTML = `${txt}<br>Dano total: <b>${total}</b>`; publicarRolagem(F, `Dano · ${it.nome}${crit ? ' (crítico)' : ''}`, { total, detalhe: base.detalhe }); });
-    $('#rolar-livre')?.addEventListener('click', () => { const ex = $('#livre').value; const r = rolar(ex); $('#res-livre').innerHTML = r ? `${r.detalhe} = <b>${r.total}</b>` : '<span class="falha">Formato inválido. Ex.: 2d6+3, 3d20m+4</span>'; if (r) publicarRolagem(F, ex, r); });
+    $('#rolar-livre')?.addEventListener('click', () => { const ex = $('#livre').value; const r = rolar(ex); $('#res-livre').innerHTML = r ? `${r.detalhe} = <b>${r.total}</b>` : '<span class="falha">Formato inválido. Ex.: 2d6+3, 3d20m+4, 3#2d10+6</span>'; if (r) publicarRolagem(F, ex, r); });
     $$('[data-lancar]').forEach(b => b.onclick = () => { const i = b.dataset.lancar, fe = F.feiticos[+i];
       const inv = F.equipamentos || [], acha = n => inv.findIndex(it => (it.nome || '').trim().toLowerCase() === n.toLowerCase());
       const faltam = reqFeitico(fe).filter(n => acha(n) < 0);
@@ -2295,7 +2299,7 @@ ROTAS.campanha = async id => {
     if (aba === 'pistas') corpo = `<div class="lista">${st.pistas.map(p => `<div class="item"><span class="nm">${esc(p.titulo)}</span><p class="dim">${nl(p.texto)}</p>${p.imagem ? `<img src="${esc(p.imagem)}" alt="" style="max-width:420px">` : ''}</div>`).join('') || '<div class="vazio">Nenhuma pista revelada.</div>'}</div>`;
     if (aba === 'relatorios') corpo = `<div class="lista">${st.relatorios.slice().reverse().map(r => `<div class="item"><div class="cab"><span class="nm">${esc(r.titulo)}</span><span class="faint">${dataBR(r.t)}</span></div><p class="dim">${nl(r.texto)}</p></div>`).join('') || '<div class="vazio">Nenhum relatório de missão ainda.</div>'}</div>`;
     if (aba === 'ligacao') corpo = membro ? '<div id="ligacao"></div>' : '<div class="vazio">Entre na campanha para usar a ligação.</div>';
-    if (aba === 'rolagens') corpo = `<div class="caixa" style="display:grid; gap:8px"><span class="rotulo">Rolar dados na mesa</span><div style="display:flex; gap:8px"><input type="text" id="dados-expr" placeholder="2d6+3 ou 3d20m+4 (m = fica o maior)"><button class="btn" id="dados-ok">Rolar</button></div></div>
+    if (aba === 'rolagens') corpo = `<div class="caixa" style="display:grid; gap:8px"><span class="rotulo">Rolar dados na mesa</span><div style="display:flex; gap:8px"><input type="text" id="dados-expr" placeholder="2d6+3, 3d20m+4 (m = fica o maior) ou 3#2d10+6 (# = rola 3 vezes e soma)"><button class="btn" id="dados-ok">Rolar</button></div></div>
       <div class="caixa" style="padding:0">${st.rolagens.map(rolHtml).join('') || '<div class="vazio">Nenhuma rolagem ainda.</div>'}</div>`;
     app.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
         ${mestre ? `<button class="btn sec" id="editar-c">Editar campanha</button><a class="btn ouro" href="#escudo-${esc(id)}" style="text-decoration:none">Escudo do mestre</a>` : ''}
@@ -2479,7 +2483,7 @@ ROTAS.escudo = async id => {
     }
     if (aba === 'dados') {
       corpo.innerHTML = `<div class="caixa" style="display:grid; gap:10px"><span class="rotulo">Rolar dados</span>
-        <div style="display:flex; gap:8px; flex-wrap:wrap"><input type="text" id="m-expr" style="flex:1" placeholder="2d6+3 ou 3d20m+4 (m = fica o maior)"><button class="btn ${publico ? 'ouro' : 'sec'}" id="m-vis">${publico ? 'Público' : 'Oculto'}</button><button class="btn" id="m-rolar">Rolar</button></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap"><input type="text" id="m-expr" style="flex:1" placeholder="2d6+3, 3d20m+4 (m = fica o maior) ou 3#2d10+6 (# = rola 3 vezes e soma)"><button class="btn ${publico ? 'ouro' : 'sec'}" id="m-vis">${publico ? 'Público' : 'Oculto'}</button><button class="btn" id="m-rolar">Rolar</button></div>
         <div class="res" id="m-res"></div><p class="faint" style="font-size:13px">Oculto: só aparece no seu feed. Público: vai para a aba Rolagens dos jogadores.</p></div>`;
       $('#m-vis').onclick = () => { publico = !publico; render(); };
       const go = () => { const ex = $('#m-expr').value; const r = rolar(ex); if (!r) return toast('Formato inválido.'); $('#m-res').innerHTML = `${r.detalhe} = <b>${r.total}</b>`; rolarMestre(ex, r, !publico); };
