@@ -125,7 +125,12 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .card-ag .foto { background: var(--painel-3) center/cover no-repeat; display: grid; place-items: center; font: 400 38px var(--f-disp); color: var(--lua-faint); }
 .card-ag .corpo { padding: 12px 14px; display: grid; gap: 4px; align-content: start; min-width: 0; }
 .card-ag .nm { font: 400 21px/1.1 var(--f-disp); overflow-wrap: anywhere; }
-.card-ag .acoes { display: flex; gap: 8px; justify-content: flex-end; align-items: end; margin-top: auto; }
+.card-ag { overflow: hidden; }
+.card-ag .acoes { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: end; margin-top: auto; min-width: 0; }
+.card-ag .acoes .vit { flex: 1 1 100%; display: grid; gap: 3px; min-width: 0; }
+.card-ag .acoes .btn { white-space: nowrap; }
+.card-ag .dono { font-size: 12px; color: var(--lua-dim); }
+.card-ag .dono b { color: var(--lua); font-weight: 600; }
 .card-camp { position: relative; background: var(--painel) center/cover no-repeat; border: 1px solid var(--linha); min-height: 190px; display: flex; align-items: end; overflow: hidden; }
 .card-camp::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11,13,20,.15), rgba(11,13,20,.92) 75%); }
 .card-camp .corpo { position: relative; padding: 14px; display: flex; justify-content: space-between; align-items: end; gap: 10px; width: 100%; }
@@ -1054,12 +1059,12 @@ ROTAS.agentes = async () => {
   $('#busca').addEventListener('input', desenhar);
   $('#todos')?.addEventListener('click', e => { todos = !todos; e.target.textContent = todos ? 'Só os meus' : 'Ver todos os agentes'; ouvir(); });
 };
-function cardAgente(f, extra = '') {
+function cardAgente(f, extra = '', dono = '') {
   return `<article class="card-ag">
     <div class="foto" style="${fotoEf(f) ? `background-image:url('${esc(fotoEf(f))}')` : ''}">${fotoEf(f) ? '' : esc(iniciais(f.nome))}</div>
     <div class="corpo"><div class="nm">${esc(f.nome || 'Sem nome')}</div>
       <div class="dim" style="font-weight:600">${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''} · Nv ${+f.nivel || 1}</div>
-      <div class="faint" style="font-size:12px">Registrado em ${dataBR(f.criado)}</div>
+      ${dono ? `<div class="dono">Jogador: <b>${esc(dono)}</b></div>` : ''}<div class="faint" style="font-size:12px">Registrado em ${dataBR(f.criado)}</div>
       <div class="acoes">${extra}<a class="btn mini" href="#agente-${esc(f.id)}" style="text-decoration:none">Acessar ficha</a></div></div>
   </article>`;
 }
@@ -2462,11 +2467,11 @@ ROTAS.campanha = async id => {
     if (st.camp === null) { app.innerHTML = '<div class="vazio">Abrindo a campanha…</div>'; return; }
     if (st.camp === false) { app.innerHTML = '<div class="vazio">Campanha não encontrada.</div>'; return; }
     const C = st.camp, mestre = C.mestre === ME, membro = st.membros.some(m => m.uid === ME) || mestre;
-    const nomes = await nomeDe([C.mestre, ...st.membros.map(m => m.uid)]);
     const fichas = Object.values(st.fichas).filter(Boolean);
+    const nomes = await nomeDe([...new Set([C.mestre, ...st.membros.map(m => m.uid), ...fichas.map(f => f.dono).filter(Boolean)])]);
     let corpo = '';
     if (aba === 'agentes') corpo = `<div class="grade-cards">${fichas.map(f => { const K = calc(f); const a = f.atual || K.max;
-      return cardAgente(f, `<div style="flex:1; display:grid; gap:3px; min-width:0">${vitalMini('pv', a.pv, K.max.pv)}${vitalMini('ps', a.ps, K.max.ps)}</div>${f.dono === ME || mestre || DONO ? `<button class="btn mini sec" data-rm-ag="${esc(f.id)}" title="Tirar da campanha">Remover</button>` : ''}`); }).join('') || '<div class="vazio">Nenhum agente nesta campanha ainda.</div>'}</div>`;
+      return cardAgente(f, `<div class="vit">${vitalMini('pv', a.pv, K.max.pv)}${vitalMini('ps', a.ps, K.max.ps)}</div>${f.dono === ME || mestre || DONO ? `<button class="btn mini sec" data-rm-ag="${esc(f.id)}" title="Tirar da campanha">Remover</button>` : ''}`, nomes[f.dono] || f.jogador || ''); }).join('') || '<div class="vazio">Nenhum agente nesta campanha ainda.</div>'}</div>`;
     if (aba === 'jogadores') corpo = `<div class="lista">${[...new Set([C.mestre, ...st.membros.map(m => m.uid)])].map(u => `<div class="item"><div class="cab"><span style="display:flex; gap:10px; align-items:center"><span class="ava" style="background:${corDe(u)}">${esc(iniciais(nomes[u]))}</span><b>${esc(nomes[u])}${u === ME ? ' (você)' : ''}</b></span><span class="tag ${u === C.mestre ? 'crit' : ''}">${u === C.mestre ? 'Mestre' : 'Jogador'}</span></div></div>`).join('')}</div>`;
     if (aba === 'combate') corpo = st.combate?.ativo ? `<div class="cab-pagina"><h2>Rodada ${st.combate.rodada || 1}</h2><span class="dim">Ordem de iniciativa</span></div>
       <div class="lista">${(st.combate.ordem || []).map((o, i) => `<div class="combatente ${i === st.combate.turno ? 'vez' : ''}"><span class="ini">${esc(o.ini ?? '')}</span><div><b>${esc(o.nome)}</b> ${o.tipo === 'ameaca' ? '<span class="tag" style="color:var(--sangue-hi)">Ameaça</span>' : ''}${(o.cond || []).map(c => ` <span class="cond-chip">${esc(c)}</span>`).join('')}</div><span>${i === st.combate.turno ? '<span class="el" style="color:var(--ouro)">Vez</span>' : ''}</span></div>`).join('')}</div>`
