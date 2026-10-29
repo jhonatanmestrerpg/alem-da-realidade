@@ -280,6 +280,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .mod-m { color: var(--fole); border-color: color-mix(in srgb, var(--fole) 50%, transparent); } .mod-b { color: var(--ouro); border-color: color-mix(in srgb, var(--ouro) 50%, transparent); } .mod-x { color: var(--sangue-hi); border-color: color-mix(in srgb, var(--sangue-hi) 50%, transparent); }
 .mod-bloco { display: grid; gap: 8px; border-top: 1px solid var(--linha); padding-top: 10px; margin-top: 6px; } .mod-linha { display: flex; gap: 10px; justify-content: space-between; align-items: start; } .mod-linha p { margin: 2px 0 0; font-size: 13px; }
 .rd-aj { display: flex; justify-content: center; gap: 3px; margin-top: 4px; } .rd-aj .vbtn { width: 24px; height: 24px; }
+.btn.perigo { color: var(--sangue-hi); border-color: color-mix(in srgb, var(--sangue-hi) 45%, transparent); } .btn.perigo:hover { background: #3a1418; }
 .lista-ajuste { margin: 0 0 12px; padding-left: 18px; display: grid; gap: 4px; }
 .carimbo.jog { border-color: var(--ouro); color: var(--ouro); }
 .abate-linha { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; border-top: 1px dashed var(--linha); padding-top: 6px; }
@@ -1100,7 +1101,7 @@ ROTAS.agente = async id => {
         ${VA ? `<h1 class="nome-vetor">${esc(F.vetor.nome || 'Vetor')}</h1><div class="dim" style="margin-top:-4px">${esc(F.nome)}, vestindo o vetor</div>` : `<h1>${esc(F.nome)}</h1>`}
         <div class="dim">${esc(F.classe)} · ${esc(F.subclasse)} · Nível ${+F.nivel || 1}${F.vontade ? ` · Vontade de ${esc(F.vontade)}` : ''}</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px">
-          ${podeEditar ? `<button class="btn ${editando ? '' : 'sec'}" id="editar">${editando ? 'Concluir edição' : 'Editar ficha'}</button>${editando ? '<button class="btn sec" id="corrigir" title="Ajusta atributos, perícias, passivas e vitais às regras do nível e da patente">Corrigir ficha</button>' : ''}` : ''}
+          ${podeEditar ? `<button class="btn ${editando ? '' : 'sec'}" id="editar">${editando ? 'Concluir edição' : 'Editar ficha'}</button>${editando ? '<button class="btn sec" id="corrigir" title="Ajusta atributos, perícias, passivas e vitais às regras do nível e da patente">Corrigir ficha</button>' : ''}${editando && (F.dono === ME || DONO) ? '<button class="btn sec perigo" id="apagar-ag">Apagar agente</button>' : ''}` : ''}
           ${VL ? (podeEditar ? `<button class="btn btn-vetor ${VA ? 'ativo' : ''}" id="vestir">${VA ? 'Tirar o vetor' : 'Vestir vetor'}</button>` : '')
             : `<button class="btn btn-vetor" disabled title="Só o mestre libera">${CADEADO} Vestir vetor</button>`}
           ${F.dono === ME ? (MEU_PRINCIPAL === id ? `<a class="btn sec principal-on" href="#dossie-${esc(ME)}" title="Abrir seu dossiê de caçador">★ Personagem principal · caçador</a>` : `<button class="btn sec" id="tornar-principal" title="Vira seu caçador no Bestiário, com dossiê e registro de abates">☆ Tornar personagem principal</button>`) : ''}
@@ -1294,6 +1295,20 @@ ROTAS.agente = async id => {
     const pularPatente = d => { const i = SIS.patentes.findIndex(p => p.nome === patente(+F.nivel || 1).nome) + d; const p = SIS.patentes[i]; if (!p) return toast(d > 0 ? 'Já está na patente mais alta.' : 'Já está na primeira patente.'); aplicarMudanca({ nivel: p.de }, `${d > 0 ? 'Subiu' : 'Desceu'} para ${p.nome}`); };
     $('#pat-sobe')?.addEventListener('click', () => pularPatente(1));
     $('#pat-desce')?.addEventListener('click', () => pularPatente(-1));
+    $('#apagar-ag')?.addEventListener('click', () => abrirModal('Apagar agente', `<p>Isso apaga <b>${esc(F.nome)}</b> para sempre: a ficha sai de todas as campanhas e, se for o seu personagem principal, o dossiê de caçador e os abates somem junto. Não tem como desfazer.</p>
+      <div class="campo"><label class="rotulo" for="ap-nome">Digite o nome do agente para confirmar</label><input type="text" id="ap-nome" autocomplete="off" placeholder="${esc(F.nome)}"></div>
+      <button class="btn" id="ap-ok" style="background:#a52a33" disabled>Apagar para sempre</button>`, (m, fechar) => {
+      const inp = m.querySelector('#ap-nome'), ok = m.querySelector('#ap-ok');
+      inp.oninput = () => { ok.disabled = inp.value.trim().toLowerCase() !== String(F.nome || '').trim().toLowerCase(); };
+      ok.onclick = async () => { ok.disabled = true; ok.textContent = 'Apagando…';
+        try {
+          for (const c of F.campanhas || []) { try { await db.doc(`campanhas/${c}/agentes/${id}`).delete(); } catch (e) {} }
+          const cac = (await db.doc('cacadores/' + F.dono).get()).data();
+          if (cac?.ficha === id) { await db.doc('cacadores/' + F.dono).delete(); if (F.dono === ME) MEU_PRINCIPAL = null; }
+          await ref.delete();
+          fechar(); toast(`${F.nome} foi apagado.`); location.hash = 'agentes';
+        } catch (e) { ok.disabled = false; ok.textContent = 'Apagar para sempre'; toast('Não deu para apagar: ' + (e.message || e.code)); } };
+    }));
     $('#corrigir')?.addEventListener('click', () => { const { campos, avisos } = corrigirFicha(F); if (!avisos.length) return toast('A ficha já está dentro das regras.'); Object.assign(F, campos); salvar(campos); render();
       abrirModal('Ficha corrigida', `<ul class="lista-ajuste">${avisos.map(m => `<li>${esc(m)}</li>`).join('')}</ul><button class="btn" data-fechar-ok>Certo</button>`, (m, fechar) => m.querySelector('[data-fechar-ok]').onclick = fechar); });
     $('#e-vont')?.addEventListener('change', e => salvar({ vontade: e.target.value }));
