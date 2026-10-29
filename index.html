@@ -281,6 +281,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .mod-bloco { display: grid; gap: 8px; border-top: 1px solid var(--linha); padding-top: 10px; margin-top: 6px; } .mod-linha { display: flex; gap: 10px; justify-content: space-between; align-items: start; } .mod-linha p { margin: 2px 0 0; font-size: 13px; }
 .rd-aj { display: flex; justify-content: center; gap: 3px; margin-top: 4px; } .rd-aj .vbtn { width: 24px; height: 24px; }
 .btn.perigo { color: var(--sangue-hi); border-color: color-mix(in srgb, var(--sangue-hi) 45%, transparent); } .btn.perigo:hover { background: #3a1418; }
+.intang { border: 1px solid #6c4fa3; background: rgba(108,79,163,.12); padding: 10px 12px; display: grid; gap: 6px; } .intang .cab { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; } .intang p { margin: 0; font-size: 13.5px; color: var(--lua-dim); }
+.intang.cont { border-color: var(--fole); background: rgba(80,160,120,.10); }
 .lista-ajuste { margin: 0 0 12px; padding-left: 18px; display: grid; gap: 4px; }
 .carimbo.jog { border-color: var(--ouro); color: var(--ouro); }
 .abate-linha { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; border-top: 1px dashed var(--linha); padding-top: 6px; }
@@ -1687,7 +1689,7 @@ ROTAS.ameacas = async () => {
     $('#f-cac')?.addEventListener('click', e => { const b = e.target.closest('[data-cac]'); if (!b) return; CAC_SEL = b.dataset.cac; desenhar(); });
     $('#lista-am').innerHTML = fil.map(c => `<a class="card-am ${eliminada(c) ? 'morta' : ''}" href="#ameaca-${esc(c.id)}" data-modal-am="${esc(c.id)}" style="text-decoration:none">${eliminada(c) ? `<span class="carimbo ${cacPadrao() === 'arthur' ? '' : 'jog'}">Eliminada${abatesDe(c.id) > 1 ? ' ×' + abatesDe(c.id) : abatesDe(c.id) < 0 ? ' ∞' : ''}</span>` : ''}<div class="img" style="${c.imagem ? `background-image:url('${esc(c.imagem)}')` : 'background:var(--painel-3)'}"></div>
       <div class="corpo"><b style="font: 400 19px/1.15 var(--f-disp)">${esc(c.nome)}</b><div style="display:flex; gap:6px; flex-wrap:wrap">${elTag(c.elemento)}<span class="tag">Nv ${c.nivel} · ${esc(nivelAm(c.nivel)[1])}</span></div>
-      <span class="mono dim" style="font-size:12px">PV ${c.ficha?.pv ?? '?'} · Def ${c.ficha?.defesa ?? '?'}</span></div></a>`).join('') || '<div class="vazio">Nenhuma criatura com esses filtros.</div>';
+      <span class="mono dim" style="font-size:12px">PV ${c.ficha?.pv ?? '?'} · Def ${c.ficha?.intangivel ? `${c.ficha.intangivel.defesa}/${c.ficha.intangivel.defesaContornada} · intangível` : c.ficha?.defesa ?? '?'}</span></div></a>`).join('') || '<div class="vazio">Nenhuma criatura com esses filtros.</div>';
   };
   $('#f-el').onclick = e => { const b = e.target.closest('[data-el]'); if (!b) return; filtroAm.el = b.dataset.el; $$('#f-el .chip').forEach(x => x.classList.toggle('aqui', x === b)); desenhar(); };
   $('#f-st').onclick = e => { const b = e.target.closest('[data-st]'); if (!b) return; filtroAm.st = b.dataset.st; $$('#f-st .chip').forEach(x => x.classList.toggle('aqui', x === b)); desenhar(); };
@@ -1706,9 +1708,13 @@ function periciasAmeaca(c) {
   return [['Percepção', q, (A.inteligencia || 0) + b], ['Iniciativa', q, (A.destreza || 0) + b], ['Resiliência', q + 1, (A.constituicao || 0) + b],
     ['Esquiva', q, (A.destreza || 0) + b], ['Vontade', q, (A.presenca || 0) + b], ['Furtividade', q, (A.destreza || 0) + b]];
 }
+// intangíveis: defesa alta por padrão; cumprida a meta (luz, bênção, selo, fogo…) cai para a defesa contornada
+const defEf = (f, contornado) => f?.intangivel ? (contornado ? f.intangivel.defesaContornada : f.intangivel.defesa) : f?.defesa;
+const blocoIntangivel = (f, contornado, comBotao) => f?.intangivel ? `<div class="intang ${contornado ? 'cont' : ''}"><div class="cab"><b>${contornado ? 'Meta cumprida' : 'Intangível'}</b><span class="mono">Defesa ${f.intangivel.defesa} → ${f.intangivel.defesaContornada}</span></div>
+  <p>${esc(f.intangivel.contorno)}</p>${comBotao ? `<button class="btn mini ${contornado ? 'sec' : 'ouro'}" data-contorno>${contornado ? 'Voltou a ficar intangível' : 'Meta cumprida: baixar a defesa'}</button>` : ''}</div>` : '';
 function fichaAmeacaModal(c, opc = {}) {
   const f = c.ficha || {}; const n = +c.nivel || 1; const dt = f.dt ?? 12 + 2 * n;
-  let pv = opc.pv ?? f.pv ?? 1; const pvMax = opc.pvMax ?? f.pv ?? 1; let aba = 'status', sub = 'acoes';
+  let pv = opc.pv ?? f.pv ?? 1; const pvMax = opc.pvMax ?? f.pv ?? 1; let aba = 'status', sub = 'acoes', contornado = !!opc.contornado;
   const pres = f.presenca || (f.tracos || []).find(t => /Presença/.test(t.nome));
   const poderes = f.poderes || (f.tracos || []).filter(t => t !== pres).map(t => { const m = /^([A-ZÇÃÉ]+)\s*[·-]\s*(.+)$/.exec(t.nome); return m ? { acao: m[1], nome: m[2], texto: t.texto } : { acao: 'PODER', nome: t.nome, texto: t.texto }; });
   const presDT = /DT\s*(\d+)/.exec(pres?.texto || '')?.[1] || dt;
@@ -1718,11 +1724,12 @@ function fichaAmeacaModal(c, opc = {}) {
     const desenhar = () => {
       let corpo = '';
       if (aba === 'status') corpo = `<div class="attr-linha">${ATR.map(([k, , s]) => `<span><b>${f.atributos?.[k] ?? 0}</b>${s}</span>`).join('')}</div>
-        <div class="mini-stats">${[['Defesa', f.defesa], ['RD', f.rd], ['Movimento', (f.movimento ?? '?') + 'm'], ['DT dos efeitos', dt]].map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="n">${esc(v)}</div></div>`).join('')}</div>
+        ${blocoIntangivel(f, contornado, true)}
+        <div class="mini-stats">${[[f.intangivel ? (contornado ? 'Defesa (contornada)' : 'Defesa (intangível)') : 'Defesa', defEf(f, contornado)], ['RD', f.rd], ['Movimento', (f.movimento ?? '?') + 'm'], ['DT dos efeitos', dt]].map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="n">${esc(v)}</div></div>`).join('')}</div>
         <h3>Perícias</h3><div class="lista" style="gap:4px">${periciasAmeaca(c).map(([nm, q, md]) => `<div class="item" style="padding:7px 12px; grid-template-columns:1fr auto auto; display:grid; align-items:center; gap:12px"><span class="rotulo" style="color:var(--lua)">${nm}</span><span class="mono">${q}d20+${md}</span><button class="btn mini ouro" data-pt="${nm}|${q}|${md}">Rolar</button></div>`).join('')}</div>
         <h3>Sentidos</h3><p class="dim">${esc(SENTIDOS[c.elemento] || 'Percepção do Outro Lado: sente quem carrega Essência do Caos por perto')}</p>
         ${pres ? `<h3>Presença perturbadora</h3><p class="mono">DT ${presDT} · ${n}d6 mental · Vontade reduz à metade</p>` : ''}`;
-      if (aba === 'combate') corpo = `<div class="abas" style="border:none">${[['acoes', 'Ações'], ['poderes', 'Poderes']].map(([k, l]) => `<button class="${sub === k ? 'aqui' : ''}" data-sub="${k}">${l}</button>`).join('')}</div>
+      if (aba === 'combate') corpo = `${f.intangivel ? `<div class="intang ${contornado ? 'cont' : ''}" style="padding:8px 12px"><b>${contornado ? 'Meta cumprida' : 'Intangível'}</b> · Defesa <b class="mono">${defEf(f, contornado)}</b> <button class="btn mini sec" data-contorno style="margin-left:8px">${contornado ? 'Voltar a intangível' : 'Meta cumprida'}</button></div>` : ''}<div class="abas" style="border:none">${[['acoes', 'Ações'], ['poderes', 'Poderes']].map(([k, l]) => `<button class="${sub === k ? 'aqui' : ''}" data-sub="${k}">${l}</button>`).join('')}</div>
         ${sub === 'acoes' ? ((f.ataques || []).length ? `<details class="acao-card" open><summary><span class="acao-tipo">PADRÃO</span> Agredir</summary><div class="acao-corpo">${(f.ataques || []).map(a => {
             const partes = String(a.dano || '').split('+').map(x => x.trim()).filter(Boolean);
             return `<div class="atq"><div class="atq-cab"><b>${esc(a.nome).toUpperCase()}</b>${a.alcance ? `<span class="faint" style="font-size:12px">${esc(a.alcance)}</span>` : ''}${a.vezes > 1 ? `<span class="tag">${a.vezes}x</span>` : ''}
@@ -1740,6 +1747,7 @@ function fichaAmeacaModal(c, opc = {}) {
         <div style="display:grid; gap:10px">${corpo}</div><div class="res" id="fam-res"></div>`;
       alvo.querySelectorAll('[data-ab]').forEach(b => b.onclick = () => { aba = b.dataset.ab; desenhar(); });
       alvo.querySelectorAll('[data-sub]').forEach(b => b.onclick = () => { sub = b.dataset.sub; desenhar(); });
+      alvo.querySelectorAll('[data-contorno]').forEach(b => b.onclick = () => { contornado = !contornado; opc.aoContorno?.(contornado); desenhar(); });
       alvo.querySelectorAll('[data-hp]').forEach(b => b.onclick = () => { pv = Math.max(0, Math.min(pvMax, pv + +b.dataset.hp)); opc.aoPV?.(pv); desenhar(); });
       alvo.querySelectorAll('[data-pt]').forEach(b => b.onclick = () => { const [nm, q, md] = b.dataset.pt.split('|'); const r = teste(+q, +md); out(`${nm}: ${r.detalhe} = <b>${r.total}</b>${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`); popRolagem({ quem: c.nome, titulo: nm, tipo: 'Teste', expr: `${q}d20+${md}`, linhas: [{ det: r.detalhe, total: r.total }], total: r.total, nat20: r.nat20 }); opc.aoRolar?.(nm, r); });
       alvo.querySelectorAll('[data-am-teste],[data-am-dano]').forEach(b => { b.dataset.alvo = 'fam-res'; b.onclick = ev => { ev.stopPropagation(); rolarAtaqueAmeaca(b, opc.aoRolar); }; });
@@ -1756,7 +1764,8 @@ function blocoFicha(c, idRes) {
   const f = c.ficha || {};
   return `<div class="caixa" style="display:grid; gap:12px">
     <div class="cab-pagina"><h2>Ficha de combate</h2><span class="tag">DT dos efeitos ${f.dt ?? 12 + 2 * c.nivel}</span></div>
-    <div class="mini-stats">${[['PV', f.pv], ['Defesa', f.defesa], ['RD', f.rd], ['Movimento', (f.movimento ?? '?') + 'm'], ['Testes', f.testes || '']].filter(x => x[1] !== '' && x[1] != null).map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="n">${esc(v)}</div></div>`).join('')}</div>
+    ${blocoIntangivel(f, false, false)}
+    <div class="mini-stats">${[['PV', f.pv], [f.intangivel ? 'Defesa intangível' : 'Defesa', defEf(f, false)], ...(f.intangivel ? [['Meta cumprida', f.intangivel.defesaContornada]] : []), ['RD', f.rd], ['Movimento', (f.movimento ?? '?') + 'm'], ['Testes', f.testes || '']].filter(x => x[1] !== '' && x[1] != null).map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="n">${esc(v)}</div></div>`).join('')}</div>
     <div class="attr-linha">${ATR.map(([k, , s]) => `<span><b>${f.atributos?.[k] ?? 0}</b>${s}</span>`).join('')}</div>
     <div class="lista">${(f.ataques || []).map((a, i) => `<div class="item"><div class="cab"><span class="nm">${esc(a.nome)}</span><span style="display:flex; gap:6px">${a.teste ? `<button class="btn mini" data-am-teste="${esc(a.teste)}" data-alvo="${idRes}">Acerto ${esc(a.teste)}</button>` : ''}${a.dano ? `<button class="btn ouro mini" data-am-dano="${esc(a.dano)}" data-alvo="${idRes}">Dano ${esc(a.dano)}</button>` : ''}</span></div></div>`).join('')}</div>
     <div class="res" id="${idRes}"></div>
@@ -2221,7 +2230,8 @@ ROTAS.escudo = async id => {
         if (x.tipo === 'agente') { const f = st.fichas[x.ref]; if (!f) return; const K = calc(f); const a = { ...(f.atual || K.max) }; a.pv = Math.max(0, Math.min(K.max.pv, a.pv + dd)); f.atual = a; render(); try { await db.doc('fichas/' + f.id).update({ atual: a }); } catch (e) { toast('Não deu para alterar a ficha.'); } }
         else { x.pv = Math.max(0, Math.min(x.pvMax, x.pv + dd)); salvarE(); render(); } });
       $$('[data-fam]').forEach(b => b.onclick = async () => { const x = c.lista[+b.dataset.fam]; const base = await acharAmeaca(x.ref) || {};
-        fichaAmeacaModal({ ...base, nome: x.nome, elemento: x.elemento, nivel: x.nivel, ficha: x.ficha }, { pv: x.pv, pvMax: x.pvMax,
+        fichaAmeacaModal({ ...base, nome: x.nome, elemento: x.elemento, nivel: x.nivel, ficha: { ...x.ficha, intangivel: x.ficha?.intangivel || base.ficha?.intangivel, poderes: base.ficha?.poderes || x.ficha?.poderes } }, { pv: x.pv, pvMax: x.pvMax, contornado: !!x.contornado,
+          aoContorno: v => { x.contornado = v; salvarE(); publicarCombate(); render(); },
           aoPV: v => { x.pv = v; salvarE(); render(); }, aoRolar: (rot, r) => rolarMestre(`${x.nome}: ${rot}`, r, true) }); });
     }
     if (aba === 'investigacao') {
