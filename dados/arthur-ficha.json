@@ -126,11 +126,13 @@
    "qtd": 1,
    "pericia": "Pontaria",
    "categoria": "Armas de Fogo",
-   "obs": "Rifle de precisão montado e ajustado por ele, dispara em sequência. Arma Favorita (Sniper): +1 de margem de crítico (já aplicado) e dano ×1,5 no total.",
+   "obs": "Rifle de precisão montado e ajustado por ele, dispara em sequência. Arma Favorita (Sniper): +1 de margem de crítico e dano ×1,5 nos dados (caixinha no combate).",
    "alcance": "Longo",
    "tipoDano": "Balístico",
    "extra": "",
-   "homebrew": true
+   "homebrew": true,
+   "multExtra": 1.5,
+   "multExtraOn": true
   },
   {
    "nome": "Submetralhadora",
