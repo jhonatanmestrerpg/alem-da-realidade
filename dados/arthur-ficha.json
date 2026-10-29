@@ -356,14 +356,16 @@
    "ligado": false
   },
   {
-   "nome": "Especialidade: Êxtase (×5)",
+   "nome": "Especialidade: Êxtase",
    "acerto": 0,
    "margem": 0,
-   "dano": "5d6",
+   "dano": "1d6",
    "mult": 0,
    "multTotal": 1,
-   "custo": 5,
-   "ligado": false
+   "custo": 1,
+   "ligado": false,
+   "escala": true,
+   "qtd": 3
   },
   {
    "nome": "Mira Sangrenta",
