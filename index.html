@@ -291,6 +291,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .pc-linha { display: grid; gap: 6px; border-top: 1px solid var(--linha); padding-top: 8px; } .pc-linha p { margin: 2px 0 0; font-size: 12.5px; color: var(--lua-dim); } .pc-linha.ok { opacity: .75; }
 .ok-tag { justify-self: start; font: 600 11px var(--f-mono); color: var(--fole); text-transform: uppercase; letter-spacing: .1em; }
 .pc-res { font-size: 13px; background: rgba(5,6,10,.5); padding: 8px 10px; border-left: 2px solid var(--ouro); }
+.oposto { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; padding: 8px 10px; border: 1px dashed var(--linha-2); } .oposto input { padding: 4px 8px; }
 .lista-ajuste { margin: 0 0 12px; padding-left: 18px; display: grid; gap: 4px; }
 .carimbo.jog { border-color: var(--ouro); color: var(--ouro); }
 .abate-linha { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; border-top: 1px dashed var(--linha); padding-top: 6px; }
@@ -709,6 +710,11 @@ function qtdPassivas(nivel) { return [2, 6, 9, 11].filter(x => nivel >= x).lengt
 
 /* ---------- regras de cálculo ---------- */
 const ehBruxa = f => f?.classe === 'Bruxa';
+// feitiço: Bruxa conjura com Bruxaria, Ocultista com Ocultismo, outros com a melhor das duas
+const periciaConj = f => f?.classe === 'Bruxa' ? 'Bruxaria' : f?.classe === 'Ocultista' ? 'Ocultismo' : (() => { const a = dadosPericia(f, 'Bruxaria'), b = dadosPericia(f, 'Ocultismo'); return (b.dados * 10 + b.mod) > (a.dados * 10 + a.mod) ? 'Ocultismo' : 'Bruxaria'; })();
+// feitiço com resistência do alvo: não existe DT fixa, a DT é o teste de quem conjura contra o teste do alvo
+const ehOposto = fe => /contra a DT/i.test(fe?.efeito || '');
+const efeitoOposto = t => String(t || '').replace(/contra a DT/gi, 'contra o seu teste de conjuração');
 const nivelFeitMax = f => Math.max(0, ...(SIS.feiticoNivel || []).filter(x => (+f?.nivel || 1) >= x.desde).map(x => x.nivel));
 const desdeFeit = n => (SIS.feiticoNivel || []).find(x => x.nivel === +n)?.desde || 1;
 const reqFeitico = r => [r.ingrediente, r.item].filter(Boolean);
@@ -1325,8 +1331,8 @@ ROTAS.agente = async id => {
     }
     if (aba === 'feiticos') {
       if (!sabeFeitico(F)) return '<div class="vazio">Feitiços só para Bruxas ou para quem tem a passiva Aprender Feitiço.</div>';
-      const PB = dadosPericia(F, 'Bruxaria');
-      return `<div style="display:grid; gap:14px">${barra}<div class="cab-pagina"><div><h2>Feitiços</h2><span class="dim" style="font-size:13px">Lançar: teste de Bruxaria <b class="mono">${PB.dados}d20 + ${PB.mod}</b> contra a DT do feitiço · nível máximo ${nivelFeitMax(F)}${nivelFeitMax(F) < 5 ? ` (nível ${nivelFeitMax(F) + 1} no nível ${desdeFeit(nivelFeitMax(F) + 1)} de agente)` : ''}${ehBruxa(F) ? '' : ' · liberado por Aprender Feitiço'}</span></div>${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" id="add-feit">Aprender feitiço</button><button class="btn sec mini" id="novo-feit">Novo feitiço</button></div>' : ''}</div>
+      const PB = dadosPericia(F, periciaConj(F));
+      return `<div style="display:grid; gap:14px">${barra}<div class="cab-pagina"><div><h2>Feitiços</h2><span class="dim" style="font-size:13px">Conjurar: teste de ${periciaConj(F)} <b class="mono">${PB.dados}d20 + ${PB.mod}</b>. Feitiço com resistência é oposto (o seu dado contra o do alvo); os outros usam a DT do feitiço · nível máximo ${nivelFeitMax(F)}${nivelFeitMax(F) < 5 ? ` (nível ${nivelFeitMax(F) + 1} no nível ${desdeFeit(nivelFeitMax(F) + 1)} de agente)` : ''}${ehBruxa(F) ? '' : ' · liberado por Aprender Feitiço'}</span></div>${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" id="add-feit">Aprender feitiço</button><button class="btn sec mini" id="novo-feit">Novo feitiço</button></div>' : ''}</div>
         <div class="grade-hab">${(F.feiticos || []).map((r, i) => cardFeitico(r, i)).join('') || '<div class="vazio">Você ainda não conhece feitiços.</div>'}</div></div>`;
     }
     if (aba === 'inventario') {
@@ -1358,9 +1364,9 @@ ROTAS.agente = async id => {
   const cardFeitico = (r, i) => `<article class="hab hab-feitico"><div class="cab"><span class="nm">${esc(r.nome)}</span>${podeEditar ? `<button class="btn-x" data-rm="feiticos" data-i="${i}" aria-label="Remover">×</button>` : ''}</div>
     <span style="display:flex; gap:6px; flex-wrap:wrap">${r.divindade ? `<span class="tag" style="color:var(--${r.divindade === 'Destino' ? 'neutro' : r.divindade.toLowerCase()})">${esc(r.divindade)}</span>` : ''}${tagNivelF(r)}</span>
     ${r.preparo ? `<p class="preparo"><b>Preparo.</b> ${esc(r.preparo)}</p>` : ''}${htmlReq(r)}
-    <div class="stats">${[['Alvo', r.alvo], ['Alcance', r.alcance], ['Duração', r.duracao], ['DT', r.dt], ['Se falhar', r.falha ? r.falha + ' PS' : (r.custo || '')]].filter(x => x[1]).map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
-    ${r.descricao ? `<p style="font-style:italic">${esc(r.descricao)}</p>` : ''}<p>${nl(r.efeito)}</p>${(r.limitacoes || []).length ? `<p class="faint" style="font-size:13px">${r.limitacoes.map(esc).join('<br>')}</p>` : ''}
-    <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" data-lancar="${i}">Usar feitiço (Bruxaria${r.dt ? ' DT ' + esc(r.dt) : ''})</button>${rolaveis(r.efeito).map(x => `<button class="btn ouro mini" data-feit="${i}" data-expr="${esc(x)}">Rolar ${esc(x)}</button>`).join('')}</div><div class="res" id="res-feit-${i}">${RES_HAB[id + '|feit|' + r.nome] || ''}</div></article>`;
+    <div class="stats">${[['Alvo', r.alvo], ['Alcance', r.alcance], ['Duração', r.duracao], ['DT', ehOposto(r) ? 'Oposto' : r.dt], ['Se falhar', r.falha ? r.falha + ' PS' : (r.custo || '')]].filter(x => x[1]).map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
+    ${r.descricao ? `<p style="font-style:italic">${esc(r.descricao)}</p>` : ''}<p>${nl(efeitoOposto(r.efeito))}</p>${(r.limitacoes || []).length ? `<p class="faint" style="font-size:13px">${r.limitacoes.map(esc).join('<br>')}</p>` : ''}
+    <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" data-lancar="${i}">Usar feitiço (${periciaConj(F)}${ehOposto(r) ? ' contra o alvo' : r.dt ? ' DT ' + esc(r.dt) : ''})</button>${rolaveis(r.efeito).map(x => `<button class="btn ouro mini" data-feit="${i}" data-expr="${esc(x)}">Rolar ${esc(x)}</button>`).join('')}</div><div class="res" id="res-feit-${i}">${RES_HAB[id + '|feit|' + r.nome] || ''}</div></article>`;
   const cardRitual = (r, i) => `<article class="hab"><div class="cab"><span class="nm">${esc(r.nome)}</span><span style="display:flex; gap:6px; align-items:center">${r.elemento ? elTag(r.elemento) : ''}${podeEditar ? `<button class="btn-x" data-rm="rituais" data-i="${i}" aria-label="Remover">×</button>` : ''}</span></div>
     <div class="stats">${[['Alvo', r.alvo], ['Custo', r.custo]].filter(x => x[1]).map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
     ${r.descricao ? `<p style="font-style:italic">${esc(r.descricao)}</p>` : ''}<p>${nl(r.efeito)}</p>${(r.limitacoes || []).length ? `<p class="faint" style="font-size:13px">${r.limitacoes.map(esc).join('<br>')}</p>` : ''}
@@ -1480,8 +1486,13 @@ ROTAS.agente = async id => {
           if (ehSaco(it)) { const u = usosSaco(it) - 1; if (u > 0) { it.usos = u; gastos.push(`${n}: ${u}/${USOS_SACO} usos restantes`); } else if ((+it.qtd || 1) > 1) { it.qtd = +it.qtd - 1; it.usos = USOS_SACO; gastos.push(`${n} esvaziou: abriu o próximo (${it.qtd} restante${it.qtd > 1 ? 's' : ''})`); } else { inv.splice(k, 1); gastos.push(`${n} esvaziou e acabou`); } }
           else { if ((+it.qtd || 1) > 1) it.qtd = +it.qtd - 1; else inv.splice(k, 1); gastos.push(`${n} consumido`); } }
         salvar({ equipamentos: inv }); }
-      const P = dadosPericia(F, 'Bruxaria'); const r = teste(P.dados, P.mod + bnv()); const dtF = +fe.dt || dtv();
-      let txt = `${gastos.length ? `<span class="faint">${gastos.map(esc).join('. ')}.</span><br>` : ''}${fe.sacrificio ? `<span class="faint">Sacrifício: ${esc(fe.sacrificio)}</span><br>` : ''}Lançar ${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtF)}${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`;
+      const per = periciaConj(F), P = dadosPericia(F, per); const r = teste(P.dados, P.mod + bnv()); const oposto = ehOposto(fe); const dtF = oposto ? 0 : (+fe.dt || dtv());
+      let txt = `${gastos.length ? `<span class="faint">${gastos.map(esc).join('. ')}.</span><br>` : ''}${fe.sacrificio ? `<span class="faint">Sacrifício: ${esc(fe.sacrificio)}</span><br>` : ''}${per} ${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtF)}${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`;
+      if (oposto) {
+        txt += `<div class="oposto" data-op-feit="${i}" data-op-total="${r.total}"><span>O alvo resiste contra <b>${r.total}</b>. Teste do alvo:</span><input type="number" data-op-alvo placeholder="total" style="width:80px"><button class="btn mini" data-op-ok>Comparar</button><button class="btn mini sec" data-op-rolar title="Se o alvo for um agente ou você quiser rolar por ele">Rolar 1d20 pelo alvo</button></div>`;
+        const chaveF = id + '|feit|' + fe.nome; RES_HAB[chaveF] = txt; const out = $('#res-feit-' + i); if (out) out.innerHTML = txt; ligarOposto();
+        publicarRolagem(F, `Feitiço · ${fe.nome} (alvo resiste contra ${r.total})`, r); return;
+      }
       const falhou = dtF && r.total < dtF; let perda = null;
       if (falhou && fe.falha) { perda = rolar(fe.falha); if (perda) txt += `<br>O feitiço cobra: ${esc(fe.falha)} → ${perda.detalhe} = <b>${perda.total} PS</b> ${podeEditar ? `<button class="btn mini" data-cobrar="${perda.total}">Descontar ${perda.total} PS</button>` : ''}`; }
       else if (!falhou) txt += '<br><span class="faint">Deu certo: nenhuma sanidade gasta.</span>';
@@ -1501,6 +1512,18 @@ ROTAS.agente = async id => {
         await ref.set({ uid: ME, ficha: id, nome: F.nome, foto: fotoEf(F) || '', jogador: PERFIL?.nome || '', abates: sn.data()?.abates || {}, desde: sn.data()?.desde || Date.now() });
         MEU_PRINCIPAL = id; fechar(); toast(`${F.nome} agora é seu caçador.`); render(); } catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); } }; }));
     $('#abrir-hist')?.addEventListener('click', () => document.querySelector('.hist-gaveta') ? document.querySelector('.hist-gaveta [data-fechar]').click() : abrirHistorico(F.campanhas));
+    // feitiço oposto: compara o teste do alvo com o de quem conjurou
+    function ligarOposto() { $$('[data-op-feit]').forEach(box => {
+      const i = +box.dataset.opFeit, fe = F.feiticos[i], meu = +box.dataset.opTotal;
+      const decidir = (alvo, det) => { const resistiu = alvo >= meu; let txt = box.closest('.res').innerHTML.replace(/<div class="oposto"[\s\S]*$/, '') + `<br>Alvo: ${det ? esc(det) + ' = ' : ''}<b>${alvo}</b> contra ${meu}: ${resistiu ? '<span class="falha">o alvo resistiu, o feitiço falhou</span>' : '<span class="ok">o feitiço pegou</span>'}`;
+        if (resistiu && fe.falha) { const perda = rolar(fe.falha); if (perda) txt += `<br>O feitiço cobra: ${esc(fe.falha)} → ${perda.detalhe} = <b>${perda.total} PS</b> ${podeEditar ? `<button class="btn mini" data-cobrar="${perda.total}">Descontar ${perda.total} PS</button>` : ''}`; }
+        else if (!resistiu) txt += '<br><span class="faint">Nenhuma sanidade gasta.</span>';
+        RES_HAB[id + '|feit|' + fe.nome] = txt; box.closest('.res').innerHTML = txt; ligarCobrar();
+        publicarRolagem(F, `Feitiço · ${fe.nome}: ${resistiu ? 'o alvo resistiu' : 'pegou'}`, { total: `${meu} × ${alvo}`, detalhe: resistiu ? 'resistiu' : 'pegou' }); };
+      box.querySelector('[data-op-ok]').onclick = () => { const v = box.querySelector('[data-op-alvo]').value; if (v === '') return toast('Digite o total do teste do alvo.'); decidir(+v); };
+      box.querySelector('[data-op-rolar]').onclick = () => { const r2 = teste(1, 0); decidir(r2.total, String(r2.detalhe).replace(/<[^>]+>/g, '')); };
+    }); }
+    ligarOposto();
     function ligarCobrar() { $$('[data-cobrar]').forEach(bt => bt.onclick = () => { const n = +bt.dataset.cobrar, caixa = bt.closest('.res'); F.atual = { ...F.atual, ps: Math.max(0, (F.atual?.ps ?? calc(F).max.ps) - n) }; pendente = true; salvarVitais();
       bt.replaceWith(Object.assign(document.createElement('span'), { className: 'faint', textContent: `${n} PS descontados.` }));
       const fe = F.feiticos?.[+(caixa?.id || '').replace('res-feit-', '')]; if (fe) RES_HAB[id + '|feit|' + fe.nome] = caixa.innerHTML; setTimeout(render, 900); }); }
@@ -1998,8 +2021,8 @@ ROTAS.grimorio = async () => {
       const desenharFe = () => { const q = $('#busca-fe').value.toLowerCase();
         $('#lista-fe').innerHTML = FEIT.filter(f => (elGr === 'Todos' || f.divindade === elGr) && (!q || JSON.stringify(f).toLowerCase().includes(q))).map(f => `<article class="hab hab-feitico"><div class="cab"><span class="nm">${esc(f.nome)}</span><span style="display:flex; gap:6px"><span class="tag" style="color:${corDv(f.divindade)}">${esc(f.divindade)}</span>${tagNivelF(f)}</span></div>
           ${f.descricao ? `<p style="font-style:italic">${esc(f.descricao)}</p>` : ''}<p class="preparo"><b>Preparo.</b> ${esc(f.preparo)}</p>${htmlReq(f)}
-          <div class="stats">${[['Alvo', f.alvo], ['Alcance', f.alcance], ['Duração', f.duracao], ['DT', f.dt], ['Se falhar', f.falha + ' PS']].map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
-          <p>${esc(f.efeito)}</p>${f.limitacoes.length ? `<p class="faint" style="font-size:13px">${f.limitacoes.map(esc).join('<br>')}</p>` : ''}</article>`).join('') || '<div class="vazio">Nenhum feitiço encontrado.</div>'; };
+          <div class="stats">${[['Alvo', f.alvo], ['Alcance', f.alcance], ['Duração', f.duracao], ['DT', ehOposto(f) ? 'Oposto' : f.dt], ['Se falhar', f.falha + ' PS']].map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
+          <p>${esc(efeitoOposto(f.efeito))}</p>${f.limitacoes.length ? `<p class="faint" style="font-size:13px">${f.limitacoes.map(esc).join('<br>')}</p>` : ''}</article>`).join('') || '<div class="vazio">Nenhum feitiço encontrado.</div>'; };
       $('#busca-fe').oninput = desenharFe;
       $('#f-dv').onclick = e => { const b = e.target.closest('[data-dv]'); if (!b) return; elGr = b.dataset.dv; $$('#f-dv .chip').forEach(x => x.classList.toggle('aqui', x === b)); desenharFe(); };
       desenharFe();
