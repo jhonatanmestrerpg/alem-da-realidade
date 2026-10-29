@@ -280,6 +280,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .mod-m { color: var(--fole); border-color: color-mix(in srgb, var(--fole) 50%, transparent); } .mod-b { color: var(--ouro); border-color: color-mix(in srgb, var(--ouro) 50%, transparent); } .mod-x { color: var(--sangue-hi); border-color: color-mix(in srgb, var(--sangue-hi) 50%, transparent); }
 .mod-bloco { display: grid; gap: 8px; border-top: 1px solid var(--linha); padding-top: 10px; margin-top: 6px; } .mod-linha { display: flex; gap: 10px; justify-content: space-between; align-items: start; } .mod-linha p { margin: 2px 0 0; font-size: 13px; }
 .rd-aj { display: flex; justify-content: center; gap: 3px; margin-top: 4px; } .rd-aj .vbtn { width: 24px; height: 24px; }
+.lista-ajuste { margin: 0 0 12px; padding-left: 18px; display: grid; gap: 4px; }
 .carimbo.jog { border-color: var(--ouro); color: var(--ouro); }
 .abate-linha { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; border-top: 1px dashed var(--linha); padding-top: 6px; }
 .polaroid-ph { width: 100%; aspect-ratio: 1; display: grid; place-items: center; background: #1c2130; color: var(--lua-dim); font: 700 48px var(--f-disp); }
@@ -570,6 +571,33 @@ function pontosAtributo(nivel) { let p = 12; if (nivel >= 4) p += 2; if (nivel >
 const patentesAlcancadas = nivel => SIS.patentes.filter(p => nivel >= p.de).length;
 function pontosPericiaTotal(cls, intel, nivel) { const C = classe(cls); return ((C?.pericias || 0) + (intel || 0)) * patentesAlcancadas(nivel); }
 function pontosPericia(f) { const total = pontosPericiaTotal(f.classe, f.atributos?.inteligencia, +f.nivel || 1); const gastos = (f.pericias || []).reduce((a, p) => a + (+p.pontos || 0), 0); return { total, gastos, livres: total - gastos }; }
+// Corrige a ficha depois de trocar classe, subclasse, nível ou patente: devolve só os campos que mudaram e o que foi ajustado.
+function corrigirFicha(f) {
+  const out = {}, av = [];
+  const nivel = Math.min(12, Math.max(1, +f.nivel || 1)); if (nivel !== +f.nivel) { out.nivel = nivel; av.push(`Nível ajustado para ${nivel}.`); }
+  const C = classe(f.classe) || SIS.classes[0];
+  if (C.nome !== f.classe) { out.classe = C.nome; av.push(`Classe definida como ${C.nome}.`); }
+  if (!C.subclasses.some(x => x.nome === f.subclasse)) { out.subclasse = C.subclasses[0]?.nome || ''; av.push(`Subclasse trocada para ${out.subclasse}, porque ${f.subclasse || 'a anterior'} não é de ${C.nome}.`); }
+  const pat = patente(nivel);
+  // atributos: limite da patente e total de pontos do nível
+  const A = { ...(f.atributos || {}) }; let mexeu = false;
+  for (const k of Object.keys(A)) if ((A[k] || 0) > pat.limite) { av.push(`${(ATR.find(x => x[0] === k) || [k, k])[1]} ${A[k]} → ${pat.limite} (limite de ${pat.nome}).`); A[k] = pat.limite; mexeu = true; }
+  let soma = Object.values(A).reduce((t, v) => t + (+v || 0), 0); const maxA = pontosAtributo(nivel);
+  if (soma > maxA) { av.push(`Atributos cortados de ${soma} para ${maxA} pontos (tirando dos mais altos).`); while (soma > maxA) { const k = Object.keys(A).sort((a, b) => A[b] - A[a])[0]; A[k]--; soma--; } mexeu = true; }
+  if (mexeu) out.atributos = A;
+  // perícias: limite da patente e total de pontos (classe + Int) × patentes
+  const P = (f.pericias || []).map(x => ({ ...x })); let mexeuP = false;
+  for (const x of P) if ((+x.pontos || 0) > pat.limite) { av.push(`${x.nome} ${x.pontos} → ${pat.limite} pontos (limite de ${pat.nome}).`); x.pontos = pat.limite; mexeuP = true; }
+  const totP = pontosPericiaTotal(out.classe || f.classe, (out.atributos || A).inteligencia, nivel); let gastos = P.reduce((t, x) => t + (+x.pontos || 0), 0);
+  if (gastos > totP) { av.push(`Perícias cortadas de ${gastos} para ${totP} pontos.`); while (gastos > totP) { const x = P.filter(y => y.pontos > 0).sort((a, b) => b.pontos - a.pontos)[0]; if (!x) break; x.pontos--; gastos--; } mexeuP = true; }
+  if (mexeuP) out.pericias = P.filter(x => x.pontos > 0);
+  // passivas pelo nível (2, 6, 9 e 11)
+  const qp = qtdPassivas(nivel); if ((f.passivas || []).length > qp) { out.passivas = f.passivas.slice(0, qp); { const fora = f.passivas.slice(qp).map(x => x.nome); av.push(`Passivas: o nível ${nivel} dá ${qp}; ${fora.join(', ')} ${fora.length > 1 ? 'saíram' : 'saiu'}.`); } }
+  // vida, sanidade e stamina não passam do novo máximo
+  const K = calc({ ...f, ...out });
+  if (f.atual) { const a = { ...f.atual }; let m2 = false; for (const k of ['pv', 'ps', 'pst']) if ((a[k] ?? 0) > K.max[k]) { a[k] = K.max[k]; m2 = true; } if (m2) { out.atual = a; av.push('PV, PS e PST ajustados ao novo máximo.'); } }
+  return { campos: out, avisos: av };
+}
 function qtdPassivas(nivel) { return [2, 6, 9, 11].filter(x => nivel >= x).length; }
 
 /* ---------- regras de cálculo ---------- */
@@ -1072,7 +1100,7 @@ ROTAS.agente = async id => {
         ${VA ? `<h1 class="nome-vetor">${esc(F.vetor.nome || 'Vetor')}</h1><div class="dim" style="margin-top:-4px">${esc(F.nome)}, vestindo o vetor</div>` : `<h1>${esc(F.nome)}</h1>`}
         <div class="dim">${esc(F.classe)} · ${esc(F.subclasse)} · Nível ${+F.nivel || 1}${F.vontade ? ` · Vontade de ${esc(F.vontade)}` : ''}</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px">
-          ${podeEditar ? `<button class="btn ${editando ? '' : 'sec'}" id="editar">${editando ? 'Concluir edição' : 'Editar ficha'}</button>` : ''}
+          ${podeEditar ? `<button class="btn ${editando ? '' : 'sec'}" id="editar">${editando ? 'Concluir edição' : 'Editar ficha'}</button>${editando ? '<button class="btn sec" id="corrigir" title="Ajusta atributos, perícias, passivas e vitais às regras do nível e da patente">Corrigir ficha</button>' : ''}` : ''}
           ${VL ? (podeEditar ? `<button class="btn btn-vetor ${VA ? 'ativo' : ''}" id="vestir">${VA ? 'Tirar o vetor' : 'Vestir vetor'}</button>` : '')
             : `<button class="btn btn-vetor" disabled title="Só o mestre libera">${CADEADO} Vestir vetor</button>`}
           ${F.dono === ME ? (MEU_PRINCIPAL === id ? `<a class="btn sec principal-on" href="#dossie-${esc(ME)}" title="Abrir seu dossiê de caçador">★ Personagem principal · caçador</a>` : `<button class="btn sec" id="tornar-principal" title="Vira seu caçador no Bestiário, com dossiê e registro de abates">☆ Tornar personagem principal</button>`) : ''}
@@ -1100,6 +1128,9 @@ ROTAS.agente = async id => {
           <div class="campo"><label class="rotulo" for="e-nome">Nome</label><input type="text" id="e-nome" data-campo="nome" value="${esc(F.nome)}"></div>
           <div class="campo"><label class="rotulo" for="e-jog">Jogador</label><input type="text" id="e-jog" data-campo="jogador" value="${esc(F.jogador)}"></div>
           <div class="campo"><label class="rotulo" for="e-idade">Idade</label><input type="text" id="e-idade" data-campo="idade" value="${esc(F.idade)}"></div>
+          <div class="campo"><label class="rotulo" for="e-classe">Classe</label><select id="e-classe">${SIS.classes.map(c => `<option ${c.nome === F.classe ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')}</select></div>
+          <div class="campo"><label class="rotulo" for="e-sub">Subclasse</label><select id="e-sub">${(classe(F.classe)?.subclasses || []).map(x => `<option ${x.nome === F.subclasse ? 'selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></div>
+          <div class="campo"><label class="rotulo" for="e-pat">Patente</label><div style="display:flex; gap:6px"><select id="e-pat" style="flex:1">${SIS.patentes.map(p => `<option value="${p.de}" ${patente(+F.nivel || 1).nome === p.nome ? 'selected' : ''}>${esc(p.nome)} (nível ${p.de} a ${p.ate})</option>`).join('')}</select><button class="vbtn" id="pat-desce" title="Descer de patente" aria-label="Descer de patente">▼</button><button class="vbtn" id="pat-sobe" title="Subir de patente" aria-label="Subir de patente">▲</button></div></div>
           <div class="campo"><label class="rotulo" for="e-nivel">Nível</label><select id="e-nivel">${Array.from({ length: 12 }, (_, i) => `<option ${+F.nivel === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div>
           <div class="campo"><label class="rotulo" for="e-vetor">Vetor</label><input type="text" id="e-vetor" data-campo="vetor" value="${esc(F.vetor)}"></div>
           <div class="campo"><label class="rotulo" for="e-vont">Vontade</label><select id="e-vont">${SIS.vontades.map(v => `<option ${v.nome === F.vontade ? 'selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></div>
@@ -1245,10 +1276,26 @@ ROTAS.agente = async id => {
     $$('[data-v]').forEach(b => b.onclick = () => { const k = b.dataset.v; F.atual[k] = Math.max(0, Math.min(K.max[k], (F.atual[k] ?? K.max[k]) + +b.dataset.d)); pendente = true; render(); salvarVitais(); });
     // edição
     $$('[data-at]').forEach(b => b.onclick = () => { const k = b.dataset.at; const v = (F.atributos[k] || 0) + +b.dataset.d; if (v < 0 || v > 9) return; F.atributos[k] = v; salvar({ atributos: F.atributos }); render(); });
-    $('#e-nivel')?.addEventListener('change', e => { const novo = +e.target.value, velho = +F.nivel || 1;
-      const ganho = pontosPericiaTotal(F.classe, F.atributos?.inteligencia, novo) - pontosPericiaTotal(F.classe, F.atributos?.inteligencia, velho);
-      if (ganho > 0) toast(`Subiu para ${patente(novo).nome}: +${ganho} pontos de perícia para distribuir.`);
-      salvar({ nivel: novo }); });
+    // troca de classe, subclasse, nível ou patente, sempre seguida da correção automática da ficha
+    const aplicarMudanca = (mud, titulo) => {
+      const velho = { ...F }, prov = { ...F, ...mud };
+      const { campos, avisos } = corrigirFicha(prov); const tudo = { ...mud, ...campos };
+      Object.assign(F, tudo); salvar(tudo); render();
+      const ganho = pontosPericiaTotal(F.classe, F.atributos?.inteligencia, +F.nivel) - pontosPericiaTotal(velho.classe, velho.atributos?.inteligencia, +velho.nivel || 1);
+      const msgs = [...avisos, ...(ganho > 0 ? [`+${ganho} ${ganho > 1 ? 'pontos' : 'ponto'} de perícia para distribuir.`] : [])];
+      if (patente(+F.nivel).nome !== patente(+velho.nivel || 1).nome) msgs.unshift(`Agora ${patente(+F.nivel).nome}: limite ${patente(+F.nivel).limite} por atributo e perícia.`);
+      if (msgs.length) abrirModal(titulo, `<p class="dim">A ficha foi corrigida automaticamente:</p><ul class="lista-ajuste">${msgs.map(m => `<li>${esc(m)}</li>`).join('')}</ul><button class="btn" data-fechar-ok>Certo</button>`, (m, fechar) => m.querySelector('[data-fechar-ok]').onclick = fechar);
+      else toast('Ficha atualizada.');
+    };
+    $('#e-nivel')?.addEventListener('change', e => aplicarMudanca({ nivel: +e.target.value }, `Nível ${e.target.value}`));
+    $('#e-classe')?.addEventListener('change', e => { const C = classe(e.target.value); aplicarMudanca({ classe: C.nome, subclasse: C.subclasses[0]?.nome || '' }, `Agora ${C.nome}`); });
+    $('#e-sub')?.addEventListener('change', e => aplicarMudanca({ subclasse: e.target.value }, `Subclasse ${e.target.value}`));
+    $('#e-pat')?.addEventListener('change', e => { const p = SIS.patentes.find(x => x.de === +e.target.value), n = +F.nivel || 1; aplicarMudanca({ nivel: n >= p.de && n <= p.ate ? n : p.de }, p.nome); });
+    const pularPatente = d => { const i = SIS.patentes.findIndex(p => p.nome === patente(+F.nivel || 1).nome) + d; const p = SIS.patentes[i]; if (!p) return toast(d > 0 ? 'Já está na patente mais alta.' : 'Já está na primeira patente.'); aplicarMudanca({ nivel: p.de }, `${d > 0 ? 'Subiu' : 'Desceu'} para ${p.nome}`); };
+    $('#pat-sobe')?.addEventListener('click', () => pularPatente(1));
+    $('#pat-desce')?.addEventListener('click', () => pularPatente(-1));
+    $('#corrigir')?.addEventListener('click', () => { const { campos, avisos } = corrigirFicha(F); if (!avisos.length) return toast('A ficha já está dentro das regras.'); Object.assign(F, campos); salvar(campos); render();
+      abrirModal('Ficha corrigida', `<ul class="lista-ajuste">${avisos.map(m => `<li>${esc(m)}</li>`).join('')}</ul><button class="btn" data-fechar-ok>Certo</button>`, (m, fechar) => m.querySelector('[data-fechar-ok]').onclick = fechar); });
     $('#e-vont')?.addEventListener('change', e => salvar({ vontade: e.target.value }));
     $$('#ficha [data-campo]').forEach(inp => inp.onchange = () => { const k = inp.dataset.campo, v = inp.value.trim(); if (k === 'nome' && !v) { inp.value = F.nome; return toast('O agente precisa de um nome.'); } F[k] = v; salvar({ [k]: v }); if (k === 'nome') render(); });
     $$('[data-qtd]').forEach(b => b.onclick = () => { const i = +b.dataset.qtd, it = F.equipamentos[i]; const n = Math.max(1, (+it.qtd || 1) + +b.dataset.d); if (n === (+it.qtd || 1)) return; it.qtd = n; salvar({ equipamentos: F.equipamentos }); render(); });
