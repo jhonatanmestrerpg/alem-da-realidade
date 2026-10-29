@@ -243,6 +243,76 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 @media (max-width: 980px) { .escudo { grid-template-columns: 1fr; } }
 .feed { background: var(--painel); border: 1px solid var(--linha); display: grid; align-content: start; max-height: 80vh; overflow: auto; position: sticky; top: 84px; }
 @media (max-width: 980px) { .feed { position: static; max-height: 360px; } }
+/* banner de ameaça / combatente */
+.am-banner { position: relative; display: grid; grid-template-columns: 112px 1fr auto; gap: 14px; align-items: center; min-height: 118px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--bc, var(--sangue)) 65%, transparent); background: #0b0d14; }
+.am-banner::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, rgba(11,13,20,.2), color-mix(in srgb, var(--bc, var(--sangue)) 32%, transparent) 55%, rgba(11,13,20,.9)), repeating-linear-gradient(115deg, transparent 0 16px, color-mix(in srgb, var(--bc, var(--sangue)) 12%, transparent) 16px 18px); }
+.am-bg { position: absolute; inset: -24px; background: center/cover no-repeat; filter: blur(16px) saturate(.7) brightness(.4); }
+.am-ft { position: relative; z-index: 2; height: 118px; background: #f2efe6 center/contain no-repeat; display: grid; place-items: center; font: 400 34px var(--f-disp); color: var(--lua-faint); }
+.am-ft.ag { background-color: var(--painel-3); background-size: cover; background-position: top center; }
+.am-tx { position: relative; z-index: 2; display: grid; gap: 3px; min-width: 0; padding-right: 8px; }
+.am-tx b { font: 400 23px/1.1 var(--f-disp); color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.7); overflow-wrap: anywhere; }
+.am-tx span { font: 600 12.5px var(--f-body); color: var(--lua); }
+.am-tx .am-el { color: color-mix(in srgb, var(--bc, var(--sangue)) 70%, #fff); text-transform: uppercase; letter-spacing: .08em; font-size: 11px; }
+.am-banner .am-acao { position: relative; z-index: 2; align-self: start; margin: 8px 8px 0 0; }
+.bcris { position: relative; display: grid; grid-template-columns: auto auto 1fr auto auto; align-items: center; height: 34px; border: 1px solid var(--sangue); background: #2a0d10; overflow: hidden; }
+.bcris.ps { border-color: var(--sanid); background: #0f1a2c; } .bcris.pst { border-color: var(--fole); background: #0f2219; }
+.bcris .fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #7a1d23, var(--sangue)); transition: width .25s ease; }
+.bcris.ps .fill { background: linear-gradient(90deg, #26406b, var(--sanid)); } .bcris.pst .fill { background: linear-gradient(90deg, #24503b, var(--fole)); }
+.bcris .b { position: relative; z-index: 1; background: none; border: 0; color: #fff; font: 700 18px/1 var(--f-mono); width: 30px; height: 100%; cursor: pointer; }
+.bcris .b:hover { background: rgba(255,255,255,.12); }
+.bcris .v { position: relative; z-index: 1; text-align: center; font: 700 14px var(--f-mono); color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+.abas-mini { justify-content: center; border-bottom: none !important; }
+.abas-mini button { font-size: 14px !important; }
+/* combate */
+.cb-topo { display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
+.cb-topo h2 { margin: 0; border-left: 3px solid var(--sangue); padding: 4px 0 4px 12px; background: var(--painel); padding-right: 18px; }
+.cb-acoes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.menu-pop { position: relative; }
+.menu-pop > div { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; background: var(--painel-2); border: 1px solid var(--linha-2); display: grid; min-width: 230px; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+.menu-pop > div[hidden] { display: none; }
+.menu-pop > div button { text-align: left; padding: 11px 14px; background: none; border: 0; border-bottom: 1px solid var(--linha); color: var(--lua); font: 600 14px var(--f-body); cursor: pointer; }
+.menu-pop > div button:hover { background: var(--painel-3); }
+.cb-wrap { display: grid; grid-template-columns: minmax(270px, 360px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.ini-lista { background: var(--painel); border: 1px solid var(--linha); padding: 12px; display: grid; gap: 8px; }
+.ini-cab { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding-bottom: 4px; }
+.ini-cab .sub { font-size: 12px; color: var(--lua-dim); }
+.ini-card { position: relative; display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; gap: 12px; align-items: center; background: var(--painel-2); border: 1px solid var(--linha); padding-right: 12px; min-height: 58px; cursor: pointer; }
+.ini-card:hover { border-color: var(--linha-2); }
+.ini-card .ft { width: 54px; height: 58px; background: var(--painel-3) center top/cover no-repeat; display: grid; place-items: center; font: 700 14px var(--f-mono); color: var(--lua-faint); }
+.ini-card .ft.am { background-color: #f2efe6; background-size: contain; background-position: center; }
+.ini-card .nm { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ini-card .vs { font: 12px var(--f-mono); display: flex; gap: 10px; flex-wrap: wrap; }
+.vs .p { color: var(--sangue-hi); } .vs .s { color: var(--sanid); }
+.ini-card .conds { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
+.ini-card .n { font: 700 22px var(--f-mono); min-width: 46px; text-align: center; border-bottom: 2px solid var(--lua-dim); }
+.ini-card .n input { width: 50px; font: 700 21px var(--f-mono); text-align: center; background: transparent; border: 0; border-bottom: 2px solid var(--lua-dim); padding: 2px 0; color: var(--lua); border-radius: 0; }
+.ini-card.sel { background: var(--painel-3); border-color: var(--linha-2); }
+.ini-card.vez { border-color: var(--sangue); box-shadow: inset 0 0 0 1px var(--sangue), 0 0 18px rgba(180,51,59,.25); }
+.ini-card.vez::after { content: "na vez"; position: absolute; top: 3px; right: 8px; font: 700 9.5px var(--f-mono); color: var(--sangue-hi); letter-spacing: .1em; text-transform: uppercase; }
+.ini-card.meu .nm::after { content: " · você"; color: var(--ouro); font-weight: 600; font-size: 12px; }
+.ini-card.caido { opacity: .5; }
+.cb-det { background: var(--painel); border: 1px solid var(--linha); padding: 14px; display: grid; gap: 12px; align-content: start; position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow: auto; }
+.cb-det .vazio-det { display: grid; place-items: center; text-align: center; min-height: 280px; font: 600 19px var(--f-body); color: var(--lua); padding: 0 24px; }
+.cb-det .lin-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.per-l { display: grid; gap: 4px; }
+.per-l > div { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; border: 1px solid var(--linha); padding: 5px 10px; font-size: 13px; }
+.per-l .dado-btn svg { width: 20px; height: 20px; }
+/* laterais puxáveis no celular */
+.puxador, .veu-lateral { display: none; }
+@media (max-width: 980px) {
+  .cb-wrap { grid-template-columns: 1fr; }
+  .lateral { position: fixed !important; z-index: 46; top: 0; bottom: 0; height: 100dvh; max-height: none !important; width: min(370px, 90vw); overflow-y: auto; overscroll-behavior: contain; transition: transform .25s ease; box-shadow: 0 0 40px rgba(0,0,0,.6); margin: 0; }
+  .lateral.esq { left: 0; transform: translateX(-104%); }
+  .lateral.dir { right: 0; transform: translateX(104%); }
+  .lateral.aberta { transform: none; }
+  .veu-lateral { display: block; position: fixed; inset: 0; z-index: 45; background: rgba(0,0,0,.55); }
+  .puxador { display: grid; place-items: center; gap: 6px; position: fixed; z-index: 44; top: 50%; transform: translateY(-50%); width: 30px; padding: 12px 0; background: var(--painel-3); border: 1px solid var(--linha-2); color: var(--lua); cursor: pointer; }
+  .puxador.esq { left: 0; border-left: 0; border-radius: 0 10px 10px 0; }
+  .puxador.dir { right: 0; border-right: 0; border-radius: 10px 0 0 10px; }
+  .puxador span { writing-mode: vertical-rl; font: 700 10.5px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; }
+  .puxador.esq span { transform: rotate(180deg); }
+  .puxador b { font: 700 14px var(--f-mono); color: var(--sangue-hi); }
+}
 .feed .cab-f { padding: 12px 14px; border-bottom: 1px solid var(--linha); display: flex; justify-content: space-between; align-items: center; }
 .rol { padding: 10px 14px; border-bottom: 1px solid var(--linha); display: grid; grid-template-columns: 38px 1fr; gap: 10px; align-items: start; }
 .rol-tx { display: grid; gap: 3px; min-width: 0; }
@@ -2089,15 +2159,25 @@ const defEf = (f, contornado) => f?.intangivel ? (contornado ? f.intangivel.defe
 const blocoIntangivel = (f, contornado, comBotao) => f?.intangivel ? `<div class="intang ${contornado ? 'cont' : ''}"><div class="cab"><b>${contornado ? 'Meta cumprida' : 'Intangível'}</b><span class="mono">Defesa ${f.intangivel.defesa} → ${f.intangivel.defesaContornada}</span></div>
   <p>${esc(f.intangivel.contorno)}</p>${comBotao ? `<button class="btn mini ${contornado ? 'sec' : 'ouro'}" data-contorno>${contornado ? 'Voltou a ficar intangível' : 'Meta cumprida: baixar a defesa'}</button>` : ''}</div>` : '';
 function fichaAmeacaModal(c, opc = {}) {
-  const f = c.ficha || {}; const n = +c.nivel || 1; const dt = f.dt ?? 12 + 2 * n;
-  let pv = opc.pv ?? f.pv ?? 1; const pvMax = opc.pvMax ?? f.pv ?? 1; let aba = 'status', sub = 'acoes', contornado = !!opc.contornado;
+  abrirModal(c.nome, '<div id="fam"></div>', (m, fechar) => montarAmeaca(m.querySelector('#fam'), c, opc, {}, fechar));
+}
+// barra de vida no estilo « ‹ valor › »
+const barraCris = (cls, v, m, attr, passos = [10, 1]) => `<div class="bcris ${cls}"><div class="fill" style="width:${Math.max(0, Math.min(100, (v / (m || 1)) * 100))}%"></div><button class="b" ${attr}="${-passos[0]}" aria-label="−${passos[0]}">«</button><button class="b" ${attr}="${-passos[1]}" aria-label="−${passos[1]}">‹</button><span class="v">${v} / ${m}</span><button class="b" ${attr}="${passos[1]}" aria-label="+${passos[1]}">›</button><button class="b" ${attr}="${passos[0]}" aria-label="+${passos[0]}">»</button></div>`;
+// banner temático da ameaça: foto na frente, a própria imagem borrada e a cor do elemento atrás
+const corEl = e => e ? `var(--${String(e).toLowerCase().normalize('NFD').replace(/[^a-z]/g, '')}, var(--sangue))` : 'var(--sangue)';
+const bannerAmeaca = (c, extra = '') => { const n = +c.nivel || 1, img = c.imagem || '';
+  return `<div class="am-banner" style="--bc:${corEl(c.elemento)}">${img ? `<div class="am-bg" style="background-image:url('${esc(img)}')"></div>` : ''}
+    <div class="am-ft" style="${img ? `background-image:url('${esc(img)}')` : ''}">${img ? '' : esc(iniciais(c.nome))}</div>
+    <div class="am-tx"><b>${esc(c.nome)}</b><span>Nível ${n} · ${esc(nivelAm(n)[1])}</span><span class="am-el">${esc(c.elemento || 'Sem elemento')}${c.ficha?.intangivel ? ' · Intangível' : ''}</span></div>${extra}</div>`; };
+function montarAmeaca(alvo, c, opc = {}, est = {}, fechar = null) {
+  const f = c.ficha || {}; const n = +c.nivel || 1; const dt = f.dt ?? 12 + 2 * n; const resId = opc.resId || 'fam-res';
+  let pv = opc.pv ?? f.pv ?? 1; const pvMax = opc.pvMax ?? f.pv ?? 1; let aba = est.aba || 'status', sub = est.sub || 'acoes', contornado = !!opc.contornado;
   const pres = f.presenca || (f.tracos || []).find(t => /Presença/.test(t.nome));
   const poderes = f.poderes || (f.tracos || []).filter(t => t !== pres).map(t => { const m = /^([A-ZÇÃÉ]+)\s*[·-]\s*(.+)$/.exec(t.nome); return m ? { acao: m[1], nome: m[2], texto: t.texto } : { acao: 'PODER', nome: t.nome, texto: t.texto }; });
   const presDT = /DT\s*(\d+)/.exec(pres?.texto || '')?.[1] || dt;
-  abrirModal(c.nome, '<div id="fam"></div>', (m, fechar) => {
-    const alvo = m.querySelector('#fam');
-    const out = r => { const o = m.querySelector('#fam-res'); if (o) o.innerHTML = r; };
-    const desenhar = () => {
+  {
+    const out = r => { const o = alvo.querySelector('#' + resId); if (o) o.innerHTML = r; };
+    const desenhar = () => { est.aba = aba; est.sub = sub;
       let corpo = '';
       if (aba === 'status') corpo = `<div class="attr-linha">${ATR.map(([k, , s]) => `<span><b>${f.atributos?.[k] ?? 0}</b>${s}</span>`).join('')}</div>
         ${blocoIntangivel(f, contornado, true)}
@@ -2117,20 +2197,21 @@ function fichaAmeacaModal(c, opc = {}) {
         ${c.anotacoes ? `<p class="nota-arthur">“${esc(c.anotacoes)}”</p>` : ''}<p class="dim">${nl(c.descricao)}</p>
         ${c.ponto_fraco ? `<h3>Ponto fraco</h3><p class="dim">${nl(c.ponto_fraco)}</p>` : ''}${c.forma_de_abate ? `<h3>Forma de abate</h3><p class="dim">${nl(c.forma_de_abate)}</p>` : ''}
         <a href="#ameaca-${esc(c.id)}" data-fechar-ir>Abrir o relato completo</a>`;
-      alvo.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap">${elTag(c.elemento)}<span class="tag">Nv ${n} · ${esc(nivelAm(n)[1])}</span></div>
-        <div class="vital pv"><div class="ctrl"><button class="vbtn" data-hp="-10">«</button><button class="vbtn" data-hp="-1">‹</button><div class="trilho"><div class="cheio" style="width:${Math.min(100, pv / pvMax * 100)}%"></div><div class="txt">${pv} / ${pvMax}</div></div><button class="vbtn" data-hp="1">›</button><button class="vbtn" data-hp="10">»</button></div></div>
-        <div class="abas">${[['status', 'Status'], ['combate', 'Combate'], ['descricao', 'Descrição']].map(([k, l]) => `<button class="${aba === k ? 'aqui' : ''}" data-ab="${k}">${l}</button>`).join('')}</div>
-        <div style="display:grid; gap:10px">${corpo}</div><div class="res" id="fam-res"></div>`;
+      alvo.innerHTML = `${opc.banner ? opc.banner() : bannerAmeaca(c)}
+        ${barraCris('pv', pv, pvMax, 'data-hp')}
+        <div class="abas abas-mini">${[['status', 'Status'], ['combate', 'Combate'], ['descricao', 'Descrição']].map(([k, l]) => `<button class="${aba === k ? 'aqui' : ''}" data-ab="${k}">${l}</button>`).join('')}</div>
+        <div style="display:grid; gap:10px">${corpo}</div><div class="res" id="${resId}"></div>`;
       alvo.querySelectorAll('[data-ab]').forEach(b => b.onclick = () => { aba = b.dataset.ab; desenhar(); });
       alvo.querySelectorAll('[data-sub]').forEach(b => b.onclick = () => { sub = b.dataset.sub; desenhar(); });
       alvo.querySelectorAll('[data-contorno]').forEach(b => b.onclick = () => { contornado = !contornado; opc.aoContorno?.(contornado); desenhar(); });
       alvo.querySelectorAll('[data-hp]').forEach(b => b.onclick = () => { pv = Math.max(0, Math.min(pvMax, pv + +b.dataset.hp)); opc.aoPV?.(pv); desenhar(); });
       alvo.querySelectorAll('[data-pt]').forEach(b => b.onclick = () => { const [nm, q, md] = b.dataset.pt.split('|'); const r = teste(+q, +md); out(`${nm}: ${r.detalhe} = <b>${r.total}</b>${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`); popRolagem({ quem: c.nome, titulo: nm, tipo: 'Teste', expr: `${q}d20+${md}`, linhas: [{ det: r.detalhe, total: r.total }], total: r.total, nat20: r.nat20 }); opc.aoRolar?.(nm, r); });
-      alvo.querySelectorAll('[data-am-teste],[data-am-dano]').forEach(b => { b.dataset.alvo = 'fam-res'; b.onclick = ev => { ev.stopPropagation(); rolarAtaqueAmeaca(b, opc.aoRolar); }; });
-      alvo.querySelector('[data-fechar-ir]')?.addEventListener('click', fechar);
+      opc.aoDesenhar?.(alvo);
+      alvo.querySelectorAll('[data-am-teste],[data-am-dano]').forEach(b => { b.dataset.alvo = resId; b.onclick = ev => { ev.stopPropagation(); rolarAtaqueAmeaca(b, opc.aoRolar); }; });
+      alvo.querySelector('[data-fechar-ir]')?.addEventListener('click', () => fechar?.());
     };
     desenhar();
-  });
+  }
 }
 async function acharAmeaca(id) {
   if (String(id).startsWith('hb')) { if (!db) return null; const s = await db.doc('homebrew/' + id.slice(2)).get(); return s.exists ? { ...s.data(), id, homebrew: true } : null; }
@@ -2474,11 +2555,36 @@ function removerDaCampanha(campId, f, nomeCamp) {
 }
 const vitalMini = (cls, a, m) => `<div class="${cls}"><div class="trilho fino"><div class="cheio" style="width:${Math.min(100, (a / (m || 1)) * 100)}%"></div><div class="txt">${a}/${m}</div></div></div>`;
 
+/* abas laterais: no computador ficam fixas; no celular viram gavetas puxadas por botões na borda */
+let LADO = null;
+function laterais(cfg) {
+  app.querySelectorAll(':scope > .puxador').forEach(x => x.remove());
+  const veu = () => app.querySelector(':scope > .veu-lateral');
+  const fechar = () => { LADO = null; app.querySelectorAll('.lateral.aberta').forEach(x => x.classList.remove('aberta')); veu()?.remove(); };
+  const abrir = lado => { const el = cfg[lado]; if (!el) return; app.querySelectorAll('.lateral.aberta').forEach(x => x !== el && x.classList.remove('aberta')); el.classList.add('aberta'); LADO = lado;
+    if (!veu()) { const v = document.createElement('div'); v.className = 'veu-lateral'; v.onclick = fechar; app.appendChild(v); } };
+  app.querySelectorAll('.lateral').forEach(x => { if (x !== cfg.esq && x !== cfg.dir) x.classList.remove('lateral', 'esq', 'dir', 'aberta'); });
+  for (const lado of ['esq', 'dir']) { const el = cfg[lado]; if (!el) continue; el.classList.add('lateral', lado);
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'puxador ' + lado; b.setAttribute('aria-label', 'Abrir ' + cfg.rot[lado]);
+    b.innerHTML = `<b>${lado === 'esq' ? '›' : '‹'}</b><span>${esc(cfg.rot[lado])}</span>`; b.onclick = () => LADO === lado ? fechar() : abrir(lado); app.appendChild(b); }
+  if (LADO && cfg[LADO]) abrir(LADO); else if (LADO) fechar();
+  return { abrir, fechar };
+}
+const ehCelular = () => matchMedia('(max-width: 980px)').matches;
+document.addEventListener('click', e => { if (!e.target.closest('.menu-pop')) document.querySelectorAll('.menu-pop > div').forEach(d => d.hidden = true); });
+// cartão da ordem de iniciativa (mestre e jogador)
+function cardIni({ i, nome, foto, ameaca, pv, pvM, ps, psM, conds = [], ini, vez, sel, meu, editavel, mostrarPV = true, rotTipo = '' }) {
+  return `<div class="ini-card ${vez ? 'vez' : ''} ${sel ? 'sel' : ''} ${meu ? 'meu' : ''} ${mostrarPV && pv != null && pv <= 0 ? 'caido' : ''}" data-selcb="${i}" role="button" tabindex="0">
+    <div class="ft ${ameaca && foto ? 'am' : ''}" style="${foto ? `background-image:url('${esc(foto)}')` : ''}">${foto ? '' : esc(iniciais(nome))}</div>
+    <div style="min-width:0"><div class="nm">${esc(nome)}</div><div class="vs">${mostrarPV && pv != null ? `<span class="p">${pv} / ${pvM}</span>` : ''}${ps != null ? `<span class="s">${ps} / ${psM}</span>` : ''}${rotTipo ? `<span class="faint">${esc(rotTipo)}</span>` : ''}</div>${conds.length ? `<div class="conds">${conds.map(c => `<span class="cond-chip">${esc(c)}</span>`).join('')}</div>` : ''}</div>
+    <div class="n">${editavel ? `<input type="number" aria-label="Iniciativa de ${esc(nome)}" data-ini="${i}" value="${esc(ini ?? '')}">` : esc(ini ?? '')}</div></div>`;
+}
 ROTAS.campanha = async id => {
   if (!db) { app.innerHTML = semBanco(); return; }
   await carregarPart();
-  let aba = ABA_INICIAL || 'agentes'; ABA_INICIAL = null;
-  const st = ouvirCampanha(id, (s, tipo) => { if (tipo === 'rolagens' && aba !== 'rolagens') return; if (!document.activeElement?.matches?.('#dados-expr')) render(); });
+  let aba = ABA_INICIAL || 'agentes'; ABA_INICIAL = null; if (aba === 'rolagens') aba = 'agentes'; LADO = null;
+  const listaRol = () => st.rolagens.map(rolHtml).join('') || '<div class="vazio" style="font-size:15px">Nenhuma rolagem ainda.</div>';
+  const st = ouvirCampanha(id, (s, tipo) => { if (tipo === 'rolagens') { const l = $('#feed-lista'); if (l) { l.innerHTML = listaRol(); const n = $('#feed-n'); if (n) n.textContent = st.rolagens.length; return; } } if (!document.activeElement?.matches?.('#dados-expr')) render(); });
   async function render() {
     if (st.camp === null) { app.innerHTML = '<div class="vazio">Abrindo a campanha…</div>'; return; }
     if (st.camp === false) { app.innerHTML = '<div class="vazio">Campanha não encontrada.</div>'; return; }
@@ -2489,14 +2595,13 @@ ROTAS.campanha = async id => {
     if (aba === 'agentes') corpo = `<div class="grade-cards">${fichas.map(f => { const K = calc(f); const a = f.atual || K.max;
       return cardAgente(f, `<div class="vit">${vitalMini('pv', a.pv, K.max.pv)}${vitalMini('ps', a.ps, K.max.ps)}</div>${f.dono === ME || mestre || DONO ? `<button class="btn mini sec" data-rm-ag="${esc(f.id)}" title="Tirar da campanha">Remover</button>` : ''}`, nomes[f.dono] || f.jogador || ''); }).join('') || '<div class="vazio">Nenhum agente nesta campanha ainda.</div>'}</div>`;
     if (aba === 'jogadores') corpo = `<div class="lista">${[...new Set([C.mestre, ...st.membros.map(m => m.uid)])].map(u => `<div class="item"><div class="cab"><span style="display:flex; gap:10px; align-items:center"><span class="ava" style="background:${corDe(u)}">${esc(iniciais(nomes[u]))}</span><b>${esc(nomes[u])}${u === ME ? ' (você)' : ''}</b></span><span class="tag ${u === C.mestre ? 'crit' : ''}">${u === C.mestre ? 'Mestre' : 'Jogador'}</span></div></div>`).join('')}</div>`;
-    if (aba === 'combate') corpo = st.combate?.ativo ? `<div class="cab-pagina"><h2>Rodada ${st.combate.rodada || 1}</h2><span class="dim">Ordem de iniciativa</span></div>
-      <div class="lista">${(st.combate.ordem || []).map((o, i) => `<div class="combatente ${i === st.combate.turno ? 'vez' : ''}"><span class="ini">${esc(o.ini ?? '')}</span><div><b>${esc(o.nome)}</b> ${o.tipo === 'ameaca' ? '<span class="tag" style="color:var(--sangue-hi)">Ameaça</span>' : ''}${(o.cond || []).map(c => ` <span class="cond-chip">${esc(c)}</span>`).join('')}</div><span>${i === st.combate.turno ? '<span class="el" style="color:var(--ouro)">Vez</span>' : ''}</span></div>`).join('')}</div>`
+    if (aba === 'combate') corpo = st.combate?.ativo ? `<div class="cb-topo"><h2>Rodada ${st.combate.rodada || 1}</h2><span class="dim">Ordem de iniciativa</span></div>
+      <section class="ini-lista" style="max-width:560px">${(st.combate.ordem || []).map((o, i) => { const f = o.tipo === 'agente' ? st.fichas[o.ref] : null; const K = f ? calc(f) : null; const a = f ? { ...K.max, ...(f.atual || {}) } : null;
+        return cardIni({ i, nome: o.nome, foto: f ? fotoEf(f) : (o.img || ''), ameaca: o.tipo !== 'agente', pv: a?.pv, pvM: K?.max.pv, ps: a?.ps, psM: K?.max.ps, conds: o.cond || [], ini: o.ini, vez: i === st.combate.turno, meu: f?.dono === ME, mostrarPV: !!f, rotTipo: o.tipo === 'ameaca' ? 'Ameaça' : o.tipo === 'npc' ? 'NPC' : '' }); }).join('')}</section>`
       : '<div class="vazio">Nenhum combate em andamento.</div>';
     if (aba === 'pistas') corpo = `<div class="lista">${st.pistas.map(p => `<div class="item"><span class="nm">${esc(p.titulo)}</span><p class="dim">${nl(p.texto)}</p>${p.imagem ? `<img src="${esc(p.imagem)}" alt="" style="max-width:420px">` : ''}</div>`).join('') || '<div class="vazio">Nenhuma pista revelada.</div>'}</div>`;
     if (aba === 'relatorios') corpo = `<div class="lista">${st.relatorios.slice().reverse().map(r => `<div class="item"><div class="cab"><span class="nm">${esc(r.titulo)}</span><span class="faint">${dataBR(r.t)}</span></div><p class="dim">${nl(r.texto)}</p></div>`).join('') || '<div class="vazio">Nenhum relatório de missão ainda.</div>'}</div>`;
     if (aba === 'ligacao') corpo = membro ? '<div id="ligacao"></div>' : '<div class="vazio">Entre na campanha para usar a ligação.</div>';
-    if (aba === 'rolagens') corpo = `<div class="caixa" style="display:grid; gap:8px"><span class="rotulo">Rolar dados na mesa</span><div style="display:flex; gap:8px"><input type="text" id="dados-expr" placeholder="2d6+3, 3d20m+4 (m = fica o maior) ou 3#2d10+6 (# = rola 3 vezes e soma)"><button class="btn" id="dados-ok">Rolar</button></div></div>
-      <div class="caixa" style="padding:0">${st.rolagens.map(rolHtml).join('') || '<div class="vazio">Nenhuma rolagem ainda.</div>'}</div>`;
     app.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
         ${mestre ? `<button class="btn sec" id="editar-c">Editar campanha</button><a class="btn ouro" href="#escudo-${esc(id)}" style="text-decoration:none">Escudo do mestre</a>` : ''}
         ${membro ? '<button class="btn sec" id="add-ag">Adicionar agente</button><button class="btn sec" id="convidar">Convidar jogadores</button>' : '<button class="btn" id="entrar-c">Entrar nesta campanha</button>'}
@@ -2505,7 +2610,8 @@ ROTAS.campanha = async id => {
         ${C.capa ? `<img src="${esc(C.capa)}" alt="" style="border:1px solid var(--linha-2); width:100%">` : ''}
         <div style="display:grid; gap:10px"><span class="rotulo">Mestre: ${esc(nomes[C.mestre])}</span><h1>${esc(C.nome)}</h1>${C.descricao ? `<p class="dim" style="font-size:17px; max-width:60ch">${nl(C.descricao)}</p>` : ''}</div>
       </section>
-      <div class="abas">${[['agentes', 'Agentes'], ['jogadores', 'Jogadores'], ['combate', st.combate?.ativo ? 'Combate ●' : 'Combate'], ['pistas', 'Pistas'], ['relatorios', 'Relatórios'], ['rolagens', 'Rolagens'], ['ligacao', Object.keys(CH.sala === id ? CH.presenca : {}).length ? `Ligação ● ${Object.keys(CH.presenca).length}` : 'Ligação']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>${corpo}`;
+      <div class="escudo"><aside class="feed" id="feed-j"><div class="cab-f"><b>Resultados</b><span class="faint" style="font-size:12px" id="feed-n">${st.rolagens.length}</span></div>${membro ? `<div style="padding:10px 12px; border-bottom:1px solid var(--linha); display:flex; gap:6px"><input type="text" id="dados-expr" placeholder="Rolar na mesa: 2d6+3" style="min-width:0"><button class="btn mini" id="dados-ok">Rolar</button></div>` : ''}<div id="feed-lista">${listaRol()}</div></aside>
+      <div style="display:grid; gap:16px; min-width:0; align-content:start"><div class="abas">${[['agentes', 'Agentes'], ['jogadores', 'Jogadores'], ['combate', st.combate?.ativo ? 'Combate ●' : 'Combate'], ['pistas', 'Pistas'], ['relatorios', 'Relatórios'], ['ligacao', Object.keys(CH.sala === id ? CH.presenca : {}).length ? `Ligação ● ${Object.keys(CH.presenca).length}` : 'Ligação']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>${corpo}</div></div>`;
     $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
     atualizarPersona(st);
     if (aba === 'ligacao' && membro) montarLigacao(id, C, st);
@@ -2528,6 +2634,7 @@ ROTAS.campanha = async id => {
     $('#dados-ok')?.addEventListener('click', async () => { const ex = $('#dados-expr').value; const r = rolar(ex); if (!r) return toast('Formato inválido. Ex.: 2d6+3');
       const nomesM = await nomeDe([ME]); try { await db.collection(`campanhas/${id}/rolagens`).add({ uid: ME, autor: nomesM[ME], rotulo: ex, detalhe: r.detalhe, total: r.total, t: Date.now() }); } catch (e) { toast('Não deu para rolar na mesa.'); } $('#dados-expr').value = ''; });
     $('#dados-expr')?.addEventListener('keydown', e => { if (e.key === 'Enter') $('#dados-ok').click(); });
+    laterais({ esq: $('#feed-j'), rot: { esq: 'Rolagens' } });
   }
   render();
 };
@@ -2559,12 +2666,13 @@ ROTAS.escudo = async id => {
   const refE = db.doc(`mestre/${ME}/escudo/${id}`);
   let E = { anotacoes: { geral: '', futuras: '', anteriores: '' }, combate: { rodada: 1, turno: 0, lista: [], ativo: false }, pistas: [], ocultas: [] };
   try { const s = await refE.get(); if (s.exists) E = { ...E, ...s.data() }; } catch (e) {}
-  let aba = ABA_INICIAL || 'agentes', gravando = Promise.resolve(); ABA_INICIAL = null;
+  let aba = ABA_INICIAL || 'agentes', gravando = Promise.resolve(); ABA_INICIAL = null; LADO = null;
+  let selCb = null; const estDet = {};
   const VETORES = {};
   assinar(db.collection(`mestre/${ME}/vetores`).where('campanha', '==', id).onSnapshot(s => { for (const k in VETORES) delete VETORES[k]; s.docs.forEach(d => VETORES[d.id] = d.data()); if (aba === 'vetores') render(); }));
   const salvarE = debounce(() => { gravando = gravando.then(() => refE.set(E)).catch(() => toast('Não deu para salvar o escudo.')); }, 600);
   const publicarCombate = debounce(() => {
-    const c = E.combate; const ordem = c.lista.map(x => ({ nome: x.nome, tipo: x.tipo, ini: x.ini, cond: (x.cond || []).map(cd => condObj(cd).nome), ref: x.tipo === 'agente' ? x.ref : '' }));
+    const c = E.combate; const ordem = c.lista.map(x => ({ nome: x.nome, tipo: x.tipo, ini: x.ini, cond: (x.cond || []).map(cd => condObj(cd).nome), ref: x.tipo === 'agente' ? x.ref : '', img: x.tipo === 'ameaca' ? (x.imagem || CRI.find(k => String(k.id) === String(x.ref))?.imagem || '') : '' }));
     db.doc(`campanhas/${id}/publico/combate`).set({ ativo: !!c.ativo && c.lista.length > 0, rodada: c.rodada, turno: c.turno, ordem }).catch(() => {});
   }, 400);
   const publicarPistas = () => db.doc(`campanhas/${id}/publico/pistas`).set({ itens: E.pistas.filter(p => p.revelada).map(({ titulo, texto, imagem }) => ({ titulo, texto, imagem: imagem || '' })) }).catch(() => toast('Não deu para publicar as pistas.'));
@@ -2583,7 +2691,8 @@ ROTAS.escudo = async id => {
   }
   st = ouvirCampanha(id, (s, tipo) => { desenharFeed(); if (tipo === 'rolagens') return; if (!document.activeElement?.closest?.('#corpo-e input, #corpo-e textarea, #corpo-e select')) render(); });
 
-  function render() {
+  function render() { renderE(); if (!$('#escudo')) return; laterais({ esq: $('#feed'), dir: aba === 'combate' ? $('#cb-det') : null, rot: { esq: 'Rolagens', dir: 'Ficha' } }); }
+  function renderE() {
     const ABAS = [['agentes', 'Agentes'], ['combate', 'Combate'], ['investigacao', 'Investigação'], ['relatorios', 'Relatórios'], ['dados', 'Dados'], ['vetores', 'Vetores'], ['anotacoes', 'Anotações'], ['ligacao', 'Ligação']];
     $('#abas-e').innerHTML = ABAS.map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('');
     $$('#abas-e [data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
@@ -2605,18 +2714,58 @@ ROTAS.escudo = async id => {
     if (aba === 'combate') {
       const c = E.combate;
       const ordenar = () => c.lista.sort((x, y) => (+y.ini || 0) - (+x.ini || 0));
-      corpo.innerHTML = `<div class="caixa" style="display:grid; gap:12px">
-        <div class="cab-pagina"><div><span class="rotulo">Iniciativa</span><h2>${c.ativo ? `Rodada ${c.rodada}` : 'Combate parado'}</h2></div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn ${c.ativo ? 'sec' : ''}" id="cb-ativo">${c.ativo ? 'Encerrar combate' : 'Iniciar combate'}</button><button class="btn sec" id="cb-voltar">Voltar turno</button><button class="btn" id="cb-prox">Próximo turno</button></div></div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn sec mini" id="cb-ag">Adicionar agentes</button><button class="btn sec mini" id="cb-am">Adicionar ameaça</button><button class="btn sec mini" id="cb-npc">Adicionar NPC</button><button class="btn sec mini" id="cb-ini">Rolar iniciativa das ameaças</button><button class="btn sec mini" id="cb-ord">Ordenar</button><button class="btn-x" id="cb-limpar" style="font-size:13px">Limpar lista</button></div>
-        <p class="faint" style="font-size:13px">Os jogadores veem a ordem e as condições, nunca os PV das ameaças.</p></div>
-        <div class="lista">${c.lista.map((x, i) => { const f = x.tipo === 'agente' ? st.fichas[x.ref] : null; const K = f ? calc(f) : null; const pv = f ? (f.atual || K.max).pv : x.pv, pvM = f ? K.max.pv : x.pvMax;
-          return `<div class="combatente ${c.ativo && i === c.turno ? 'vez' : ''}"><div class="ini"><input type="number" aria-label="Iniciativa de ${esc(x.nome)}" data-ini="${i}" value="${esc(x.ini ?? '')}"></div>
-          <div style="display:grid; gap:6px; min-width:0"><div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap"><b>${esc(x.nome)}</b>${x.tipo === 'ameaca' ? elTag(x.elemento) : `<span class="tag">${x.tipo === 'agente' ? 'Agente' : 'NPC'}</span>`}${(f ? (f.condicoes || []).map(condObj) : (x.cond || []).map(condObj)).map((cd, j) => `<span class="cond-chip" title="${esc(textoCond(cd))}">${esc(cd.turnos ? `${cd.nome} (${cd.turnos})` : cd.nome)}<button data-rmc="${i}" data-j="${j}" aria-label="Tirar ${esc(cd.nome)}">×</button></span>`).join('')}
-            <select data-addc="${i}" style="width:auto; padding:2px 6px; font-size:12px"><option value="">+ condição</option>${SIS.condicoes.map(cd => `<option>${esc(cd.nome)}</option>`).join('')}</select></div>
-            <div class="vital pv"><div class="ctrl"><button class="vbtn" data-cpv="${i}" data-d="-10">−10</button><button class="vbtn" data-cpv="${i}" data-d="-1">−1</button><div class="trilho fino" style="height:22px"><div class="cheio" style="width:${Math.min(100, (pv / (pvM || 1)) * 100)}%"></div><div class="txt" style="line-height:20px">${pv} / ${pvM}</div></div><button class="vbtn" data-cpv="${i}" data-d="1">+1</button><button class="vbtn" data-cpv="${i}" data-d="10">+10</button></div></div>
-            ${x.tipo === 'ameaca' ? `<button class="btn mini sec" style="justify-self:start" data-fam="${i}">Abrir ficha da ameaça</button>` : ''}${f && ((f.condicoes || []).length || quedaAtiva(f).length) ? `<button class="btn mini sec" style="justify-self:start" data-resolver="${esc(f.id)}" title="Abre o pop-up de condições para você resolver no lugar do jogador">Resolver condições de ${esc(f.nome.split(' ')[0])}</button>` : ''}</div>
-          <button class="btn-x" data-rmx="${i}" aria-label="Tirar do combate">×</button></div>`; }).join('') || '<div class="vazio">Adicione agentes e ameaças para montar a iniciativa.</div>'}</div>`;
+      if (selCb != null && selCb >= c.lista.length) selCb = null;
+      const sel = selCb ?? (c.ativo && c.lista.length ? c.turno : -1);
+      const infoX = x => { const f = x.tipo === 'agente' ? st.fichas[x.ref] : null; const K = f ? calc(f) : null; const a = f ? { ...K.max, ...(f.atual || {}) } : null;
+        return { f, K, a, pv: f ? a.pv : x.pv, pvM: f ? K.max.pv : x.pvMax, foto: f ? fotoEf(f) : x.tipo === 'ameaca' ? (x.imagem || CRI.find(k => String(k.id) === String(x.ref))?.imagem || '') : '', conds: f ? (f.condicoes || []).map(condObj) : (x.cond || []).map(condObj) }; };
+      const x0 = c.lista[sel], I0 = x0 ? infoX(x0) : null, chave0 = x0 ? (x0.ref || x0.nome) + '|' + sel : '';
+      const est0 = x0 ? (estDet[chave0] = estDet[chave0] || { aba: x0.tipo === 'agente' ? 'atributos' : 'status' }) : null;
+      const blocoCond = x0 ? `<div style="display:grid; gap:6px"><span class="rotulo">Condições</span><div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center">${I0.conds.map((cd, j) => `<span class="cond-chip" title="${esc(textoCond(cd))}">${esc(cd.turnos ? `${cd.nome} (${cd.turnos})` : cd.nome)}<button data-rmc="${sel}" data-j="${j}" aria-label="Tirar ${esc(cd.nome)}">×</button></span>`).join('')}
+          <select data-addc="${sel}" style="width:auto; padding:3px 6px; font-size:12.5px"><option value="">+ condição</option>${SIS.condicoes.map(cd => `<option>${esc(cd.nome)}</option>`).join('')}</select></div>
+          ${I0.f && ((I0.f.condicoes || []).length || quedaAtiva(I0.f).length) ? `<button class="btn mini sec" style="justify-self:start" data-resolver="${esc(I0.f.id)}">Resolver condições de ${esc(I0.f.nome.split(' ')[0])}</button>` : ''}</div>` : '';
+      let det = '<div class="vazio-det">Selecione alguém na ordem de iniciativa</div>';
+      if (x0 && x0.tipo === 'agente' && I0.f) { const f = I0.f, K = I0.K, a = I0.a, ab = est0.aba;
+        const armas = (f.equipamentos || []).filter(it => it.dano);
+        const pers = [...new Set([...(f.pericias || []).filter(p => p.pontos > 0).map(p => p.nome), ...periciasVontade(f.vontade, f.vontadeEscolha)])];
+        let cx = '';
+        if (ab === 'atributos') cx = `<div class="attr-linha">${ATR.map(([k, , s2]) => `<span><b>${f.atributos?.[k] ?? 0}</b>${s2}</span>`).join('')}</div>
+          <div class="mini-stats"><div><div class="rotulo">Mov</div><div class="n">${K.mov}m</div></div><div><div class="rotulo">RD</div><div class="n">${K.rd}</div></div><div><div class="rotulo">Carga</div><div class="n">${fmtKg(K.carga)}/${fmtKg(K.cc)}</div></div></div>
+          <h3 style="margin:4px 0 0">Perícias</h3><div class="per-l">${pers.map(n => { const P = dadosPericia(f, n); return `<div><span class="rotulo" style="color:var(--lua)">${esc(n)}</span><span class="mono">${P.dados}d20+${P.mod}</span><button class="dado-btn" data-cbper="${esc(n)}" aria-label="Rolar ${esc(n)}">${DADO_SVG}</button></div>`; }).join('') || '<p class="faint">Sem perícias treinadas.</p>'}</div>`;
+        if (ab === 'combate') cx = `<div class="per-l">${armas.map((it, k) => { const E2 = armaEf(it); return `<div style="grid-template-columns:1fr auto auto"><span><b>${esc(it.nome)}</b><br><span class="mono faint" style="font-size:12px">Dano ${esc(E2.dano)} · Crítico ${E2.margem}/×${E2.mult}</span></span><button class="btn mini sec" data-cbatq="${k}">Acerto</button><button class="btn mini ouro" data-cbdano="${k}">Dano</button></div>`; }).join('') || '<p class="faint">Nenhuma arma no inventário.</p>'}</div>`;
+        if (ab === 'condicoes') cx = blocoCond;
+        det = `<div class="am-banner" style="--bc:${f.alinhamento ? corEl(elDe(f.alinhamento.nome)) : 'var(--violeta)'}">${I0.foto ? `<div class="am-bg" style="background-image:url('${esc(I0.foto)}')"></div>` : ''}<div class="am-ft ag" style="${I0.foto ? `background-image:url('${esc(I0.foto)}')` : ''}">${I0.foto ? '' : esc(iniciais(f.nome))}</div>
+            <div class="am-tx"><b>${esc(f.nome)}</b><span>${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''}</span><span class="am-el">Nv ${+f.nivel || 1} · ${esc(patente(+f.nivel || 1).nome || '')}</span></div><a class="btn mini sec am-acao" href="#agente-${esc(f.id)}" style="text-decoration:none">Ficha</a></div>
+          ${['pv', 'ps', 'pst'].map(k => barraCris(k, a[k], K.max[k], 'data-cbv-' + k, [5, 1])).join('')}
+          <div class="abas abas-mini">${[['atributos', 'Atributos'], ['combate', 'Combate'], ['condicoes', `Condições${I0.conds.length ? ' ' + I0.conds.length : ''}`]].map(([k, l]) => `<button class="${ab === k ? 'aqui' : ''}" data-dab="${k}">${l}</button>`).join('')}</div>
+          <div style="display:grid; gap:10px">${cx}</div><div class="res" id="cb-res"></div>
+          <div class="lin-acoes"><button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`; }
+      else if (x0 && x0.tipo === 'ameaca') det = `<div id="cb-amf"></div>${blocoCond}<div class="lin-acoes"><button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`;
+      else if (x0) det = `<div class="am-banner" style="--bc:var(--ouro)"><div class="am-ft ag">${esc(iniciais(x0.nome))}</div><div class="am-tx"><b>${esc(x0.nome)}</b><span class="am-el">NPC</span></div></div>
+          ${barraCris('pv', x0.pv, x0.pvMax, 'data-cbv-pv', [10, 1])}${blocoCond}<div class="lin-acoes"><button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`;
+      corpo.innerHTML = `<div style="display:grid; gap:14px">
+        <div class="cb-topo"><h2>${c.ativo ? 'Em combate' : 'Combate parado'}</h2>
+          <div class="cb-acoes"><div class="menu-pop"><button class="btn sec mini" data-menu>Configurações</button><div hidden><button id="cb-ini">Rolar iniciativa das ameaças</button><button id="cb-ord">Ordenar por iniciativa</button><button id="cb-limpar">Limpar lista</button></div></div>
+            <button class="btn mini ${c.ativo ? 'sec' : ''}" id="cb-ativo">${c.ativo ? 'Encerrar' : 'Iniciar combate'}</button>
+            <div class="menu-pop"><button class="btn mini" data-menu>Adicionar</button><div hidden><button id="cb-ag">Agentes da campanha</button><button id="cb-am">Ameaça</button><button id="cb-npc">NPC</button></div></div></div></div>
+        <div class="cb-wrap"><section class="ini-lista">
+          <div class="ini-cab"><div><b>Iniciativa</b><div class="sub">Rodada atual: ${c.ativo ? c.rodada : 0}</div></div><div style="display:flex; gap:6px"><button class="btn sec mini" id="cb-voltar">Voltar turno</button><button class="btn mini" id="cb-prox">Próximo turno</button></div></div>
+          ${c.lista.map((x, i) => { const I = infoX(x); return cardIni({ i, nome: x.nome, foto: I.foto, ameaca: x.tipo !== 'agente', pv: I.pv, pvM: I.pvM, ps: I.f ? I.a.ps : null, psM: I.f ? I.K.max.ps : null, conds: I.conds.map(cd => cd.nome), ini: x.ini, vez: c.ativo && i === c.turno, sel: i === sel, editavel: true, rotTipo: x.tipo === 'npc' ? 'NPC' : '' }); }).join('') || '<div class="vazio" style="font-size:15px">Use Adicionar para montar a iniciativa.</div>'}
+          <p class="faint" style="font-size:12px; margin:4px 2px 0">Os jogadores veem a ordem e as condições, nunca os PV das ameaças.</p></section>
+        <aside class="cb-det" id="cb-det">${det}</aside></div></div>`;
+      if (x0 && x0.tipo === 'ameaca') { const base = CRI.find(k => String(k.id) === String(x0.ref)) || {};
+        montarAmeaca($('#cb-amf'), { ...base, nome: x0.nome, elemento: x0.elemento, nivel: x0.nivel, imagem: x0.imagem || base.imagem, ficha: { ...x0.ficha, intangivel: x0.ficha?.intangivel || base.ficha?.intangivel, poderes: base.ficha?.poderes || x0.ficha?.poderes } },
+          { pv: x0.pv, pvMax: x0.pvMax, contornado: !!x0.contornado, resId: 'cb-am-res', aoContorno: v => { x0.contornado = v; salvarE(); publicarCombate(); }, aoPV: v => { x0.pv = v; salvarE(); render(); }, aoRolar: (rot, r) => rolarMestre(`${x0.nome}: ${rot}`, r, true) }, est0); }
+      $$('[data-menu]').forEach(b => b.onclick = e => { e.stopPropagation(); const m = b.nextElementSibling, ab = m.hidden; $$('.menu-pop > div').forEach(d => d.hidden = true); m.hidden = !ab; });
+      $$('.menu-pop > div button').forEach(b => b.addEventListener('click', () => { b.parentElement.hidden = true; }));
+      $$('[data-selcb]').forEach(el => { const go = e => { if (e.target.closest('input')) return; selCb = +el.dataset.selcb; if (ehCelular()) LADO = 'dir'; render(); }; el.onclick = go; el.onkeydown = e => { if (e.key === 'Enter') go(e); }; });
+      $$('[data-dab]').forEach(b => b.onclick = () => { est0.aba = b.dataset.dab; render(); });
+      for (const k of ['pv', 'ps', 'pst']) $$(`[data-cbv-${k}]`).forEach(b => b.onclick = async () => { const dd = +b.getAttribute('data-cbv-' + k);
+        if (x0.tipo !== 'agente') { x0.pv = Math.max(0, Math.min(x0.pvMax, x0.pv + dd)); salvarE(); render(); return; }
+        const f = I0.f; const a = { ...I0.a }; a[k] = Math.max(0, Math.min(I0.K.max[k], a[k] + dd)); f.atual = a; ajustarQueda(f); render(); try { await db.doc('fichas/' + f.id).update({ atual: a, queda: f.queda || {} }); } catch (e) { toast('Não deu para alterar a ficha.'); } });
+      const outCb = (tit, tipo, expr, r) => { const o = $('#cb-res'); if (o) o.innerHTML = `${esc(tit)}: ${r.detalhe} = <b>${r.total}</b>`; popRolagem({ quem: I0.f.nome, titulo: tit, tipo, expr, linhas: [{ det: r.detalhe, total: r.total }], total: r.total, nat20: r.nat20, dano: tipo === 'Dano' }); rolarMestre(`${I0.f.nome}: ${tit}`, r, true); };
+      $$('[data-cbper]').forEach(b => b.onclick = () => { const n = b.dataset.cbper, P = dadosPericia(I0.f, n); outCb(n, 'Teste', `${P.dados}d20+${P.mod}`, teste(P.dados, P.mod)); });
+      $$('[data-cbatq]').forEach(b => b.onclick = () => { const it = (I0.f.equipamentos || []).filter(q => q.dano)[+b.dataset.cbatq], E2 = armaEf(it), P = dadosPericia(I0.f, it.pericia || tipoArma(it)); outCb(it.nome, 'Acerto', `${P.dados}d20+${P.mod + E2.acerto}`, teste(P.dados, P.mod + E2.acerto)); });
+      $$('[data-cbdano]').forEach(b => b.onclick = () => { const it = (I0.f.equipamentos || []).filter(q => q.dano)[+b.dataset.cbdano], E2 = armaEf(it), r = rolar(E2.dano); if (r) outCb(it.nome, 'Dano', E2.dano, r); });
       const mudou = () => { salvarE(); publicarCombate(); render(); };
       // fim do turno de quem estava na vez: aplica condições (dano, cura, duração)
       const fimDoTurno = (x, por = 'turno') => { if (!x) return;
@@ -2639,10 +2788,10 @@ ROTAS.escudo = async id => {
         m.querySelector('#npc-ok').onclick = () => { const n = m.querySelector('#npc-n').value.trim(); if (!n) return; const pv = +m.querySelector('#npc-pv').value || 1; c.lista.push({ tipo: 'npc', nome: n, pv, pvMax: pv, ini: '' }); fechar(); mudou(); }; });
       $('#cb-am').onclick = async () => { const hb = (await homebrewVisivel('ameaca')).map(x => ({ ...x, id: 'hb' + x.id }));
         seletor('Adicionar ameaça', [...CRI, ...hb], a => `<b>${esc(a.nome)}</b> ${elTag(a.elemento)} <span class="tag">Nv ${a.nivel}</span> <span class="tag">PV ${a.ficha?.pv}</span>`, a => {
-          const n = c.lista.filter(x => x.ref === a.id).length; c.lista.push({ tipo: 'ameaca', ref: a.id, nome: a.nome + (n ? ` ${n + 1}` : ''), elemento: a.elemento, nivel: a.nivel, pv: a.ficha?.pv || 1, pvMax: a.ficha?.pv || 1, ficha: a.ficha, ini: '' }); salvarE(); publicarCombate(); render(); }); };
+          const n = c.lista.filter(x => x.ref === a.id).length; c.lista.push({ tipo: 'ameaca', ref: a.id, nome: a.nome + (n ? ` ${n + 1}` : ''), elemento: a.elemento, imagem: a.imagem || '', nivel: a.nivel, pv: a.ficha?.pv || 1, pvMax: a.ficha?.pv || 1, ficha: a.ficha, ini: '' }); salvarE(); publicarCombate(); render(); }); };
       $('#cb-ini').onclick = () => { c.lista.forEach(x => { if (x.tipo === 'ameaca') x.ini = d(20) + (x.ficha?.atributos?.destreza || 0); }); ordenar(); mudou(); };
       $$('[data-ini]').forEach(i => i.onchange = () => { c.lista[+i.dataset.ini].ini = i.value === '' ? '' : +i.value; salvarE(); publicarCombate(); });
-      $$('[data-rmx]').forEach(b => b.onclick = () => { c.lista.splice(+b.dataset.rmx, 1); if (c.turno >= c.lista.length) c.turno = 0; mudou(); });
+      $$('[data-rmx]').forEach(b => b.onclick = () => { c.lista.splice(+b.dataset.rmx, 1); if (c.turno >= c.lista.length) c.turno = 0; selCb = null; mudou(); });
       $$('[data-addc]').forEach(s => s.onchange = async () => { if (!s.value) return; const x = c.lista[+s.dataset.addc], nova = condNova(s.value);
         if (x.tipo === 'agente') { const f = st.fichas[x.ref]; if (!f) return; const l = [...(f.condicoes || []).filter(cd => condObj(cd).nome !== nova.nome), nova]; f.condicoes = l; render(); try { await db.doc('fichas/' + f.id).update({ condicoes: l }); } catch (e) { toast('Não deu para alterar a ficha.'); } }
         else { x.cond = [...(x.cond || []).map(condObj).filter(cd => cd.nome !== nova.nome), nova]; mudou(); } });
