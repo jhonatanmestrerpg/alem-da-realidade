@@ -1982,6 +1982,17 @@ function abrirHistorico(camps) {
   assinar(sair);
   if (camps.length > 1) Promise.all(camps.map(c => db.doc('campanhas/' + c).get().then(x => { nomes[c] = x.data()?.nome || 'Campanha'; }).catch(() => {}))).then(() => { g.querySelector('.hist-topo').innerHTML = cabeca(); ligar(); });
 }
+// tira um agente da campanha: só o dono da ficha, o mestre da campanha ou o administrador
+function removerDaCampanha(campId, f, nomeCamp) {
+  abrirModal('Remover da campanha', `<p>Tirar <b>${esc(f.nome)}</b> de <b>${esc(nomeCamp || 'esta campanha')}</b>?</p><p class="dim">A ficha não é apagada: ela só sai da campanha e as rolagens deixam de ir para a mesa. Dá para adicionar de novo depois.</p><div style="display:flex; gap:8px"><button class="btn" id="rm-ag-ok" style="background:#a52a33">Remover</button></div>`, (m, fechar) => {
+    m.querySelector('#rm-ag-ok').onclick = async () => { try {
+      await db.doc(`campanhas/${campId}/agentes/${f.id}`).delete();
+      const atual = (await db.doc('fichas/' + f.id).get()).data();
+      if (atual) await db.doc('fichas/' + f.id).update({ campanhas: (atual.campanhas || []).filter(c => c !== campId) });
+      fechar(); toast(`${f.nome} saiu da campanha.`);
+    } catch (e) { toast('Não deu para remover: ' + (e.message || e.code)); } };
+  });
+}
 const vitalMini = (cls, a, m) => `<div class="${cls}"><div class="trilho fino"><div class="cheio" style="width:${Math.min(100, (a / (m || 1)) * 100)}%"></div><div class="txt">${a}/${m}</div></div></div>`;
 
 ROTAS.campanha = async id => {
@@ -1997,7 +2008,7 @@ ROTAS.campanha = async id => {
     const fichas = Object.values(st.fichas).filter(Boolean);
     let corpo = '';
     if (aba === 'agentes') corpo = `<div class="grade-cards">${fichas.map(f => { const K = calc(f); const a = f.atual || K.max;
-      return cardAgente(f, `<div style="flex:1; display:grid; gap:3px; min-width:0">${vitalMini('pv', a.pv, K.max.pv)}${vitalMini('ps', a.ps, K.max.ps)}</div>`); }).join('') || '<div class="vazio">Nenhum agente nesta campanha ainda.</div>'}</div>`;
+      return cardAgente(f, `<div style="flex:1; display:grid; gap:3px; min-width:0">${vitalMini('pv', a.pv, K.max.pv)}${vitalMini('ps', a.ps, K.max.ps)}</div>${f.dono === ME || mestre || DONO ? `<button class="btn mini sec" data-rm-ag="${esc(f.id)}" title="Tirar da campanha">Remover</button>` : ''}`); }).join('') || '<div class="vazio">Nenhum agente nesta campanha ainda.</div>'}</div>`;
     if (aba === 'jogadores') corpo = `<div class="lista">${[...new Set([C.mestre, ...st.membros.map(m => m.uid)])].map(u => `<div class="item"><div class="cab"><span style="display:flex; gap:10px; align-items:center"><span class="ava" style="background:${corDe(u)}">${esc(iniciais(nomes[u]))}</span><b>${esc(nomes[u])}${u === ME ? ' (você)' : ''}</b></span><span class="tag ${u === C.mestre ? 'crit' : ''}">${u === C.mestre ? 'Mestre' : 'Jogador'}</span></div></div>`).join('')}</div>`;
     if (aba === 'combate') corpo = st.combate?.ativo ? `<div class="cab-pagina"><h2>Rodada ${st.combate.rodada || 1}</h2><span class="dim">Ordem de iniciativa</span></div>
       <div class="lista">${(st.combate.ordem || []).map((o, i) => `<div class="combatente ${i === st.combate.turno ? 'vez' : ''}"><span class="ini">${esc(o.ini ?? '')}</span><div><b>${esc(o.nome)}</b> ${o.tipo === 'ameaca' ? '<span class="tag" style="color:var(--sangue-hi)">Ameaça</span>' : ''}${(o.cond || []).map(c => ` <span class="cond-chip">${esc(c)}</span>`).join('')}</div><span>${i === st.combate.turno ? '<span class="el" style="color:var(--ouro)">Vez</span>' : ''}</span></div>`).join('')}</div>`
@@ -2028,6 +2039,7 @@ ROTAS.campanha = async id => {
       m.querySelector('#sim').onclick = async () => { try {
         for (const f of fichas.filter(f => f.dono === ME)) { await db.doc(`campanhas/${id}/agentes/${f.id}`).delete(); await db.doc('fichas/' + f.id).update({ campanhas: (f.campanhas || []).filter(c => c !== id) }); }
         await db.doc(`campanhas/${id}/membros/${ME}`).delete(); PART.campanhas = PART.campanhas.filter(c => c !== id); await salvarPart(); fechar(); location.hash = 'campanhas'; } catch (e) { toast('Não deu para sair: ' + (e.message || e.code)); } }; }));
+    $$('[data-rm-ag]').forEach(b => b.onclick = () => { const f = st.fichas[b.dataset.rmAg]; if (f) removerDaCampanha(id, f, C.nome); });
     $('#add-ag')?.addEventListener('click', async () => {
       const s = await db.collection('fichas').where('dono', '==', ME).get(); const meus = s.docs.map(x => ({ id: x.id, ...x.data() })).filter(f => !st.agentes[f.id]);
       if (!meus.length) return toast('Você não tem agentes livres. Crie um em Agentes.');
@@ -2106,7 +2118,8 @@ ROTAS.escudo = async id => {
             <div class="trilho fino" style="height:22px"><div class="cheio" style="width:${Math.min(100, (a[k] / (K.max[k] || 1)) * 100)}%"></div><div class="txt" style="line-height:20px">${k.toUpperCase()} ${a[k]}/${K.max[k]}</div></div>
             <button class="vbtn" data-fv="${esc(f.id)}" data-k="${k}" data-d="1">+1</button><button class="vbtn" data-fv="${esc(f.id)}" data-k="${k}" data-d="5">+5</button></div></div>`).join('')}
           <div class="mini-stats"><div><div class="rotulo">Mov</div><div class="n">${K.mov}m</div></div><div><div class="rotulo">Carga</div><div class="n">${fmtKg(K.carga)}/${fmtKg(K.cc)}</div></div><div><div class="rotulo">RD</div><div class="n">${K.rd}</div></div></div>
-          <a class="btn mini sec" href="#agente-${esc(f.id)}" style="text-decoration:none; justify-self:end">Ficha</a></div>`; }).join('') || '<div class="vazio">Nenhum agente na campanha.</div>'}</div>`;
+          <div style="display:flex; gap:6px; justify-content:end"><button class="btn mini sec" data-rm-ag="${esc(f.id)}">Remover da campanha</button><a class="btn mini sec" href="#agente-${esc(f.id)}" style="text-decoration:none">Ficha</a></div></div>`; }).join('') || '<div class="vazio">Nenhum agente na campanha.</div>'}</div>`;
+      $$('[data-rm-ag]').forEach(b => b.onclick = () => { const f = st.fichas[b.dataset.rmAg]; if (f) removerDaCampanha(id, f, camp.data().nome); });
       $$('[data-fv]').forEach(b => b.onclick = async () => { const f = st.fichas[b.dataset.fv]; const K = calc(f); const a = { ...(f.atual || K.max) }; const k = b.dataset.k;
         a[k] = Math.max(0, Math.min(K.max[k], (a[k] ?? K.max[k]) + +b.dataset.d)); f.atual = a; render(); try { await db.doc('fichas/' + f.id).update({ atual: a }); } catch (e) { toast('Não deu para alterar a ficha.'); } });
     }
