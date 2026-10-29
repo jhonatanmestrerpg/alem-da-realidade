@@ -1427,11 +1427,31 @@ function formItem(salvarFn, it = {}) {
     <div class="campo"><label class="rotulo" for="fi-pe">Perícia de acerto</label><select id="fi-pe">${SIS.pericias.map(p => `<option ${(it.pericia || 'Armas Brancas') === p.nome ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select></div>
     <div class="campo"><label class="rotulo" for="fi-r">RD que concede</label><input type="number" id="fi-r" value="${esc(it.rd ?? 0)}"></div>
     <div class="campo"><label class="rotulo" for="fi-a">Alivia peso (kg)</label><input type="number" id="fi-a" value="${esc(it.alivio ?? 0)}"></div></div>
-    <div class="campo"><label class="rotulo" for="fi-o">Observação / efeito</label><textarea id="fi-o" style="min-height:80px">${esc(it.obs)}</textarea></div><button class="btn" id="fi-ok">Salvar</button>`, (m, fechar) => {
+    <div class="campo"><label class="rotulo" for="fi-o">Observação / efeito</label><textarea id="fi-o" style="min-height:80px">${esc(it.obs)}</textarea></div>
+    <div class="caixa" id="fi-mods" style="display:grid; gap:4px"></div><button class="btn" id="fi-ok">Salvar</button>`, (m, fechar) => {
+    // melhorias, bênçãos e maldições direto no formulário (mesmas regras do botão da aba Combate)
+    let mods = modsDe(it);
+    const caixa = m.querySelector('#fi-mods');
+    const desenharMods = () => {
+      const tmp = { ...it, dano: m.querySelector('#fi-d').value.trim(), pericia: m.querySelector('#fi-pe').value, mods };
+      if (!ehArma(tmp)) { caixa.innerHTML = '<span class="rotulo">Melhorias, bênçãos e maldições</span><p class="faint" style="font-size:13px; margin:0">Preencha o dano para o item contar como arma e poder receber.</p>'; return; }
+      const usados = MOD_TIPOS.filter(([k]) => mods[k].length).map(([k]) => k);
+      caixa.innerHTML = `<span class="rotulo">Melhorias, bênçãos e maldições · ${esc(tipoArma(tmp))}</span><p class="faint" style="font-size:12.5px; margin:0">Até 2 de cada tipo e nunca os três juntos. Bênção vale para quem empunha; maldição, para o alvo.</p>
+        ${MOD_TIPOS.map(([k, rot, fonte]) => { const bloq = mods[k].length >= 2 || (!mods[k].length && usados.length >= 2); const ops = (SIS[fonte] || []).filter(x => modCabe(tmp, x));
+          return `<div class="mod-bloco"><b>${rot} <span class="faint">${mods[k].length}/2</span></b>
+            ${mods[k].length ? `<div style="display:flex; gap:6px; flex-wrap:wrap">${mods[k].map((n, j) => `<span class="tag ${k === 'melhorias' ? 'mod-m' : k === 'bencaos' ? 'mod-b' : 'mod-x'}" title="${esc((SIS[fonte] || []).find(x => x.nome === n)?.texto || '')}">${esc(n)} <button type="button" class="btn-x" style="padding:0 0 0 4px" data-frm="${k}|${j}" aria-label="Tirar ${esc(n)}">×</button></span>`).join('')}</div>` : ''}
+            ${bloq ? `<p class="faint" style="font-size:12.5px; margin:0">${mods[k].length >= 2 ? 'Limite de 2 atingido.' : 'Já tem dois tipos; o terceiro não entra.'}</p>` : `<div style="display:flex; gap:8px"><select data-fsel="${k}" style="flex:1">${ops.map(x => `<option value="${esc(x.nome)}" title="${esc(x.texto)}">${esc(x.nome)}</option>`).join('')}</select><button type="button" class="btn mini" data-fadd="${k}">Adicionar</button></div><p class="faint" data-fdesc="${k}" style="font-size:12.5px; margin:0">${esc(ops[0]?.texto || '')}</p>`}</div>`; }).join('')}`;
+      caixa.querySelectorAll('[data-fsel]').forEach(sel => sel.onchange = () => { const d = (SIS[MOD_TIPOS.find(t => t[0] === sel.dataset.fsel)[2]] || []).find(x => x.nome === sel.value); caixa.querySelector(`[data-fdesc="${sel.dataset.fsel}"]`).textContent = d?.texto || ''; });
+      caixa.querySelectorAll('[data-fadd]').forEach(b => b.onclick = () => { const k = b.dataset.fadd, v = caixa.querySelector(`[data-fsel="${k}"]`).value; if (v) { mods = { ...mods, [k]: [...mods[k], v] }; desenharMods(); } });
+      caixa.querySelectorAll('[data-frm]').forEach(b => b.onclick = () => { const [k, j] = b.dataset.frm.split('|'); mods = { ...mods, [k]: mods[k].filter((_, x) => x !== +j) }; desenharMods(); });
+    };
+    desenharMods();
+    m.querySelector('#fi-d').addEventListener('input', desenharMods);
+    m.querySelector('#fi-pe').addEventListener('change', () => { const tmp = { ...it, dano: 'x', pericia: m.querySelector('#fi-pe').value }; mods = { ...mods, melhorias: mods.melhorias.filter(n => modCabe(tmp, (SIS.melhorias || []).find(x => x.nome === n) || {})) }; desenharMods(); });
     m.querySelector('#fi-ok').onclick = () => { const v = id => m.querySelector(id).value.trim(); if (!v('#fi-n')) return toast('Dê um nome ao item.');
       const dano = v('#fi-d'); if (dano && !rolar(dano)) return toast('Dano em formato inválido. Ex.: 2d8+6');
       const extra = v('#fi-ex'); if (extra && !rolar(extra)) return toast('Dano extra em formato inválido. Ex.: 1d6');
-      salvarFn({ nome: v('#fi-n'), peso: +v('#fi-p') || 0, qtd: +v('#fi-q') || 1, dano, mult: +v('#fi-m') || 1, margem: Math.min(20, Math.max(2, +v('#fi-mg') || 20)), extra, tipoDano: v('#fi-td'), alcance: v('#fi-al'), pericia: v('#fi-pe'), rd: +v('#fi-r') || 0, alivio: +v('#fi-a') || 0, obs: v('#fi-o') }); fechar(); };
+      salvarFn({ nome: v('#fi-n'), peso: +v('#fi-p') || 0, qtd: +v('#fi-q') || 1, mods: dano ? mods : modsDe({}), dano, mult: +v('#fi-m') || 1, margem: Math.min(20, Math.max(2, +v('#fi-mg') || 20)), extra, tipoDano: v('#fi-td'), alcance: v('#fi-al'), pericia: v('#fi-pe'), rd: +v('#fi-r') || 0, alivio: +v('#fi-a') || 0, obs: v('#fi-o') }); fechar(); };
   });
 }
 
