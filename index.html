@@ -687,7 +687,7 @@ async function popCondicoes(fid, camp, rodada, porMestre) {
         return `<div class="pc-linha ${feito[i] ? 'ok' : ''}"><div><b>${esc(c.nome)}</b> <span class="faint" style="font-size:12px">${esc(textoCond(c).replace(c.nome, '').replace(/^ · /, ''))}</span>
           <p>${esc(SIS.condicoes.find(x => x.nome === c.nome)?.texto || (c.porTurno ? `Efeito por turno: ${c.porTurno}` : ''))}</p></div>
           ${feito[i] ? '<span class="ok-tag">feito</span>' : r.teste ? `<button class="btn mini" data-pc-teste="${i}">Fazer teste de ${esc(r.teste.rotulo || r.teste.pericia)} (${esc(r.teste.pericia)} ${P.dados}d20+${P.mod}) · DT ${r.teste.dt}</button>` : `<button class="btn mini ${c.porTurno.startsWith('+') ? 'sec' : ''}" data-pc-ef="${i}">${c.porTurno.startsWith('+') ? 'Receber' : 'Sofrer'} ${esc(c.porTurno)}</button>`}</div>`; }).join('')}
-      ${quedaAtiva(F).map(([k, n]) => `<div class="pc-linha ${quedaFeita[k] ? 'ok' : ''}"><div><b>Caído (${NOME_VITAL[k]})</b> ${bolinhas(n)}<p>${NOME_VITAL[k]} em 0. Cada turno caído gasta uma bolinha; quando as três zeram, volta com 1.</p></div>${quedaFeita[k] ? '<span class="ok-tag">feito</span>' : `<button class="btn mini" data-pc-queda="${k}">Passar o turno caído</button>`}</div>`).join('')}
+      ${quedaAtiva(F).map(([k, n]) => `<div class="pc-linha ${quedaFeita[k] ? 'ok' : ''}"><div><b>${ESTADO_ZERO[k]} (${NOME_VITAL[k]})</b> ${bolinhas(n)}<p>${NOME_VITAL[k]} em 0. Cada turno ${ESTADO_ZERO[k].toLowerCase()} gasta uma bolinha; quando as três zeram, volta com 1.</p></div>${quedaFeita[k] ? '<span class="ok-tag">feito</span>' : `<button class="btn mini" data-pc-queda="${k}">Passar o turno ${ESTADO_ZERO[k].toLowerCase()}</button>`}</div>`).join('')}
       ${linhas.length ? `<div class="pc-res">${linhas.map(esc).join('<br>')}</div>` : ''}
       <div class="mono faint" style="font-size:12px">PV ${atual.pv}/${K.max.pv} · PS ${atual.ps}/${K.max.ps} · PST ${atual.pst}/${K.max.pst}</div>`;
     el.querySelector('[data-pc-x]').onclick = () => el.remove();
@@ -716,6 +716,8 @@ async function popCondicoes(fid, camp, rodada, porMestre) {
 /* Caído: quando PV, PS ou PST chega a 0, aquele status fica "Caído" com 3 bolinhas de morte.
    Cada turno caído gasta uma; quando as três zeram, o status volta com 1. */
 const NOME_VITAL = { pv: 'PV', ps: 'PS', pst: 'PST' };
+const ESTADO_ZERO = { pv: 'Caído', ps: 'Enlouquecendo', pst: 'Caído' };
+const VOLTA_ZERO = { pv: 'se levantou', ps: 'recobrou a sanidade', pst: 'recuperou o fôlego' };
 function ajustarQueda(f) {
   const K = calc(f), a = { ...K.max, ...(f.atual || {}) }, q = { ...(f.queda || {}) }; let mudou = false;
   for (const k of ['pv', 'ps', 'pst']) { if ((a[k] ?? 1) <= 0 && q[k] == null) { q[k] = 3; mudou = true; } else if ((a[k] ?? 1) > 0 && q[k] != null) { q[k] = null; mudou = true; } }
@@ -724,8 +726,8 @@ function ajustarQueda(f) {
 // gasta uma bolinha; devolve o texto do que aconteceu
 function gastarBolinha(f, k) {
   const q = { ...(f.queda || {}) }; if (q[k] == null) return '';
-  q[k]--; let txt = `${f.nome} caído (${NOME_VITAL[k]}): ${q[k]} bolinha${q[k] === 1 ? '' : 's'} de morte restante${q[k] === 1 ? '' : 's'}.`;
-  if (q[k] <= 0) { q[k] = null; f.atual = { ...calc(f).max, ...(f.atual || {}), [k]: 1 }; txt = `${f.nome} se levantou: ${NOME_VITAL[k]} volta com 1.`; }
+  q[k]--; let txt = `${f.nome} ${ESTADO_ZERO[k].toLowerCase()} (${NOME_VITAL[k]}): ${q[k]} bolinha${q[k] === 1 ? '' : 's'} de morte restante${q[k] === 1 ? '' : 's'}.`;
+  if (q[k] <= 0) { q[k] = null; f.atual = { ...calc(f).max, ...(f.atual || {}), [k]: 1 }; txt = `${f.nome} ${VOLTA_ZERO[k]}: ${NOME_VITAL[k]} volta com 1.`; }
   f.queda = q; return txt;
 }
 const quedaAtiva = f => Object.entries(f?.queda || {}).filter(([, v]) => v != null);
@@ -1282,9 +1284,9 @@ ROTAS.agente = async id => {
         </div>
         ${['pv', 'ps', 'pst'].map(k => `<div class="vital ${k}"><div class="cab"><span class="nome">${{ pv: 'PV · Vida', ps: 'PS · Sanidade', pst: 'PST · Stamina' }[k]}</span><span class="faint mono" style="font-size:11px">${K.form[k]} = ${K.max[k]}</span></div>
           <div class="ctrl"><button class="vbtn" data-v="${k}" data-d="-5" ${podeEditar ? '' : 'disabled'}>−5</button><button class="vbtn" data-v="${k}" data-d="-1" ${podeEditar ? '' : 'disabled'}>−1</button>
-          <div class="trilho ${F.queda?.[k] != null ? 'caido' : ''}"><div class="cheio" style="width:${Math.min(100, (F.atual[k] / (K.max[k] || 1)) * 100)}%"></div><div class="txt">${F.queda?.[k] != null ? `Caído · ${F.atual[k]} / ${K.max[k]}` : `${F.atual[k]} / ${K.max[k]}`}</div></div>
+          <div class="trilho ${F.queda?.[k] != null ? 'caido' : ''}"><div class="cheio" style="width:${Math.min(100, (F.atual[k] / (K.max[k] || 1)) * 100)}%"></div><div class="txt">${F.queda?.[k] != null ? `${ESTADO_ZERO[k]} · ${F.atual[k]} / ${K.max[k]}` : `${F.atual[k]} / ${K.max[k]}`}</div></div>
           <button class="vbtn" data-v="${k}" data-d="1" ${podeEditar ? '' : 'disabled'}>+1</button><button class="vbtn" data-v="${k}" data-d="5" ${podeEditar ? '' : 'disabled'}>+5</button></div>
-          ${F.queda?.[k] != null ? `<div class="queda"><span class="rotulo">Morte</span>${bolinhas(F.queda[k])}<span class="faint" style="font-size:12px">quando as três zerarem, volta com 1</span>${podeEditar || ehMestre ? `<button class="btn mini sec" data-bolinha="${k}">Passar turno caído</button>` : ''}</div>` : ''}</div>`).join('')}
+          ${F.queda?.[k] != null ? `<div class="queda"><span class="rotulo">Morte</span>${bolinhas(F.queda[k])}<span class="faint" style="font-size:12px">quando as três zerarem, volta com 1</span>${podeEditar || ehMestre ? `<button class="btn mini sec" data-bolinha="${k}">Passar turno ${ESTADO_ZERO[k].toLowerCase()}</button>` : ''}</div>` : ''}</div>`).join('')}
       </div>
     </section>
 
@@ -1418,8 +1420,8 @@ ROTAS.agente = async id => {
     });
     $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
     $('#todas')?.addEventListener('click', () => { mostrarTodas = !mostrarTodas; render(); });
-    $$('[data-v]').forEach(b => b.onclick = () => { const k = b.dataset.v; F.atual[k] = Math.max(0, Math.min(K.max[k], (F.atual[k] ?? K.max[k]) + +b.dataset.d)); const caiu = F.atual[k] === 0 && F.queda?.[k] == null; ajustarQueda(F); pendente = true; render(); salvarVitais(); if (caiu) toast(`${F.nome} caiu (${NOME_VITAL[k]} 0): 3 bolinhas de morte.`); });
-    $$('[data-bolinha]').forEach(b => b.onclick = async () => { const t = gastarBolinha(F, b.dataset.bolinha); pendente = true; render(); try { await ref.update({ atual: F.atual, queda: F.queda || {} }); } catch (e) {} pendente = false; toast(t); publicarRolagem(F, 'Caído', { total: '', detalhe: esc(t) }); });
+    $$('[data-v]').forEach(b => b.onclick = () => { const k = b.dataset.v; F.atual[k] = Math.max(0, Math.min(K.max[k], (F.atual[k] ?? K.max[k]) + +b.dataset.d)); const caiu = F.atual[k] === 0 && F.queda?.[k] == null; ajustarQueda(F); pendente = true; render(); salvarVitais(); if (caiu) toast(`${F.nome}: ${ESTADO_ZERO[k]} (${NOME_VITAL[k]} 0), 3 bolinhas de morte.`); });
+    $$('[data-bolinha]').forEach(b => b.onclick = async () => { const t = gastarBolinha(F, b.dataset.bolinha); pendente = true; render(); try { await ref.update({ atual: F.atual, queda: F.queda || {} }); } catch (e) {} pendente = false; toast(t); publicarRolagem(F, ESTADO_ZERO[b.dataset.bolinha], { total: '', detalhe: esc(t) }); });
     // edição
     $$('[data-at]').forEach(b => b.onclick = () => { const k = b.dataset.at; const v = (F.atributos[k] || 0) + +b.dataset.d; if (v < 0 || v > 9) return; F.atributos[k] = v; salvar({ atributos: F.atributos }); render(); });
     // troca de classe, subclasse, nível ou patente, sempre seguida da correção automática da ficha
