@@ -243,7 +243,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .rol-av { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--linha-2); background: var(--painel-3) center/cover no-repeat; display: grid; place-items: center; font: 700 13px var(--f-mono); color: var(--lua-dim); }
 .btn-hist { position: fixed; z-index: 41; right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); width: 54px; height: 54px; border-radius: 50%; border: 1px solid var(--linha-2); background: var(--painel-3); color: var(--lua); display: grid; place-items: center; box-shadow: 0 6px 20px rgba(0,0,0,.5); cursor: pointer; }
 .btn-hist svg { width: 24px; height: 24px; }
-.hist-gaveta { position: fixed; z-index: 45; top: 0; right: 0; bottom: 0; width: min(380px, 100vw); background: var(--painel); border-left: 1px solid var(--linha-2); display: grid; grid-template-rows: auto 1fr; box-shadow: -10px 0 30px rgba(0,0,0,.5); padding-top: env(safe-area-inset-top, 0px); }
+.hist-gaveta { position: fixed; z-index: 45; top: 0; right: 0; bottom: 0; height: 100dvh; width: min(380px, 100vw); max-width: 100vw; overflow: hidden; background: var(--painel); border-left: 1px solid var(--linha-2); display: grid; grid-template-rows: auto 1fr; box-shadow: -10px 0 30px rgba(0,0,0,.5); padding-top: env(safe-area-inset-top, 0px); }
 .hist-topo { padding: 12px 14px; border-bottom: 1px solid var(--linha); display: grid; gap: 8px; }
 .hist-cab { display: flex; justify-content: space-between; align-items: center; }
 .hist-lista { overflow-y: auto; overscroll-behavior: contain; padding-bottom: 80px; }
@@ -277,6 +277,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .lbl-v { color: #b18ee6; }
 .dado-btn { margin-left: auto; background: none; border: none; color: var(--lua); padding: 2px; }
 .dado-btn:hover { color: var(--ouro); }
+html, body { overflow-x: clip; max-width: 100%; }
+@media (max-width: 600px) { .hist-gaveta { left: 0; width: 100vw; border-left: none; } .hist-lista .rol { padding: 10px 12px; } }
+.rol .l1 b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .rol .total { flex-shrink: 0; }
+.rol-tx > span { overflow-wrap: anywhere; }
 .best-stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13.5px; color: var(--lua-dim); margin-top: 4px; }
 .best-stats b { font: 700 18px var(--f-mono); color: var(--lua); margin-right: 3px; }
 .best-stats.grande b { font-size: 24px; }
@@ -1346,7 +1350,7 @@ ROTAS.agente = async id => {
     if (aba === 'combate') {
       const armas = (F.equipamentos || []).map((it, i) => [it, i]).filter(([it]) => it.dano);
       return `<div style="display:grid; gap:12px">${barra}${armas.length ? `<div class="lista">${armas.map(([it, i]) => { const P = dadosPericia(F, it.pericia || 'Armas Brancas');
-        return `<div class="item"><div class="cab"><span class="nm">${esc(it.nome)} <span class="mono dim" style="font-weight:400; font-size:13px">${esc(it.dano)}</span></span><span style="display:flex; gap:6px">${it.tipoDano ? `<span class="tag">${esc(it.tipoDano)}</span>` : ''}${it.alcance ? `<span class="tag">${esc(it.alcance)}</span>` : ''}<span class="tag crit">${armaEf(it).margem < 20 ? `${armaEf(it).margem}/` : ''}×${armaEf(it).mult}</span><span class="tag">${esc(it.pericia || 'Armas Brancas')} ${P.dados}d20+${P.mod + armaEf(it).acerto}</span></span></div>
+        return `<div class="item"><div class="cab"><span class="nm">${esc(it.nome)} <span class="mono dim" style="font-weight:400; font-size:13px">${esc(it.dano)}</span></span><span style="display:flex; gap:6px; flex-wrap:wrap">${it.tipoDano ? `<span class="tag">${esc(it.tipoDano)}</span>` : ''}${it.alcance ? `<span class="tag">${esc(it.alcance)}</span>` : ''}<span class="tag crit">${armaEf(it).margem < 20 ? `${armaEf(it).margem}/` : ''}×${armaEf(it).mult}</span><span class="tag">${esc(it.pericia || 'Armas Brancas')} ${P.dados}d20+${P.mod + armaEf(it).acerto}</span></span></div>
         ${tagsMods(it) ? `<div style="display:flex; gap:6px; flex-wrap:wrap">${tagsMods(it)}</div>` : ''}${armaEf(it).notas.length ? `<p class="mono faint" style="font-size:12px">Aplicado: ${esc(armaEf(it).notas.join(' · '))}</p>` : ''}
         ${it.obs ? `<p class="dim" style="font-size:13.5px">${esc(it.obs)}</p>` : ''}
         <div class="acoes"><button class="btn mini" data-acerto="${i}">Acerto</button><button class="btn ouro mini" data-dano="${i}">Dano</button><label class="chk"><input type="checkbox" id="crit-${i}" data-crit="${i}" ${UI_ARMA[id + '|c|' + i] ? 'checked' : ''}> Crítico ×${armaEf(it).mult}</label>${+it.multExtra && +it.multExtra !== 1 ? `<label class="chk" title="Multiplica todos os dados de dano, inclusive os extras (crítico Brutal, dano extra, habilidade)"><input type="checkbox" data-mx="${i}" ${it.multExtraOn ? 'checked' : ''}> Dano ×${fmtMult(it.multExtra)}</label>` : ''}<label class="chk">+ dano extra <input type="text" id="extra-${i}" data-extra="${i}" value="${esc(UI_ARMA[id + '|x|' + i] ?? it.extra ?? '')}" placeholder="1d6+3" style="width:90px; padding:3px 6px"></label>${podeEditar ? `<button class="btn sec mini" data-ed-item="${i}">Editar arma</button>${ehArma(it) ? `<button class="btn sec mini" data-mods="${i}">Melhorias e bênçãos</button>` : ''}` : ''}</div>
@@ -1532,7 +1536,7 @@ ROTAS.agente = async id => {
       if (crit) txt += ` <span class="critico">× ${E.mult} = ${total}</span>`;
       if (crit && E.critExtra) { const rb = rolar(multDados(E.critExtra, mx)); if (rb) { total += rb.total; txt += `<br>+ ${esc(E.critExtra)} Brutal → ${rb.detalhe} = ${rb.total}`; } }
       const ex = $('#extra-' + i).value.trim(); if (ex) { const r2 = rolar(multDados(ex, mx)); if (r2) { total += r2.total; txt += `<br>+ ${esc(ex)} → ${r2.detalhe} = ${r2.total} <span class="faint">(fora do crítico)</span>`; } }
-      $('#res-' + i).innerHTML = UI_ARMA[id + '|r|' + i] = `${txt}<br>Dano total: <b>${total}</b>`; publicarRolagem(F, `Dano · ${it.nome}${crit ? ' (crítico)' : ''}`, { total, detalhe: base.detalhe }); });
+      $('#res-' + i).innerHTML = UI_ARMA[id + '|r|' + i] = `${txt}<br>Dano total: <b>${total}</b>`; publicarRolagem(F, `Dano · ${it.nome}${crit ? ' (crítico)' : ''}`, { total, detalhe: txt.replace(/<br>/g, ' · ').replace(/<(?!\/?span)[^>]+>/g, '') }); });
     $('#rolar-livre')?.addEventListener('click', () => { const ex = $('#livre').value; const r = rolar(ex); $('#res-livre').innerHTML = r ? `${r.detalhe} = <b>${r.total}</b>` : '<span class="falha">Formato inválido. Ex.: 2d6+3, 3d20m+4, 3#2d10+6</span>'; if (r) publicarRolagem(F, ex, r); });
     $$('[data-lancar]').forEach(b => b.onclick = () => { const i = b.dataset.lancar, fe = F.feiticos[+i];
       const inv = F.equipamentos || [], acha = n => inv.findIndex(it => (it.nome || '').trim().toLowerCase() === n.toLowerCase());
