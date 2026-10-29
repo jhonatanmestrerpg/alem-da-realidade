@@ -283,6 +283,14 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .btn.perigo { color: var(--sangue-hi); border-color: color-mix(in srgb, var(--sangue-hi) 45%, transparent); } .btn.perigo:hover { background: #3a1418; }
 .intang { border: 1px solid #6c4fa3; background: rgba(108,79,163,.12); padding: 10px 12px; display: grid; gap: 6px; } .intang .cab { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; } .intang p { margin: 0; font-size: 13.5px; color: var(--lua-dim); }
 .intang.cont { border-color: var(--fole); background: rgba(80,160,120,.10); }
+.cond-ficha { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border: 1px solid var(--linha); background: var(--painel); padding: 10px 14px; }
+.cond-add { display: inline-flex; gap: 8px; align-items: center; } .cond-add select { width: auto; padding: 3px 8px; font-size: 13px; }
+.pop-cond { position: fixed; z-index: 57; width: min(360px, calc(100vw - 24px)); background: #141824; border: 1px solid var(--sangue); box-shadow: 0 16px 50px rgba(0,0,0,.6), 0 0 24px rgba(196,48,60,.25); padding: 12px 14px; display: grid; gap: 8px; animation: popCartao .16s ease-out; }
+.pop-cond.fim { border-color: var(--fole); box-shadow: 0 16px 50px rgba(0,0,0,.6); }
+.pc-cab { display: flex; justify-content: space-between; align-items: center; cursor: grab; touch-action: none; user-select: none; } .pc-cab b { font: 400 18px var(--f-disp); color: var(--sangue-hi); }
+.pc-linha { display: grid; gap: 6px; border-top: 1px solid var(--linha); padding-top: 8px; } .pc-linha p { margin: 2px 0 0; font-size: 12.5px; color: var(--lua-dim); } .pc-linha.ok { opacity: .75; }
+.ok-tag { justify-self: start; font: 600 11px var(--f-mono); color: var(--fole); text-transform: uppercase; letter-spacing: .1em; }
+.pc-res { font-size: 13px; background: rgba(5,6,10,.5); padding: 8px 10px; border-left: 2px solid var(--ouro); }
 .lista-ajuste { margin: 0 0 12px; padding-left: 18px; display: grid; gap: 4px; }
 .carimbo.jog { border-color: var(--ouro); color: var(--ouro); }
 .abate-linha { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; border-top: 1px dashed var(--linha); padding-top: 6px; }
@@ -601,6 +609,102 @@ function corrigirFicha(f) {
   if (f.atual) { const a = { ...f.atual }; let m2 = false; for (const k of ['pv', 'ps', 'pst']) if ((a[k] ?? 0) > K.max[k]) { a[k] = K.max[k]; m2 = true; } if (m2) { out.atual = a; av.push('PV, PS e PST ajustados ao novo máximo.'); } }
   return { campos: out, avisos: av };
 }
+/* ---------- condições com efeito por turno ----------
+   porTurno: "-2d6 PV", "+1d8 PV", "-2 PS"... aplicado no fim de cada turno do personagem.
+   turnos: quantos turnos dura (vazio = até alguém tirar). teste: anula o efeito do turno se passar. */
+const COND_TURNO = {
+  'Envenenado': { porTurno: '-2d6 PV' },
+  'Sangrando': { porTurno: '-3d4 PV', teste: { pericia: 'Resiliência', atributo: 'constituicao', rotulo: 'Constituição', dt: 20 } },
+  'Em chamas': { porTurno: '-2d6 PV' },
+  'Paralisado': { turnos: 1 },
+  'Atordoado': { turnos: 1 },
+  'Enlouquecido': { aviso: 'O mestre define a ação compulsória deste turno.' },
+  'Doente': { aviso: 'Teste de Constituição para não agravar.' },
+};
+const condNova = (nome, turnos, porTurno, por) => ({ nome, turnos: +turnos || COND_TURNO[nome]?.turnos || null, porTurno: (porTurno ?? COND_TURNO[nome]?.porTurno) || '', por: por || 'turno' });
+const condObj = c => typeof c === 'string' ? condNova(c) : c;
+const textoCond = c => { const u = c.por === 'rodada' ? 'rodada' : 'turno'; return [c.nome, c.porTurno ? `${c.porTurno}/${u}` : '', c.turnos ? `${c.turnos} ${u}${c.turnos > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · '); };
+// aplica as condições no fim do turno. alvo: { conds, atual, max, testar(pericia, atributo) → {total, detalhe} }
+// por: 'turno' (fim do turno do personagem) ou 'rodada' (quando a rodada vira); as outras condições passam intactas
+function passarTurno(alvo, por = 'turno') {
+  const atual = { ...alvo.atual }, linhas = [], conds = [];
+  for (const c0 of alvo.conds || []) {
+    const c = { ...condObj(c0) }, regra = COND_TURNO[c.nome] || {};
+    if ((c.por || 'turno') !== por) { conds.push(c); continue; }
+    const m = /^\s*([+-])\s*([^\s]+)\s*(PV|PS|PST)\s*$/i.exec(c.porTurno || '');
+    if (m) {
+      let anulou = false;
+      if (regra.teste) { const t0 = alvo.testar(regra.teste.pericia, regra.teste.atributo), t = { ...t0, detalhe: String(t0.detalhe).replace(/<[^>]+>/g, '') }; if (t.total >= regra.teste.dt) { anulou = true; linhas.push(`${c.nome}: teste ${t.detalhe} = ${t.total} contra DT ${regra.teste.dt}, passou e não sofre nada.`); } else linhas.push(`${c.nome}: teste ${t.detalhe} = ${t.total} contra DT ${regra.teste.dt}, falhou.`); }
+      if (!anulou) { const r = rolar(m[2]); if (r) { const k = m[3].toLowerCase(), v = m[1] === '-' ? -r.total : r.total, antes = atual[k] ?? alvo.max[k];
+        atual[k] = Math.max(0, Math.min(alvo.max[k], antes + v)); linhas.push(`${c.nome}: ${m[1]}${m[2]} ${m[3].toUpperCase()} → ${r.detalhe} = ${m[1]}${r.total} (${m[3].toUpperCase()} ${antes} → ${atual[k]})`); } }
+    }
+    if (regra.aviso) linhas.push(`${c.nome}: ${regra.aviso}`);
+    if (c.turnos) { c.turnos--; if (c.turnos <= 0) { linhas.push(`${c.nome} acabou.`); continue; } }
+    conds.push(c);
+  }
+  return { atual, conds, linhas };
+}
+// efeito de uma condição num turno. t: resultado do teste (quando a condição pede), ou null
+function efeitoCond(c, atual, max, t) {
+  const regra = COND_TURNO[c.nome] || {}, m = /^\s*([+-])\s*([^\s]+)\s*(PV|PS|PST)\s*$/i.exec(c.porTurno || ''), a = { ...atual }; let linha = '';
+  if (regra.teste && t && t.total >= regra.teste.dt) return { atual: a, linha: `${c.nome}: teste ${t.total} contra DT ${regra.teste.dt}, passou e não sofre nada.`, passou: true };
+  if (m) { const r = rolar(m[2]); if (r) { const k = m[3].toLowerCase(), v = m[1] === '-' ? -r.total : r.total, antes = a[k] ?? max[k]; a[k] = Math.max(0, Math.min(max[k], antes + v));
+    linha = `${c.nome}${regra.teste && t ? `: teste ${t.total} contra DT ${regra.teste.dt}, falhou` : ''}: ${m[1]}${r.total} ${m[3].toUpperCase()} (${antes} → ${a[k]})`; } }
+  else if (regra.aviso) linha = `${c.nome}: ${regra.aviso}`;
+  return { atual: a, linha };
+}
+/* pop-up de condições: aparece para o dono da ficha quando chega a vez dele no combate da campanha */
+const VIG = {};
+function vigiarTurnos() {
+  if (!db || !ME) return;
+  for (const camp of PART.campanhas || []) {
+    if (VIG[camp]) continue;
+    VIG[camp] = db.doc(`campanhas/${camp}/publico/combate`).onSnapshot(async sn => {
+      const cb = sn.data(); if (!cb?.ativo) return; const x = (cb.ordem || [])[cb.turno];
+      if (x?.tipo !== 'agente' || !x.ref) return;
+      try { const f = (await db.doc('fichas/' + x.ref).get()).data(); if (!f || f.dono !== ME || !(f.condicoes || []).length) return;
+        if (f.condVez === `${camp}:${cb.rodada}`) return; popCondicoes(x.ref, camp, cb.rodada); } catch (e) {}
+    }, () => {});
+  }
+}
+async function popCondicoes(fid, camp, rodada, porMestre) {
+  const chave = `${camp}:${rodada}`; if (document.querySelector(`.pop-cond[data-chave="${CSS.escape(fid + '|' + chave)}"]`)) return;
+  const ref = db.doc('fichas/' + fid); const F0 = (await ref.get()).data(); if (!F0) return; const F = { id: fid, ...F0 };
+  const K = calc(F); let atual = { ...K.max, ...(F.atual || {}) };
+  const conds = (F.condicoes || []).map(condObj), feito = conds.map(c => { const r = COND_TURNO[c.nome] || {}; return !(r.teste || /[+-]/.test(c.porTurno || '')); }), linhas = [];
+  const el = document.createElement('section'); el.className = 'pop-cond'; el.dataset.chave = fid + '|' + chave; el.setAttribute('aria-label', 'Condições no seu turno');
+  const salvo = (() => { try { return JSON.parse(localStorage.getItem('adr-popcond') || 'null'); } catch (e) { return null; } })();
+  el.style.top = (salvo?.y ?? 80) + 'px'; el.style.left = (salvo?.x ?? Math.max(12, innerWidth - 372)) + 'px';
+  const desenhar = () => {
+    el.innerHTML = `<div class="pc-cab" data-arrasta><b>${porMestre ? `Turno de ${esc(F.nome)}` : 'Chegou o seu turno'}</b><button class="btn-x" data-pc-x aria-label="Fechar">×</button></div>
+      <p class="dim" style="margin:0; font-size:13px">${esc(F.nome)} está com:</p>
+      ${conds.map((c, i) => { const r = COND_TURNO[c.nome] || {}, P = r.teste ? dadosPericia(F, r.teste.pericia) : null;
+        return `<div class="pc-linha ${feito[i] ? 'ok' : ''}"><div><b>${esc(c.nome)}</b> <span class="faint" style="font-size:12px">${esc(textoCond(c).replace(c.nome, '').replace(/^ · /, ''))}</span>
+          <p>${esc(SIS.condicoes.find(x => x.nome === c.nome)?.texto || (c.porTurno ? `Efeito por turno: ${c.porTurno}` : ''))}</p></div>
+          ${feito[i] ? '<span class="ok-tag">feito</span>' : r.teste ? `<button class="btn mini" data-pc-teste="${i}">Fazer teste de ${esc(r.teste.rotulo || r.teste.pericia)} (${esc(r.teste.pericia)} ${P.dados}d20+${P.mod}) · DT ${r.teste.dt}</button>` : `<button class="btn mini ${c.porTurno.startsWith('+') ? 'sec' : ''}" data-pc-ef="${i}">${c.porTurno.startsWith('+') ? 'Receber' : 'Sofrer'} ${esc(c.porTurno)}</button>`}</div>`; }).join('')}
+      ${linhas.length ? `<div class="pc-res">${linhas.map(esc).join('<br>')}</div>` : ''}
+      <div class="mono faint" style="font-size:12px">PV ${atual.pv}/${K.max.pv} · PS ${atual.ps}/${K.max.ps} · PST ${atual.pst}/${K.max.pst}</div>`;
+    el.querySelector('[data-pc-x]').onclick = () => el.remove();
+    el.querySelectorAll('[data-pc-teste]').forEach(b => b.onclick = () => { const i = +b.dataset.pcTeste, c = conds[i], r = COND_TURNO[c.nome], P = dadosPericia(F, r.teste.pericia), t = teste(P.dados, P.mod);
+      const e = efeitoCond(c, atual, K.max, t); atual = e.atual; feito[i] = true; linhas.push(`${c.nome}: teste ${String(t.detalhe).replace(/<[^>]+>/g, '')} = ${t.total}. ` + e.linha.replace(/^[^:]+: /, '')); checar(); });
+    el.querySelectorAll('[data-pc-ef]').forEach(b => b.onclick = () => { const i = +b.dataset.pcEf, e = efeitoCond(conds[i], atual, K.max, null); atual = e.atual; feito[i] = true; if (e.linha) linhas.push(e.linha); checar(); });
+  };
+  const checar = async () => {
+    desenhar(); if (feito.some(x => !x)) return;
+    conds.forEach(c => { const a = COND_TURNO[c.nome]?.aviso; if (a) linhas.push(`${c.nome}: ${a}`); });
+    const restantes = []; for (const c of conds) { if (c.turnos) { c.turnos--; if (c.turnos <= 0) { linhas.push(`${c.nome} acabou.`); continue; } } restantes.push(c); }
+    try { await ref.update({ atual, condicoes: restantes, condVez: chave }); } catch (e) { toast('Não deu para salvar a ficha.'); }
+    publicarRolagem(F, `Turno de ${F.nome} · condições`, { total: '', detalhe: esc(linhas.join(' · ')) });
+    desenhar(); el.classList.add('fim'); setTimeout(() => el.remove(), 3500);
+  };
+  // arrastar pelo cabeçalho
+  let ini = null;
+  el.addEventListener('pointerdown', e => { if (!e.target.closest('[data-arrasta]') || e.target.closest('button')) return; const r = el.getBoundingClientRect(); ini = { dx: e.clientX - r.left, dy: e.clientY - r.top }; el.setPointerCapture(e.pointerId); });
+  el.addEventListener('pointermove', e => { if (!ini) return; const x = Math.min(Math.max(6, e.clientX - ini.dx), innerWidth - el.offsetWidth - 6), y = Math.min(Math.max(6, e.clientY - ini.dy), innerHeight - 60); el.style.left = x + 'px'; el.style.top = y + 'px'; });
+  el.addEventListener('pointerup', () => { if (!ini) return; ini = null; try { localStorage.setItem('adr-popcond', JSON.stringify({ x: parseInt(el.style.left), y: parseInt(el.style.top) })); } catch (e) {} });
+  document.body.appendChild(el); desenhar();
+  if (feito.every(Boolean)) checar();
+}
 function qtdPassivas(nivel) { return [2, 6, 9, 11].filter(x => nivel >= x).length; }
 
 /* ---------- regras de cálculo ---------- */
@@ -775,6 +879,7 @@ async function rotear() {
   try { await fn(arg); } catch (e) { console.error(e); app.innerHTML = `<div class="aviso">Algo deu errado ao abrir esta página: ${esc(e.message || e)}</div>`; }
   window.scrollTo(0, 0);
   if (CH.dentro) desenharVoz();
+  if (db && ME) carregarPart().then(vigiarTurnos);
 }
 addEventListener('hashchange', rotear);
 
@@ -1111,6 +1216,11 @@ ROTAS.agente = async id => {
         </div>
       </div>
     </div>
+    <div class="cond-ficha"><span class="rotulo">Condições</span>
+      ${(F.condicoes || []).map((c0, i) => { const c = condObj(c0); return `<span class="cond-chip" title="${esc(SIS.condicoes.find(x => x.nome === c.nome)?.texto || '')}">${esc(textoCond(c))}${podeEditar || ehMestre ? `<button data-rm-cond="${i}" aria-label="Tirar ${esc(c.nome)}">×</button>` : ''}</span>`; }).join('') || '<span class="faint" style="font-size:13px">Nenhuma.</span>'}
+      ${podeEditar ? `<span class="cond-add"><select id="cond-sel"><option value="">+ condição</option>${SIS.condicoes.map(c => `<option>${esc(c.nome)}</option>`).join('')}<option value="__nova">Outra (personalizada)…</option></select>
+        ${(F.condicoes || []).some(c => (condObj(c).por || 'turno') === 'turno') ? '<button class="btn mini" data-passar="turno" title="Aplica as condições que contam por turno do jogador">Passar turno</button>' : ''}${(F.condicoes || []).some(c => condObj(c).por === 'rodada') ? '<button class="btn mini sec" data-passar="rodada" title="Aplica as condições que contam por rodada">Passar rodada</button>' : ''}</span>` : ''}
+      <div class="res" id="res-cond" style="flex-basis:100%">${window._resCond?.[id] || ''}</div></div>
 
     <section class="principal">
       <div class="caixa penta" style="display:grid; gap:10px">
@@ -1297,6 +1407,26 @@ ROTAS.agente = async id => {
     const pularPatente = d => { const i = SIS.patentes.findIndex(p => p.nome === patente(+F.nivel || 1).nome) + d; const p = SIS.patentes[i]; if (!p) return toast(d > 0 ? 'Já está na patente mais alta.' : 'Já está na primeira patente.'); aplicarMudanca({ nivel: p.de }, `${d > 0 ? 'Subiu' : 'Desceu'} para ${p.nome}`); };
     $('#pat-sobe')?.addEventListener('click', () => pularPatente(1));
     $('#pat-desce')?.addEventListener('click', () => pularPatente(-1));
+    // condições
+    const salvarConds = l => { F.condicoes = l; salvar({ condicoes: l }); render(); };
+    $$('[data-rm-cond]').forEach(b => b.onclick = () => salvarConds((F.condicoes || []).filter((_, i) => i !== +b.dataset.rmCond)));
+    $('#cond-sel')?.addEventListener('change', e => { const n = e.target.value; e.target.value = ''; if (!n) return;
+      const base = n === '__nova' ? {} : condNova(n);
+      abrirModal(n === '__nova' ? 'Condição personalizada' : n, `${n === '__nova' ? '' : `<p class="dim">${esc(SIS.condicoes.find(x => x.nome === n)?.texto || '')}</p>`}
+        <div class="grade-campos">${n === '__nova' ? '<div class="campo"><label class="rotulo" for="cd-n">Nome</label><input type="text" id="cd-n" placeholder="Regeneração, Queimadura…"></div>' : ''}
+        <div class="campo"><label class="rotulo" for="cd-p">Efeito por turno</label><input type="text" id="cd-p" value="${esc(base.porTurno || '')}" placeholder="-2d6 PV, +1d8 PV, -2 PS"></div>
+        <div class="campo"><label class="rotulo" for="cd-por">Conta por</label><select id="cd-por"><option value="turno">Turno do jogador</option><option value="rodada">Rodada</option></select></div>
+        <div class="campo"><label class="rotulo" for="cd-t">Dura quantos</label><input type="number" min="0" id="cd-t" value="${esc(base.turnos || '')}" placeholder="Vazio = até tirar"></div></div>
+        <p class="faint" style="font-size:12.5px">Turno do jogador: o efeito entra no fim do turno dele (Passar turno na ficha ou Próximo turno no combate). Rodada: entra quando a rodada vira (Passar rodada na ficha ou quando o combate do mestre chega na rodada seguinte).</p><button class="btn" id="cd-ok">Adicionar</button>`, (m, fechar) => {
+        m.querySelector('#cd-ok').onclick = () => { const v = q => m.querySelector(q)?.value.trim() || ''; const nome = n === '__nova' ? v('#cd-n') : n; if (!nome) return toast('Dê um nome à condição.');
+          if (v('#cd-p') && !/^\s*[+-]\s*\S+\s*(PV|PS|PST)\s*$/i.test(v('#cd-p'))) return toast('Efeito no formato -2d6 PV, +1d8 PV ou -2 PS.');
+          if (v('#cd-p') && !rolar(v('#cd-p').replace(/^\s*[+-]\s*/, '').replace(/\s*(PV|PS|PST)\s*$/i, ''))) return toast('Não sei rolar esse efeito.');
+          fechar(); salvarConds([...(F.condicoes || []).filter(c => condObj(c).nome !== nome), { nome, turnos: +v('#cd-t') || null, porTurno: v('#cd-p'), por: v('#cd-por') || 'turno' }]); }; }); });
+    $$('[data-passar]').forEach(b => b.onclick = () => { const por = b.dataset.passar;
+      const K = calc(F), r = passarTurno({ conds: F.condicoes, atual: { ...K.max, ...(F.atual || {}) }, max: K.max, testar: (per) => { const P = dadosPericia(F, per); return teste(P.dados, P.mod); } }, por);
+      F.atual = r.atual; F.condicoes = r.conds; salvar({ atual: r.atual, condicoes: r.conds });
+      (window._resCond = window._resCond || {})[id] = r.linhas.map(esc).join('<br>') || 'Nada aconteceu neste turno.';
+      publicarRolagem(F, `Fim ${por === 'rodada' ? 'da rodada' : 'do turno'} · condições`, { total: '', detalhe: esc(r.linhas.join(' · ') || 'sem efeito') }); render(); });
     $('#apagar-ag')?.addEventListener('click', () => abrirModal('Apagar agente', `<p>Isso apaga <b>${esc(F.nome)}</b> para sempre: a ficha sai de todas as campanhas e, se for o seu personagem principal, o dossiê de caçador e os abates somem junto. Não tem como desfazer.</p>
       <div class="campo"><label class="rotulo" for="ap-nome">Digite o nome do agente para confirmar</label><input type="text" id="ap-nome" autocomplete="off" placeholder="${esc(F.nome)}"></div>
       <button class="btn" id="ap-ok" style="background:#a52a33" disabled>Apagar para sempre</button>`, (m, fechar) => {
@@ -2156,7 +2286,7 @@ ROTAS.escudo = async id => {
   assinar(db.collection(`mestre/${ME}/vetores`).where('campanha', '==', id).onSnapshot(s => { for (const k in VETORES) delete VETORES[k]; s.docs.forEach(d => VETORES[d.id] = d.data()); if (aba === 'vetores') render(); }));
   const salvarE = debounce(() => { gravando = gravando.then(() => refE.set(E)).catch(() => toast('Não deu para salvar o escudo.')); }, 600);
   const publicarCombate = debounce(() => {
-    const c = E.combate; const ordem = c.lista.map(x => ({ nome: x.nome, tipo: x.tipo, ini: x.ini, cond: x.cond || [] }));
+    const c = E.combate; const ordem = c.lista.map(x => ({ nome: x.nome, tipo: x.tipo, ini: x.ini, cond: (x.cond || []).map(cd => condObj(cd).nome), ref: x.tipo === 'agente' ? x.ref : '' }));
     db.doc(`campanhas/${id}/publico/combate`).set({ ativo: !!c.ativo && c.lista.length > 0, rodada: c.rodada, turno: c.turno, ordem }).catch(() => {});
   }, 400);
   const publicarPistas = () => db.doc(`campanhas/${id}/publico/pistas`).set({ itens: E.pistas.filter(p => p.revelada).map(({ titulo, texto, imagem }) => ({ titulo, texto, imagem: imagem || '' })) }).catch(() => toast('Não deu para publicar as pistas.'));
@@ -2204,14 +2334,25 @@ ROTAS.escudo = async id => {
         <p class="faint" style="font-size:13px">Os jogadores veem a ordem e as condições, nunca os PV das ameaças.</p></div>
         <div class="lista">${c.lista.map((x, i) => { const f = x.tipo === 'agente' ? st.fichas[x.ref] : null; const K = f ? calc(f) : null; const pv = f ? (f.atual || K.max).pv : x.pv, pvM = f ? K.max.pv : x.pvMax;
           return `<div class="combatente ${c.ativo && i === c.turno ? 'vez' : ''}"><div class="ini"><input type="number" aria-label="Iniciativa de ${esc(x.nome)}" data-ini="${i}" value="${esc(x.ini ?? '')}"></div>
-          <div style="display:grid; gap:6px; min-width:0"><div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap"><b>${esc(x.nome)}</b>${x.tipo === 'ameaca' ? elTag(x.elemento) : `<span class="tag">${x.tipo === 'agente' ? 'Agente' : 'NPC'}</span>`}${(x.cond || []).map((cd, j) => `<span class="cond-chip">${esc(cd)}<button data-rmc="${i}" data-j="${j}" aria-label="Tirar ${esc(cd)}">×</button></span>`).join('')}
+          <div style="display:grid; gap:6px; min-width:0"><div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap"><b>${esc(x.nome)}</b>${x.tipo === 'ameaca' ? elTag(x.elemento) : `<span class="tag">${x.tipo === 'agente' ? 'Agente' : 'NPC'}</span>`}${(f ? (f.condicoes || []).map(condObj) : (x.cond || []).map(condObj)).map((cd, j) => `<span class="cond-chip" title="${esc(textoCond(cd))}">${esc(cd.turnos ? `${cd.nome} (${cd.turnos})` : cd.nome)}<button data-rmc="${i}" data-j="${j}" aria-label="Tirar ${esc(cd.nome)}">×</button></span>`).join('')}
             <select data-addc="${i}" style="width:auto; padding:2px 6px; font-size:12px"><option value="">+ condição</option>${SIS.condicoes.map(cd => `<option>${esc(cd.nome)}</option>`).join('')}</select></div>
             <div class="vital pv"><div class="ctrl"><button class="vbtn" data-cpv="${i}" data-d="-10">−10</button><button class="vbtn" data-cpv="${i}" data-d="-1">−1</button><div class="trilho fino" style="height:22px"><div class="cheio" style="width:${Math.min(100, (pv / (pvM || 1)) * 100)}%"></div><div class="txt" style="line-height:20px">${pv} / ${pvM}</div></div><button class="vbtn" data-cpv="${i}" data-d="1">+1</button><button class="vbtn" data-cpv="${i}" data-d="10">+10</button></div></div>
-            ${x.tipo === 'ameaca' ? `<button class="btn mini sec" style="justify-self:start" data-fam="${i}">Abrir ficha da ameaça</button>` : ''}</div>
+            ${x.tipo === 'ameaca' ? `<button class="btn mini sec" style="justify-self:start" data-fam="${i}">Abrir ficha da ameaça</button>` : ''}${f && (f.condicoes || []).length ? `<button class="btn mini sec" style="justify-self:start" data-resolver="${esc(f.id)}" title="Abre o pop-up de condições para você resolver no lugar do jogador">Resolver condições de ${esc(f.nome.split(' ')[0])}</button>` : ''}</div>
           <button class="btn-x" data-rmx="${i}" aria-label="Tirar do combate">×</button></div>`; }).join('') || '<div class="vazio">Adicione agentes e ameaças para montar a iniciativa.</div>'}</div>`;
       const mudou = () => { salvarE(); publicarCombate(); render(); };
+      // fim do turno de quem estava na vez: aplica condições (dano, cura, duração)
+      const fimDoTurno = (x, por = 'turno') => { if (!x) return;
+        if (x.tipo === 'agente') return; // agentes: o jogador resolve no pop-up quando a vez dele chega
+        if (false) { const f = st.fichas[x.ref]; if (!f || !(f.condicoes || []).length) return; const K = calc(f);
+          const r = passarTurno({ conds: f.condicoes, atual: { ...K.max, ...(f.atual || {}) }, max: K.max, testar: per => { const P = dadosPericia(f, per); return teste(P.dados, P.mod); } }, por);
+          f.atual = r.atual; f.condicoes = r.conds; db.doc('fichas/' + f.id).update({ atual: r.atual, condicoes: r.conds }).catch(() => toast('Não deu para alterar a ficha.'));
+          if (r.linhas.length) { rolarMestre(`${f.nome} · fim ${por === 'rodada' ? 'da rodada' : 'do turno'}`, { total: '', detalhe: esc(r.linhas.join(' · ')) }, false); toast(`${f.nome}: ${r.linhas.join(' ')}`); } }
+        else if ((x.cond || []).length) { const A = x.ficha?.atributos || {};
+          const r = passarTurno({ conds: x.cond, atual: { pv: x.pv }, max: { pv: x.pvMax, ps: 0, pst: 0 }, testar: (per, atr) => teste(Math.max(1, +(String(x.ficha?.testes || '').match(/^(\d+)/)?.[1]) || 1), A[atr] || 0) }, por);
+          x.pv = r.atual.pv; x.cond = r.conds;
+          if (r.linhas.length) { rolarMestre(`${x.nome} · fim ${por === 'rodada' ? 'da rodada' : 'do turno'}`, { total: '', detalhe: esc(r.linhas.join(' · ')) }, true); toast(`${x.nome}: ${r.linhas.join(' ')}`); } } };
       $('#cb-ativo').onclick = () => { c.ativo = !c.ativo; if (c.ativo) { ordenar(); c.turno = 0; c.rodada = 1; } mudou(); };
-      $('#cb-prox').onclick = () => { if (!c.lista.length) return; c.turno++; if (c.turno >= c.lista.length) { c.turno = 0; c.rodada++; } mudou(); };
+      $('#cb-prox').onclick = () => { if (!c.lista.length) return; if (c.ativo) fimDoTurno(c.lista[c.turno]); c.turno++; if (c.turno >= c.lista.length) { c.turno = 0; c.rodada++; if (c.ativo) c.lista.forEach(y => fimDoTurno(y, 'rodada')); } mudou(); };
       $('#cb-voltar').onclick = () => { if (!c.lista.length) return; c.turno--; if (c.turno < 0) { if (c.rodada > 1) { c.rodada--; c.turno = c.lista.length - 1; } else c.turno = 0; } mudou(); };
       $('#cb-ord').onclick = () => { ordenar(); mudou(); };
       $('#cb-limpar').onclick = () => { c.lista = []; c.turno = 0; c.rodada = 1; c.ativo = false; mudou(); };
@@ -2224,11 +2365,16 @@ ROTAS.escudo = async id => {
       $('#cb-ini').onclick = () => { c.lista.forEach(x => { if (x.tipo === 'ameaca') x.ini = d(20) + (x.ficha?.atributos?.destreza || 0); }); ordenar(); mudou(); };
       $$('[data-ini]').forEach(i => i.onchange = () => { c.lista[+i.dataset.ini].ini = i.value === '' ? '' : +i.value; salvarE(); publicarCombate(); });
       $$('[data-rmx]').forEach(b => b.onclick = () => { c.lista.splice(+b.dataset.rmx, 1); if (c.turno >= c.lista.length) c.turno = 0; mudou(); });
-      $$('[data-addc]').forEach(s => s.onchange = () => { if (!s.value) return; const x = c.lista[+s.dataset.addc]; x.cond = [...new Set([...(x.cond || []), s.value])]; mudou(); });
-      $$('[data-rmc]').forEach(b => b.onclick = () => { const x = c.lista[+b.dataset.rmc]; x.cond.splice(+b.dataset.j, 1); mudou(); });
+      $$('[data-addc]').forEach(s => s.onchange = async () => { if (!s.value) return; const x = c.lista[+s.dataset.addc], nova = condNova(s.value);
+        if (x.tipo === 'agente') { const f = st.fichas[x.ref]; if (!f) return; const l = [...(f.condicoes || []).filter(cd => condObj(cd).nome !== nova.nome), nova]; f.condicoes = l; render(); try { await db.doc('fichas/' + f.id).update({ condicoes: l }); } catch (e) { toast('Não deu para alterar a ficha.'); } }
+        else { x.cond = [...(x.cond || []).map(condObj).filter(cd => cd.nome !== nova.nome), nova]; mudou(); } });
+      $$('[data-rmc]').forEach(b => b.onclick = async () => { const x = c.lista[+b.dataset.rmc], j = +b.dataset.j;
+        if (x.tipo === 'agente') { const f = st.fichas[x.ref]; if (!f) return; const l = (f.condicoes || []).filter((_, k) => k !== j); f.condicoes = l; render(); try { await db.doc('fichas/' + f.id).update({ condicoes: l }); } catch (e) { toast('Não deu para alterar a ficha.'); } }
+        else { x.cond = (x.cond || []).filter((_, k) => k !== j); mudou(); } });
       $$('[data-cpv]').forEach(b => b.onclick = async () => { const x = c.lista[+b.dataset.cpv], dd = +b.dataset.d;
         if (x.tipo === 'agente') { const f = st.fichas[x.ref]; if (!f) return; const K = calc(f); const a = { ...(f.atual || K.max) }; a.pv = Math.max(0, Math.min(K.max.pv, a.pv + dd)); f.atual = a; render(); try { await db.doc('fichas/' + f.id).update({ atual: a }); } catch (e) { toast('Não deu para alterar a ficha.'); } }
         else { x.pv = Math.max(0, Math.min(x.pvMax, x.pv + dd)); salvarE(); render(); } });
+      $$('[data-resolver]').forEach(b => b.onclick = () => popCondicoes(b.dataset.resolver, id, c.rodada, true));
       $$('[data-fam]').forEach(b => b.onclick = async () => { const x = c.lista[+b.dataset.fam]; const base = await acharAmeaca(x.ref) || {};
         fichaAmeacaModal({ ...base, nome: x.nome, elemento: x.elemento, nivel: x.nivel, ficha: { ...x.ficha, intangivel: x.ficha?.intangivel || base.ficha?.intangivel, poderes: base.ficha?.poderes || x.ficha?.poderes } }, { pv: x.pv, pvMax: x.pvMax, contornado: !!x.contornado,
           aoContorno: v => { x.contornado = v; salvarE(); publicarCombate(); render(); },
