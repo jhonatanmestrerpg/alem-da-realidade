@@ -268,6 +268,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .bonus-atq { display: grid; gap: 8px; } .bonus-lista { display: flex; gap: 8px; flex-wrap: wrap; }
 .bonus-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--linha-2); background: var(--painel-2); cursor: pointer; }
 .bonus-chip span { display: grid; } .bonus-chip small { font-size: 11.5px; color: var(--lua-dim); } .bonus-chip.on { border-color: var(--fole); background: rgba(80,160,120,.12); }
+.cores-cartao { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.cor-slot { width: 34px; height: 34px; border: 1px dashed var(--linha-2); display: grid; place-items: center; cursor: pointer; } .cor-slot.on { border-style: solid; border-color: var(--lua-dim); }
+.cor-slot input { width: 28px; height: 28px; padding: 0; border: none; background: none; cursor: pointer; } .cor-slot:not(.on) input { opacity: .35; }
+.cores-cartao input[type=range] { width: 110px; } .cor-previa { margin-top: 8px; }
 .rc-data { justify-self: end; font-size: 11.5px; color: var(--lua-faint); }
 .combatente { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; background: var(--painel); border: 1px solid var(--linha); padding: 10px 12px; }
 .combatente.vez { border-color: var(--ouro); box-shadow: inset 3px 0 0 var(--ouro); }
@@ -904,15 +908,18 @@ async function carregarPart() { if (!db || !ME) return; try { const s = await re
 async function salvarPart() { try { await refPart().set({ campanhas: [...new Set(PART.campanhas)] }); } catch (e) { toast('Não deu para salvar sua lista de campanhas.'); } }
 
 /* rolagens enviadas para as campanhas da ficha */
+// cor do cartão de rolagem escolhida pelo jogador: 1 cor ou gradiente de até 4
+const estiloCartao = e => { const c = (e?.cores || []).filter(x => /^#[0-9a-f]{6}$/i.test(x)).slice(0, 4); if (!c.length) return null;
+  return { borda: c[0], fundo: c.length === 1 ? `linear-gradient(${+e.angulo || 135}deg, color-mix(in srgb, ${c[0]} 38%, #10131c), #10131c 75%)` : `linear-gradient(${+e.angulo || 135}deg, ${c.map((x, i) => `color-mix(in srgb, ${x} 55%, #10131c) ${Math.round(i / (c.length - 1) * 100)}%`).join(', ')})`, borda2: c[c.length - 1] }; };
 // histórico da própria ficha (fica neste aparelho; serve mesmo sem campanha)
 const histLocal = fid => { try { return JSON.parse(localStorage.getItem('adr-hist-' + fid) || '[]'); } catch (e) { return []; } };
-function guardarLocal(f, rotulo, r) { if (!f?.id) return; const l = [{ autor: f.nome || 'Agente', foto: (typeof fotoEf === 'function' ? fotoEf(f) : f.foto) || '', rotulo, detalhe: r.detalhe, total: r.total ?? '', tipo: r.tipo || '', titulo: r.titulo || '', ataque: r.ataque ?? '', dano: r.dano ?? '', critico: !!r.critico, t: Date.now() }, ...histLocal(f.id)].slice(0, 60);
+function guardarLocal(f, rotulo, r) { if (!f?.id) return; const l = [{ autor: f.nome || 'Agente', foto: (typeof fotoEf === 'function' ? fotoEf(f) : f.foto) || '', estilo: f.estiloRolagem || null, rotulo, detalhe: r.detalhe, total: r.total ?? '', tipo: r.tipo || '', titulo: r.titulo || '', ataque: r.ataque ?? '', dano: r.dano ?? '', critico: !!r.critico, t: Date.now() }, ...histLocal(f.id)].slice(0, 60);
   try { localStorage.setItem('adr-hist-' + f.id, JSON.stringify(l)); } catch (e) {} window.dispatchEvent(new CustomEvent('hist-local', { detail: f.id })); }
 async function publicarRolagem(f, rotulo, r) {
   guardarLocal(f, rotulo, r);
   if (!db || !f?.campanhas?.length) return;
   for (const c of f.campanhas) {
-    try { await db.collection(`campanhas/${c}/rolagens`).add({ uid: ME, autor: f.nome || 'Agente', foto: (typeof fotoEf === 'function' ? fotoEf(f) : f.foto) || '', cor: (vetorAtivo(f) && f.vetor?.cor) || '', ficha: f.id || '', rotulo, detalhe: r.detalhe, total: r.total ?? '', tipo: r.tipo || '', titulo: r.titulo || '', ataque: r.ataque ?? '', dano: r.dano ?? '', critico: !!r.critico, t: Date.now() }); } catch (e) {}
+    try { await db.collection(`campanhas/${c}/rolagens`).add({ uid: ME, autor: f.nome || 'Agente', foto: (typeof fotoEf === 'function' ? fotoEf(f) : f.foto) || '', cor: (vetorAtivo(f) && f.vetor?.cor) || '', ficha: f.id || '', estilo: f.estiloRolagem || null, rotulo, detalhe: r.detalhe, total: r.total ?? '', tipo: r.tipo || '', titulo: r.titulo || '', ataque: r.ataque ?? '', dano: r.dano ?? '', critico: !!r.critico, t: Date.now() }); } catch (e) {}
   }
 }
 
@@ -1331,6 +1338,9 @@ ROTAS.agente = async id => {
           <div class="campo"><label class="rotulo" for="e-nivel">Nível</label><select id="e-nivel">${Array.from({ length: 12 }, (_, i) => `<option ${+F.nivel === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div>
           <div class="campo"><label class="rotulo" for="e-vetor">Vetor</label><input type="text" id="e-vetor" data-campo="vetor" value="${esc(F.vetor)}"></div>
           <div class="campo"><label class="rotulo" for="e-vont">Vontade</label><select id="e-vont">${SIS.vontades.map(v => `<option ${v.nome === F.vontade ? 'selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></div>
+          <div class="campo"><label class="rotulo">Cor do cartão de rolagem</label><div class="cores-cartao">${[0, 1, 2, 3].map(k => { const c = F.estiloRolagem?.cores?.[k]; return `<label class="cor-slot ${c ? 'on' : ''}" title="Cor ${k + 1}"><input type="color" data-cor-card="${k}" value="${esc(c || ['#c8a35a', '#b4333b', '#6c4fa3', '#3d8f6f'][k])}"></label>${c && k ? `<button class="btn-x" data-cor-rm="${k}" aria-label="Tirar cor ${k + 1}">×</button>` : ''}`; }).join('')}
+            <input type="range" min="0" max="360" step="15" data-cor-ang value="${esc(F.estiloRolagem?.angulo ?? 135)}" title="Ângulo do gradiente" aria-label="Ângulo do gradiente"><button class="btn mini sec" data-cor-limpa>Padrão</button></div>
+            <div class="rc-card cor-previa" style="${(() => { const e = estiloCartao(F.estiloRolagem); return e ? `--rc:${e.borda}; background:${e.fundo}; border-image:linear-gradient(90deg, ${e.borda}, ${e.borda2}) 1` : ''; })()}"><div class="rc-ico" style="${fotoEf(F) ? `background-image:url('${esc(fotoEf(F))}')` : ''}">${fotoEf(F) ? '' : DADO_SVG}</div><div class="rc-meio"><div class="rc-tit">Prévia</div><div class="rc-par"><div><b>20</b><span>Ataque</span></div><i></i><div><b>154</b><span>Dano</span></div></div></div></div></div>
           <div class="campo"><label class="rotulo" for="e-foto">Retrato</label><input type="file" id="e-foto" accept="image/*"></div>
         </div>
         ${['pv', 'ps', 'pst'].map(k => `<div class="vital ${k}"><div class="cab"><span class="nome">${{ pv: 'PV · Vida', ps: 'PS · Sanidade', pst: 'PST · Stamina' }[k]}</span><span class="faint mono" style="font-size:11px">${K.form[k]} = ${K.max[k]}</span></div>
@@ -1536,6 +1546,12 @@ ROTAS.agente = async id => {
     $('#e-vont')?.addEventListener('change', e => salvar({ vontade: e.target.value }));
     $$('#ficha [data-campo]').forEach(inp => inp.onchange = () => { const k = inp.dataset.campo, v = inp.value.trim(); if (k === 'nome' && !v) { inp.value = F.nome; return toast('O agente precisa de um nome.'); } F[k] = v; salvar({ [k]: v }); if (k === 'nome') render(); });
     $$('[data-qtd]').forEach(b => b.onclick = () => { const i = +b.dataset.qtd, it = F.equipamentos[i]; const n = Math.max(1, (+it.qtd || 1) + +b.dataset.d); if (n === (+it.qtd || 1)) return; it.qtd = n; salvar({ equipamentos: F.equipamentos }); render(); });
+    // cor do cartão: a 1ª cor sempre vale; as outras entram ao mexer nelas
+    const salvarEstilo = est => { F.estiloRolagem = est; salvar({ estiloRolagem: est }); render(); };
+    $$('[data-cor-card]').forEach(inp => inp.onchange = () => { const k = +inp.dataset.corCard, cores = [...(F.estiloRolagem?.cores || [])]; while (cores.length < k) cores.push(inp.value); cores[k] = inp.value; salvarEstilo({ cores: cores.slice(0, 4), angulo: F.estiloRolagem?.angulo ?? 135 }); });
+    $$('[data-cor-rm]').forEach(b => b.onclick = () => { const k = +b.dataset.corRm; salvarEstilo({ ...F.estiloRolagem, cores: (F.estiloRolagem?.cores || []).filter((_, i) => i !== k) }); });
+    $('[data-cor-ang]')?.addEventListener('change', e => { if (!F.estiloRolagem?.cores?.length) return; salvarEstilo({ ...F.estiloRolagem, angulo: +e.target.value }); });
+    $('[data-cor-limpa]')?.addEventListener('click', () => salvarEstilo(null));
     $('#e-foto')?.addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; const u = await enviarImagem(f); if (u) salvar({ foto: u }); });
     $$('#ficha [data-op-vontade]').forEach(sel => sel.onchange = () => { const ve = { ...(F.vontadeEscolha || {}), [sel.dataset.opVontade]: sel.value }; F.vontadeEscolha = ve; salvar({ vontadeEscolha: ve }); render(); });
     $('#dist-pts')?.addEventListener('click', () => { editando = true; mostrarTodas = true; render(); });
@@ -2376,7 +2392,7 @@ const rolHtml = r => { const tit = r.titulo || String(r.rotulo || '').replace(/^
     ? `<div class="rc-par"><div><b class="${r.critico ? 'crit' : ''}">${esc(r.ataque)}</b><span>Ataque</span></div><i aria-hidden="true"></i><div><b>${esc(r.dano)}</b><span>Dano</span></div></div>`
     : `<div class="rc-par um"><div><b class="${r.critico || /crítico/i.test(r.rotulo || '') ? 'crit' : ''}">${esc(r.total)}</b><span>${tipo === 'acerto' ? 'Ataque' : tipo === 'dano' ? 'Dano' : 'Total'}</span></div></div>`;
   return `<div class="rol2 ${r.oculta ? 'oculta' : ''}"><div class="rc-autor">${esc(r.autor)}</div>
-    <div class="rc-card ${r.critico || /crítico/i.test(r.rotulo || '') ? 'crit' : ''}" style="${r.cor ? `--rc:${esc(r.cor)}` : ''}">
+    <div class="rc-card ${r.critico || /crítico/i.test(r.rotulo || '') ? 'crit' : ''}" style="${(() => { const e = estiloCartao(r.estilo); return e ? `--rc:${e.borda}; background:${e.fundo}; border-image:linear-gradient(90deg, ${e.borda}, ${e.borda2}) 1` : r.cor ? `--rc:${esc(r.cor)}` : ''; })()}">
       <div class="rc-ico" style="${r.foto ? `background-image:url('${esc(r.foto)}')` : ''}">${r.foto ? '' : DADO_SVG}</div>
       <div class="rc-meio"><div class="rc-tit">${esc(tit)}</div>${corpo}</div></div>
     ${r.detalhe ? `<details class="rc-det"><summary>dados</summary><span class="mono">${r.detalhe}</span></details>` : ''}
