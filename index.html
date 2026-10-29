@@ -950,16 +950,19 @@ function abrirModal(titulo, corpoHtml, ligar) {
 document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#camada').innerHTML = ''; });
 
 /* seletor de catálogo com busca */
-function seletor(titulo, itens, render, aoEscolher, extra = '') {
-  abrirModal(titulo, `${extra}<div class="busca">${ICON_BUSCA}<input type="search" id="sel-busca" placeholder="Buscar"></div><div id="sel-lista"></div>`, (m, fechar) => {
+function seletor(titulo, itens, render, aoEscolher, extra = '', grupo = null) {
+  const grupos = grupo ? [...new Set(itens.map(grupo).filter(Boolean))] : [];
+  let gSel = 'Todos';
+  abrirModal(titulo, `${extra}${grupos.length > 1 ? `<div class="filtros" id="sel-grupos">${['Todos', ...grupos].map(g => `<button class="chip ${g === 'Todos' ? 'aqui' : ''}" data-g="${esc(g)}">${esc(g)}</button>`).join('')}</div>` : ''}<div class="busca">${ICON_BUSCA}<input type="search" id="sel-busca" placeholder="Buscar"></div><div id="sel-lista"></div>`, (m, fechar) => {
     const lista = m.querySelector('#sel-lista');
     const desenhar = q => {
       const ql = q.toLowerCase();
-      const fil = itens.map((x, i) => [x, i]).filter(([x]) => !q || JSON.stringify(x).toLowerCase().includes(ql)).slice(0, 120);
+      const fil = itens.map((x, i) => [x, i]).filter(([x]) => (gSel === 'Todos' || grupo(x) === gSel) && (!q || JSON.stringify(x).toLowerCase().includes(ql))).slice(0, 400);
       lista.innerHTML = fil.length ? fil.map(([x, i]) => `<div class="opcao"><div>${render(x)}</div><button class="btn mini" data-i="${i}">Adicionar</button></div>`).join('') : '<div class="vazio">Nada encontrado.</div>';
     };
     desenhar('');
     m.querySelector('#sel-busca').addEventListener('input', e => desenhar(e.target.value));
+    m.querySelector('#sel-grupos')?.addEventListener('click', e => { const b = e.target.closest('[data-g]'); if (!b) return; gSel = b.dataset.g; m.querySelectorAll('#sel-grupos .chip').forEach(c => c.classList.toggle('aqui', c === b)); desenhar(m.querySelector('#sel-busca').value); });
     lista.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (!b) return; aoEscolher(itens[+b.dataset.i]); b.textContent = 'Adicionado'; b.disabled = true; });
   });
 }
@@ -1047,7 +1050,7 @@ ROTAS.agentes = async () => {
   const desenhar = () => {
     const q = $('#busca').value.toLowerCase();
     const fil = docs.filter(f => !q || (f.nome || '').toLowerCase().includes(q));
-    $('#lista').innerHTML = fil.length ? fil.map(cardAgente).join('') : `<div class="vazio">${docs.length ? 'Nenhum agente com esse nome.' : 'Você ainda não registrou agentes.'}</div>`;
+    $('#lista').innerHTML = fil.length ? fil.map(f => cardAgente(f)).join('') : `<div class="vazio">${docs.length ? 'Nenhum agente com esse nome.' : 'Você ainda não registrou agentes.'}</div>`;
   };
   let un = null;
   const ouvir = () => {
@@ -1666,7 +1669,7 @@ ROTAS.agente = async id => {
     $('#add-feit')?.addEventListener('click', async () => { const hb = (await homebrewVisivel('feitico')).map(r => ({ ...r, divindade: r.divindade || 'Homebrew' }));
       const mx = nivelFeitMax(F), ja = new Set((F.feiticos || []).map(x => x.nome));
       seletor(`Aprender feitiço (até nível ${mx})`, [...FEIT, ...hb].filter(r => (+r.nivel || 1) <= mx && !ja.has(r.nome)), r => `<b>${esc(r.nome)}</b> <span class="tag">${esc(r.divindade || '')}</span> ${tagNivelF(r)} <span class="tag">DT ${esc(r.dt || '?')}</span><p>${esc(r.preparo ? 'Preparo: ' + r.preparo + '. ' : '')}${esc(r.efeito)}</p>${reqFeitico(r).length ? `<p class="faint" style="font-size:12.5px">Requer: ${reqFeitico(r).map(esc).join(' + ')}${r.sacrificio ? ' + sacrifício' : ''}</p>` : ''}`,
-        r => add('feiticos', { nome: r.nome, divindade: r.divindade, nivel: r.nivel || '', ingrediente: r.ingrediente || '', item: r.item || '', sacrificio: r.sacrificio || '', preparo: r.preparo || '', alvo: r.alvo, alcance: r.alcance, duracao: r.duracao, falha: r.falha || '', custo: r.custo || '', dt: r.dt, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] })); });
+        r => add('feiticos', { nome: r.nome, divindade: r.divindade, nivel: r.nivel || '', ingrediente: r.ingrediente || '', item: r.item || '', sacrificio: r.sacrificio || '', preparo: r.preparo || '', alvo: r.alvo, alcance: r.alcance, duracao: r.duracao, falha: r.falha || '', custo: r.custo || '', dt: r.dt, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] }), '', r => r.divindade || 'Sem divindade'); });
     $('#novo-feit')?.addEventListener('click', () => formFeitico(r => add('feiticos', r)));
     $$('[data-rit]').forEach(b => b.onclick = () => { const r = rolar(b.dataset.expr); if (!r) return; $('#res-rit-' + b.dataset.rit).innerHTML = `${esc(b.dataset.expr)} → ${r.detalhe} = <b>${r.total}</b>`; publicarRolagem(F, `${F.rituais[+b.dataset.rit].nome}`, r); });
     // remover itens/habilidades/rituais
@@ -1711,7 +1714,7 @@ ROTAS.agente = async id => {
     $('#nova-hab')?.addEventListener('click', () => formHabilidade(h => add('habilidades', h)));
     $('#add-rit')?.addEventListener('click', async () => { const hb = (await homebrewVisivel('ritual')).map(r => ({ ...r, origem: 'Homebrew' }));
       const todos = [...RIT, ...hb];
-      seletor('Rituais', todos, r => `<b>${esc(r.nome)}</b> ${elTag(r.elemento)}${r.antigo ? ' <span class="tag">Antigo</span>' : ''} <span class="tag">${esc(r.custo || '')}</span><p>${esc(r.efeito)}</p>`, r => add('rituais', { nome: r.nome, elemento: r.elemento, alvo: r.alvo, custo: r.custo, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] })); });
+      seletor('Rituais', todos, r => `<b>${esc(r.nome)}</b> ${elTag(r.elemento)}${r.antigo ? ' <span class="tag">Antigo</span>' : ''} <span class="tag">${esc(r.custo || '')}</span><p>${esc(r.efeito)}</p>`, r => add('rituais', { nome: r.nome, elemento: r.elemento, alvo: r.alvo, custo: r.custo, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] }), '', r => r.origem === 'Homebrew' && !r.elemento ? 'Homebrew' : (r.elemento || 'Sem elemento')); });
     $('#novo-rit')?.addEventListener('click', () => formRitual(r => add('rituais', r)));
     $$('[data-ascender]').forEach(b => b.onclick = () => { const nome = b.dataset.ascender;
       abrirModal(`Ascender a ${elDe(nome)}`, `<p>Você pisa no símbolo do outro mundo e a realidade pergunta pela sua vontade. <b>${esc(F.nome)}</b> recebe o primeiro nível de <b>${esc(nome)}</b>.</p><p class="dim">Depois de escolhido, só o mestre retira ou troca o alinhamento.</p><div style="display:flex; gap:8px"><button class="btn" id="asc-ok">Ascender</button></div>`, (m, fechar) => {
