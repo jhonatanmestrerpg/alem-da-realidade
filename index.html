@@ -2084,6 +2084,25 @@ ROTAS.grimorio = async () => {
    ================================================================= */
 const SECOES_DOSSIE = [['Biografia', 'biografia'], ['Aparência', 'aparencia'], ['Personalidade', 'personalidade'], ['Cicatrizes', 'cicatrizes'], ['Perdas', 'perdas'], ['Missões na Delta Green', 'missoes'], ['Estilo de caça', 'estilo'], ['Rituais', 'rituais'], ['Equipamento', 'equipamento'], ['Aliados e afetos', 'aliados'], ['Viagens', 'viagens'], ['Limites', 'limites']];
 let filtroDos = 'mortas';
+// cria no perfil do administrador a ficha do Arthur já no formato do sistema (dados/arthur-ficha.json)
+async function criarFichaArthur() {
+  if (!db || !DONO) return;
+  const base = await fetch('dados/arthur-ficha.json').then(r => r.json());
+  const meus = (await db.collection('fichas').where('dono', '==', ME).get()).docs.map(d => ({ id: d.id, ...d.data() })).filter(f => f.nome === base.nome);
+  const criar = async () => {
+    try {
+      // habilidades que não existem no sistema viram homebrew (uma vez só)
+      const hb = (await db.collection('homebrew').where('autor', '==', ME).get()).docs.map(d => d.data());
+      for (const h of base.habilidades.filter(x => x.homebrew)) if (!hb.some(x => x.tipo === 'habilidade' && x.nome === h.nome)) await db.collection('homebrew').add({ tipo: 'habilidade', nome: h.nome, texto: h.texto, origem: 'Arthur Henrique Senna', autor: ME, compartilhado: false, criado: Date.now() });
+      // armas e itens que não estão no livro (Eclipsa, Bazuca, balas .50…) também viram homebrew
+      for (const it of base.equipamentos.filter(x => x.homebrew)) if (!hb.some(x => x.tipo === 'item' && x.nome === it.nome)) { const { qtd, homebrew, ...item } = it; await db.collection('homebrew').add({ ...item, tipo: 'item', autor: ME, compartilhado: false, criado: Date.now() }); }
+      const ref = await db.collection('fichas').add({ ...base, dono: ME, jogador: PERFIL?.nome || '', criado: Date.now() });
+      toast('Ficha do Arthur criada no seu perfil.'); location.hash = 'agente-' + ref.id;
+    } catch (e) { toast('Não deu para criar: ' + (e.message || e.code)); }
+  };
+  if (!meus.length) return criar();
+  abrirModal('Já existe', `<p>Você já tem ${meus.length} ficha${meus.length > 1 ? 's' : ''} chamada <b>${esc(base.nome)}</b>. Criar outra mesmo assim?</p><div style="display:flex; gap:8px; flex-wrap:wrap"><a class="btn sec" href="#agente-${esc(meus[0].id)}">Abrir a que existe</a><button class="btn" id="cfa-ok">Criar outra</button></div>`, (m, fechar) => { m.querySelector('#cfa-ok').onclick = () => { fechar(); criar(); }; m.querySelector('a').onclick = fechar; });
+}
 ROTAS.dossie = async arg => {
   ouvirAbates();
   if (!arg && !arthurVisivel()) {
@@ -2117,6 +2136,7 @@ ROTAS.dossie = async arg => {
           <p class="dim" style="margin:0">${sub.filter(Boolean).map(esc).join(' · ')}</p>
           <div class="best-stats grande"><span><b>${t.n}${t.mais ? '+' : ''}</b> monstros mortos</span><span><b>${nEl}</b> espécies eliminadas</span><span><b>${CRI.length - nEl}</b> em aberto</span></div>
           ${c?.foto_campo ? `<figure class="foto-campo"><img src="${esc(c.foto_campo)}" alt="${esc(nome)} em campo"><figcaption>Em campo</figcaption></figure>` : ''}
+          ${c && DONO ? '<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn" id="criar-ficha-arthur">Criar a ficha do Arthur no meu perfil</button></div>' : ''}
           ${!c ? `<div style="display:flex; gap:8px; flex-wrap:wrap"><a class="btn sec" href="#agente-${esc(CACS[q].ficha)}">Abrir a ficha</a></div>
             <p class="faint" style="font-size:13px">${q === ME ? 'Registre seus abates na página de cada criatura, em Ameaças.' : ''}</p>` : ''}
         </div>
@@ -2125,6 +2145,7 @@ ROTAS.dossie = async arg => {
       <div class="cab-pagina" style="margin-top:8px"><h2>Histórico de abates</h2><div class="filtros" id="f-dos">${[['mortas', 'Eliminadas'], ['abertas', 'Em aberto'], ['todas', 'Todas']].map(([k, l]) => `<button class="chip ${filtroDos === k ? 'aqui' : ''}" data-fd="${k}">${l}</button>`).join('')}</div></div>
       <div class="galeria-abates">${G.map(x => `<a class="ga-item ${eliminada(x, q) ? 'morta' : ''}" href="#ameaca-${esc(x.id)}"><div class="ga-img" style="${x.imagem ? `background-image:url('${esc(x.imagem)}')` : ''}">${eliminada(x, q) ? `<span class="carimbo ${c ? '' : 'jog'}">${abatesDe(x.id, q) < 0 ? '∞' : '×' + abatesDe(x.id, q)}</span>` : ''}</div><b>${esc(x.nome)}</b><span class="faint" style="font-size:12px">${esc(capDe(x) === 'Servos' ? 'Sem elemento' : capDe(x))} · ${esc(nivelAm(x.nivel)[1])}</span></a>`).join('') || `<div class="vazio">${filtroDos === 'mortas' ? 'Nenhum abate registrado ainda.' : 'Nada aqui.'}</div>`}</div>`;
     $$('[data-fd]').forEach(b => b.onclick = () => { filtroDos = b.dataset.fd; desenhar(); });
+    $('#criar-ficha-arthur')?.addEventListener('click', criarFichaArthur);
     $('#f-cac')?.addEventListener('click', e => { const b = e.target.closest('[data-cac]'); if (!b) return; CAC_SEL = b.dataset.cac; location.hash = CAC_SEL === 'arthur' ? 'dossie' : 'dossie-' + CAC_SEL; });
   };
   CAC_SEL = q; desenhar();

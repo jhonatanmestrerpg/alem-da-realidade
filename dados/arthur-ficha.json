@@ -1,0 +1,309 @@
+{
+ "nome": "Arthur Henrique Senna",
+ "idade": "22",
+ "vontade": "Criação",
+ "vontadeEscolha": {
+  "Mecânica|Alquimia": "Mecânica"
+ },
+ "vetor": "",
+ "classe": "Técnico",
+ "subclasse": "Inventor",
+ "nivel": 7,
+ "atributos": {
+  "forca": 1,
+  "destreza": 4,
+  "constituicao": 2,
+  "inteligencia": 3,
+  "presenca": 1
+ },
+ "pericias": [
+  {
+   "nome": "Pontaria",
+   "pontos": 4,
+   "atributo": "destreza"
+  },
+  {
+   "nome": "Mecânica",
+   "pontos": 4,
+   "atributo": "inteligencia"
+  },
+  {
+   "nome": "Investigação",
+   "pontos": 3,
+   "atributo": "inteligencia"
+  },
+  {
+   "nome": "Armas Brancas",
+   "pontos": 3,
+   "atributo": "forca"
+  },
+  {
+   "nome": "Vigor",
+   "pontos": 3,
+   "atributo": "constituicao"
+  },
+  {
+   "nome": "Furtividade",
+   "pontos": 2,
+   "atributo": "destreza"
+  },
+  {
+   "nome": "Medicina",
+   "pontos": 1,
+   "atributo": "inteligencia"
+  }
+ ],
+ "passivas": [
+  {
+   "nome": "Leitura Avançada",
+   "texto": "Se passar em um teste de Investigação ou Percepção, revele uma fraqueza, resistência ou padrão de um inimigo em cena, concedendo +2 nos 3 próximos testes contra ele."
+  },
+  {
+   "nome": "Passo Fantasma",
+   "texto": "Caso o resultado de um teste de Furtividade seja 18 ou mais, você fica fora da linha de visão de qualquer inimigo, causa +1d de dano no próximo ataque furtivo que der e recebe +5 de defesa até o seu próximo turno."
+  }
+ ],
+ "habilidades": [
+  {
+   "nome": "Especialidade: Êxtase",
+   "origem": "Homebrew",
+   "texto": "1 PST gasto = +1d6 de dano.",
+   "homebrew": true
+  },
+  {
+   "nome": "Especialidade: Dedo no gatilho",
+   "origem": "Homebrew",
+   "texto": "1 PST gasto = +1 tiro.",
+   "homebrew": true
+  },
+  {
+   "nome": "Arma Favorita: Eclipsa (Sniper)",
+   "origem": "Homebrew",
+   "texto": "+1 de margem de crítico e dano ×1,5 com a Eclipsa.",
+   "homebrew": true
+  }
+ ],
+ "rituais": [
+  {
+   "nome": "Mira Sangrenta",
+   "elemento": "Guerra",
+   "alvo": "Uma arma de longo alcance",
+   "custo": "Ver preço",
+   "descricao": "O olho que mira acende e a arma esquenta.",
+   "efeito": "A fúria entra na arma, e cada disparo fica mais forte quanto mais longe está o alvo. Quem mata com ele pode ser tomado por um êxtase e continuar atirando em qualquer coisa viva.",
+   "limitacoes": [
+    "Custo médio para ativar, e cada disparo cobra um pedaço da cabeça de quem atira."
+   ]
+  },
+  {
+   "nome": "Lâmina de Sangue",
+   "elemento": "Fome",
+   "alvo": "O próprio ocultista",
+   "custo": "Ver preço",
+   "descricao": "O sangue que escorre do ferimento sobe pelo braço em vez de cair.",
+   "efeito": "Precisa apanhar primeiro. Depois de ferido, o sangue cobre o braço, endurece e vira uma lâmina viva, pulsando, que fica até o fim da luta.",
+   "limitacoes": [
+    "Exige estar ferido. No fim da luta, quem usou pode desabar de cansaço e de perda de sangue."
+   ]
+  }
+ ],
+ "feiticos": [],
+ "equipamentos": [
+  {
+   "nome": "Bestiário Senna",
+   "peso": 1,
+   "qtd": 1,
+   "categoria": "Gerais",
+   "obs": "Registros de campo de todas as criaturas encontradas.",
+   "homebrew": true
+  },
+  {
+   "nome": "Eclipsa (Favorita)",
+   "dano": "2d10+6",
+   "mult": 3,
+   "margem": 19,
+   "peso": 6,
+   "qtd": 1,
+   "pericia": "Pontaria",
+   "categoria": "Armas de Fogo",
+   "obs": "Rifle de precisão montado e ajustado por ele, dispara em sequência. Arma Favorita (Sniper): +1 de margem de crítico (já aplicado) e dano ×1,5 no total.",
+   "alcance": "Longo",
+   "tipoDano": "Balístico",
+   "extra": "",
+   "homebrew": true
+  },
+  {
+   "nome": "Submetralhadora",
+   "dano": "2d4+1",
+   "mult": 1,
+   "margem": 20,
+   "peso": 4,
+   "qtd": 1,
+   "pericia": "Pontaria",
+   "categoria": "Armas de Fogo",
+   "obs": "MP5.",
+   "alcance": "Médio",
+   "tipoDano": "Balístico",
+   "extra": ""
+  },
+  {
+   "nome": "Pistola",
+   "dano": "1d6",
+   "mult": 2,
+   "margem": 20,
+   "peso": 1.5,
+   "qtd": 1,
+   "pericia": "Pontaria",
+   "categoria": "Armas de Fogo",
+   "obs": "Pistola de cintura.",
+   "alcance": "Curto",
+   "tipoDano": "Balístico",
+   "extra": ""
+  },
+  {
+   "nome": "Balas especializadas [.50]",
+   "peso": 0.5,
+   "qtd": 1,
+   "categoria": "Gerais",
+   "obs": "+2d6 de dano nas armas de grosso calibre. Some no campo de dano extra da arma ao usar.",
+   "homebrew": true
+  },
+  {
+   "nome": "Kit Médico Portátil",
+   "peso": 1.5,
+   "qtd": 1,
+   "categoria": "Gerais",
+   "obs": "+2 em testes de cura."
+  },
+  {
+   "nome": "Água benta",
+   "peso": 1,
+   "qtd": 1,
+   "categoria": "Gerais",
+   "obs": "Uso contra entidades."
+  },
+  {
+   "nome": "Bag de armas",
+   "peso": 0,
+   "qtd": 1,
+   "categoria": "Bolsas",
+   "alivio": 34.4,
+   "obs": "Invenção própria: carrega o arsenal de reserva sem pesar.",
+   "homebrew": true
+  },
+  {
+   "nome": "Espingarda de cano duplo",
+   "dano": "1d10",
+   "mult": 2,
+   "margem": 20,
+   "peso": 4,
+   "qtd": 1,
+   "pericia": "Pontaria",
+   "categoria": "Armas de Fogo",
+   "obs": "Munição 10/10.",
+   "alcance": "Curto",
+   "tipoDano": "Balístico",
+   "extra": "",
+   "homebrew": true
+  },
+  {
+   "nome": "Pistola",
+   "dano": "1d6",
+   "mult": 2,
+   "margem": 20,
+   "peso": 1.5,
+   "qtd": 2,
+   "pericia": "Pontaria",
+   "categoria": "Armas de Fogo",
+   "obs": "Par, uma em cada mão. Munição: esquerda 16/16, direita 16/16.",
+   "alcance": "Curto",
+   "tipoDano": "Balístico",
+   "extra": ""
+  },
+  {
+   "nome": "Espingarda (médio, 10 a 25m)",
+   "dano": "1d12",
+   "mult": 2,
+   "margem": 20,
+   "peso": 4,
+   "qtd": 1,
+   "pericia": "Pontaria",
+   "categoria": "Armas de Fogo",
+   "obs": "Espingarda tradicional. Munição 10/10.",
+   "alcance": "Médio",
+   "tipoDano": "Balístico",
+   "extra": ""
+  },
+  {
+   "nome": "Granada de Fragmentação",
+   "dano": "3d8+1d6",
+   "mult": 2,
+   "margem": 20,
+   "peso": 0.8,
+   "qtd": 6,
+   "pericia": "Pontaria",
+   "categoria": "Granadas",
+   "obs": "6/6.",
+   "alcance": "",
+   "tipoDano": "Explosivo",
+   "extra": ""
+  },
+  {
+   "nome": "Granada de Fumaça",
+   "peso": 0.6,
+   "qtd": 6,
+   "categoria": "Granadas",
+   "obs": "Bomba de fumaça. Cobre a área e corta a linha de visão."
+  },
+  {
+   "nome": "Rifle de Caça",
+   "dano": "1d12+3",
+   "mult": 1,
+   "margem": 20,
+   "peso": 5,
+   "qtd": 1,
+   "pericia": "Pontaria",
+   "categoria": "Armas de Fogo",
+   "obs": "Rifle de caçador. Munição 6/6.",
+   "alcance": "Longo",
+   "tipoDano": "Balístico",
+   "extra": ""
+  },
+  {
+   "nome": "Bazuca",
+   "dano": "4d10",
+   "mult": 3,
+   "margem": 20,
+   "peso": 8,
+   "qtd": 1,
+   "pericia": "Pontaria",
+   "categoria": "Armas de Fogo",
+   "obs": "Munição 1/10.",
+   "alcance": "Longo",
+   "tipoDano": "Explosivo",
+   "extra": "",
+   "homebrew": true
+  },
+  {
+   "nome": "Katana",
+   "dano": "1d10",
+   "mult": 3,
+   "margem": 20,
+   "peso": 2,
+   "qtd": 1,
+   "pericia": "Armas Brancas",
+   "categoria": "Armas Brancas",
+   "obs": "",
+   "alcance": "Corpo a corpo",
+   "tipoDano": "Corte",
+   "extra": ""
+  }
+ ],
+ "aparencia": "Cabelo preto desgrenhado com mechas vermelhas, óculos redondos de lente vermelha que escondem as olheiras e um brinco de cruz numa orelha só. Usa camisa social com suspensórios que seguram metade do equipamento. É magro, mas o treino militar esconde uma força que engana. O sorriso torto é quase sempre disfarce para o cansaço.",
+ "personalidade": "Orgulhoso, teimoso e debochado, com piada suja pronta para qualquer hora e o humor carioca de quem já perdeu demais para levar tudo a sério. Solta um Eita, um Valeu ou um Puts quando é pego de surpresa, e diz que é foda ser um chocolate gostoso no meio do combate. Por baixo disso, é leal até o osso e protege os seus com uma raiva que assusta quem está do outro lado. Dorme mal, fala pouco sobre o que sente e só baixa a guarda com Aline, Daniela e Mael. Tem ódio pessoal por ocultista. Desde a mansão da Barra, ocultista não é alvo para ele, é dívida, e ele cobra cada uma sem pressa e sem perdão.",
+ "historico": "Codinome: Morte Negra.\nArthur Henrique Senna é carioca, ex-militar e atirador de elite. O pai sumiu quando ele tinha oito anos e nunca mais deu notícia. A mãe morreu no incêndio da casa da família, e o padrasto morreu pouco depois. Sobraram ele e Daniela.\nOs dois foram para a mansão que Daniela tinha herdado na Barra da Tijuca, e foi lá que o paranormal deixou de ser história: ocultistas, mercenários e um arauto cercaram a casa, e os dois passaram tempos ruins até conseguir fugir, matando alguns no caminho. Foi nessa época que conheceram Felipe, líder da Delta Green, que virou pai de consideração dos dois. Felipe esperou que eles tivessem idade para entrar oficialmente na organização, mesmo sabendo que os dois já trabalhavam por fora havia tempo.\nPassou pelo Exército, aprendeu a atirar como poucos e saiu de lá com mais fantasmas do que medalhas. Tentou aliviar tudo do jeito errado: entorpecentes, cigarro, injetáveis e caçadas sem dormir, uma atrás da outra, até o corpo pedir arrego. Só começou a largar isso quando entrou de vez na Delta Green.\nHoje é o atirador do grupo, o melhor amigo de Mael, irmão de Daniela e namorado de Aline. Odeia todos os Cavaleiros, sem exceção, desde que a Guerra e a Fome destruíram a base da Delta Green.",
+ "objetivo": "Arthur não recua diante de terror cósmico nem de monstro distorcido: ele bota a cara. Matou a Hydra Falsa com o grupo e enfrentou o Sumo Sacerdote sozinho. As exceções são o Karma, que reescreve a realidade, e os Cavaleiros novos, que nenhum humano matou até hoje. Dos antigos, já derrubou com a equipe a Hydra Falsa, antigo Cavaleiro da Fome, e The Skull, antigo Cavaleiro da Morte. Isso não quer dizer respeito. Ele odeia cada um dos Cavaleiros, e se um dia tiver a chance, vai provar que não existe nada que não sangre.",
+ "anotacoes": "Arma de fogo em qualquer distância. De longe, tiro de precisão de posição elevada e com o terreno a favor. Na média e na curta, submetralhadora, pistolas e espingarda, sem trocar para a lâmina enquanto houver bala. Estuda a criatura antes de puxar o gatilho, lê o padrão, a fraqueza e a resistência dela, e escolhe o instante em que ela está mais exposta.\nO tiro dele é pesado, do tipo que derruba de primeira o que muita gente precisa de um pente inteiro para parar. Mesmo assim, Arthur nunca dá um tiro só. Nunca. O dedo não para no primeiro disparo, nem quando o primeiro já resolveu, e a Eclipsa cospe em sequência. Quem sobrevive ao primeiro não tem tempo de sobreviver ao resto.\nQuando precisa sumir, some: sai da linha de visão e reaparece em outro ponto antes que o alvo entenda de onde veio o disparo. Usa os rituais sem anunciar nada: a Mira Sangrenta acende o símbolo no olho esquerdo e a arma esquenta, e é só isso que o alvo vê. A Lâmina de Sangue e a katana são o extra para quando a munição acaba.",
+ "foto": "img/cacador/arthur.webp",
+ "campanhas": []
+}
