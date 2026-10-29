@@ -205,6 +205,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .modal .cab-m { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .opcao { display: flex; justify-content: space-between; gap: 12px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--linha); }
 .opcao p { font-size: 13.5px; color: var(--lua-dim); }
+.aviso-versao { position: fixed; z-index: 70; top: max(10px, env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: flex; gap: 12px; align-items: center; background: var(--painel-3); border: 1px solid var(--sangue, #b3262e); padding: 10px 14px; font-size: 14px; max-width: calc(100% - 32px); box-shadow: 0 8px 30px rgba(0,0,0,.5); }
 .toast { position: fixed; z-index: 60; left: 50%; transform: translateX(-50%); bottom: max(20px, env(safe-area-inset-bottom, 0px)); background: var(--painel-3); border: 1px solid var(--linha-2); padding: 10px 16px; font-size: 14px; max-width: calc(100% - 32px); }
 
 /* criação */
@@ -603,6 +604,18 @@ const dataBR = t => t ? new Date(t).toLocaleDateString('pt-BR') : '';
 const horaBR = t => t ? new Date(t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
 const uid8 = () => Math.random().toString(36).slice(2, 10);
 function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+/* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
+let VERSAO = null;
+async function versaoAtual() { try { const r = await fetch(location.pathname, { method: 'HEAD', cache: 'no-store' }); return r.headers.get('etag') || r.headers.get('last-modified'); } catch (e) { return null; } }
+async function checarVersao() {
+  const v = await versaoAtual(); if (!v) return; if (!VERSAO) { VERSAO = v; return; }
+  if (v === VERSAO || document.querySelector('.aviso-versao')) return;
+  const d = document.createElement('div'); d.className = 'aviso-versao';
+  d.innerHTML = '<span>O site foi atualizado.</span><button class="btn mini">Atualizar agora</button>';
+  d.querySelector('button').onclick = () => location.reload(); document.body.appendChild(d);
+}
+checarVersao(); setInterval(checarVersao, 120000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checarVersao(); });
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
 /* ---------- dados estáticos do sistema ---------- */
