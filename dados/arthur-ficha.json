@@ -333,7 +333,8 @@
    "mult": 0,
    "multTotal": 1,
    "custo": 0,
-   "ligado": false
+   "ligado": false,
+   "semMult": false
   },
   {
    "nome": "Esforço Máximo",
@@ -343,7 +344,8 @@
    "mult": 0,
    "multTotal": 2,
    "custo": 0,
-   "ligado": false
+   "ligado": false,
+   "semMult": false
   },
   {
    "nome": "Pressão Mortal",
@@ -353,7 +355,8 @@
    "mult": 0.5,
    "multTotal": 1,
    "custo": 0,
-   "ligado": false
+   "ligado": false,
+   "semMult": false
   },
   {
    "nome": "Especialidade: Êxtase",
@@ -365,7 +368,8 @@
    "custo": 1,
    "ligado": false,
    "escala": true,
-   "qtd": 3
+   "qtd": 3,
+   "semMult": false
   },
   {
    "nome": "Mira Sangrenta",
@@ -377,7 +381,8 @@
    "custo": 0,
    "custoPs": 2,
    "ligado": false,
-   "distancia": true
+   "distancia": true,
+   "semMult": true
   }
  ]
 }
