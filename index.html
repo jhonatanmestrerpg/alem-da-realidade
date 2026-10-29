@@ -292,6 +292,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ok-tag { justify-self: start; font: 600 11px var(--f-mono); color: var(--fole); text-transform: uppercase; letter-spacing: .1em; }
 .pc-res { font-size: 13px; background: rgba(5,6,10,.5); padding: 8px 10px; border-left: 2px solid var(--ouro); }
 .oposto { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; padding: 8px 10px; border: 1px dashed var(--linha-2); } .oposto input { padding: 4px 8px; }
+.queda { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+.bolinhas { display: inline-flex; gap: 6px; vertical-align: middle; } .bolinhas i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--sangue-hi); } .bolinhas i.on { background: var(--sangue-hi); box-shadow: 0 0 8px rgba(196,48,60,.6); }
+.trilho.caido { outline: 1px solid var(--sangue); } .trilho.caido .txt { color: var(--sangue-hi); font-weight: 700; letter-spacing: .04em; }
 .lista-ajuste { margin: 0 0 12px; padding-left: 18px; display: grid; gap: 4px; }
 .carimbo.jog { border-color: var(--ouro); color: var(--ouro); }
 .abate-linha { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; border-top: 1px dashed var(--linha); padding-top: 6px; }
@@ -663,7 +666,7 @@ function vigiarTurnos() {
     VIG[camp] = db.doc(`campanhas/${camp}/publico/combate`).onSnapshot(async sn => {
       const cb = sn.data(); if (!cb?.ativo) return; const x = (cb.ordem || [])[cb.turno];
       if (x?.tipo !== 'agente' || !x.ref) return;
-      try { const f = (await db.doc('fichas/' + x.ref).get()).data(); if (!f || f.dono !== ME || !(f.condicoes || []).length) return;
+      try { const f = (await db.doc('fichas/' + x.ref).get()).data(); if (!f || f.dono !== ME || (!(f.condicoes || []).length && !quedaAtiva(f).length)) return;
         if (f.condVez === `${camp}:${cb.rodada}`) return; popCondicoes(x.ref, camp, cb.rodada); } catch (e) {}
     }, () => {});
   }
@@ -672,6 +675,7 @@ async function popCondicoes(fid, camp, rodada, porMestre) {
   const chave = `${camp}:${rodada}`; if (document.querySelector(`.pop-cond[data-chave="${CSS.escape(fid + '|' + chave)}"]`)) return;
   const ref = db.doc('fichas/' + fid); const F0 = (await ref.get()).data(); if (!F0) return; const F = { id: fid, ...F0 };
   const K = calc(F); let atual = { ...K.max, ...(F.atual || {}) };
+  const quedaFeita = {};
   const conds = (F.condicoes || []).map(condObj), feito = conds.map(c => { const r = COND_TURNO[c.nome] || {}; return !(r.teste || /[+-]/.test(c.porTurno || '')); }), linhas = [];
   const el = document.createElement('section'); el.className = 'pop-cond'; el.dataset.chave = fid + '|' + chave; el.setAttribute('aria-label', 'Condições no seu turno');
   const salvo = (() => { try { return JSON.parse(localStorage.getItem('adr-popcond') || 'null'); } catch (e) { return null; } })();
@@ -683,18 +687,21 @@ async function popCondicoes(fid, camp, rodada, porMestre) {
         return `<div class="pc-linha ${feito[i] ? 'ok' : ''}"><div><b>${esc(c.nome)}</b> <span class="faint" style="font-size:12px">${esc(textoCond(c).replace(c.nome, '').replace(/^ · /, ''))}</span>
           <p>${esc(SIS.condicoes.find(x => x.nome === c.nome)?.texto || (c.porTurno ? `Efeito por turno: ${c.porTurno}` : ''))}</p></div>
           ${feito[i] ? '<span class="ok-tag">feito</span>' : r.teste ? `<button class="btn mini" data-pc-teste="${i}">Fazer teste de ${esc(r.teste.rotulo || r.teste.pericia)} (${esc(r.teste.pericia)} ${P.dados}d20+${P.mod}) · DT ${r.teste.dt}</button>` : `<button class="btn mini ${c.porTurno.startsWith('+') ? 'sec' : ''}" data-pc-ef="${i}">${c.porTurno.startsWith('+') ? 'Receber' : 'Sofrer'} ${esc(c.porTurno)}</button>`}</div>`; }).join('')}
+      ${quedaAtiva(F).map(([k, n]) => `<div class="pc-linha ${quedaFeita[k] ? 'ok' : ''}"><div><b>Caído (${NOME_VITAL[k]})</b> ${bolinhas(n)}<p>${NOME_VITAL[k]} em 0. Cada turno caído gasta uma bolinha; quando as três zeram, volta com 1.</p></div>${quedaFeita[k] ? '<span class="ok-tag">feito</span>' : `<button class="btn mini" data-pc-queda="${k}">Passar o turno caído</button>`}</div>`).join('')}
       ${linhas.length ? `<div class="pc-res">${linhas.map(esc).join('<br>')}</div>` : ''}
       <div class="mono faint" style="font-size:12px">PV ${atual.pv}/${K.max.pv} · PS ${atual.ps}/${K.max.ps} · PST ${atual.pst}/${K.max.pst}</div>`;
     el.querySelector('[data-pc-x]').onclick = () => el.remove();
     el.querySelectorAll('[data-pc-teste]').forEach(b => b.onclick = () => { const i = +b.dataset.pcTeste, c = conds[i], r = COND_TURNO[c.nome], P = dadosPericia(F, r.teste.pericia), t = teste(P.dados, P.mod);
       const e = efeitoCond(c, atual, K.max, t); atual = e.atual; feito[i] = true; linhas.push(`${c.nome}: teste ${String(t.detalhe).replace(/<[^>]+>/g, '')} = ${t.total}. ` + e.linha.replace(/^[^:]+: /, '')); checar(); });
+    el.querySelectorAll('[data-pc-queda]').forEach(b => b.onclick = () => { const k = b.dataset.pcQueda; F.atual = atual; const t = gastarBolinha(F, k); atual = { ...atual, ...F.atual }; quedaFeita[k] = true; linhas.push(t); checar(); });
     el.querySelectorAll('[data-pc-ef]').forEach(b => b.onclick = () => { const i = +b.dataset.pcEf, e = efeitoCond(conds[i], atual, K.max, null); atual = e.atual; feito[i] = true; if (e.linha) linhas.push(e.linha); checar(); });
   };
   const checar = async () => {
-    desenhar(); if (feito.some(x => !x)) return;
+    desenhar(); if (feito.some(x => !x) || quedaAtiva(F).some(([k]) => !quedaFeita[k])) return;
     conds.forEach(c => { const a = COND_TURNO[c.nome]?.aviso; if (a) linhas.push(`${c.nome}: ${a}`); });
     const restantes = []; for (const c of conds) { if (c.turnos) { c.turnos--; if (c.turnos <= 0) { linhas.push(`${c.nome} acabou.`); continue; } } restantes.push(c); }
-    try { await ref.update({ atual, condicoes: restantes, condVez: chave }); } catch (e) { toast('Não deu para salvar a ficha.'); }
+    F.atual = atual; ajustarQueda(F);
+    try { await ref.update({ atual, condicoes: restantes, condVez: chave, queda: F.queda || {} }); } catch (e) { toast('Não deu para salvar a ficha.'); }
     publicarRolagem(F, `Turno de ${F.nome} · condições`, { total: '', detalhe: esc(linhas.join(' · ')) });
     desenhar(); el.classList.add('fim'); setTimeout(() => el.remove(), 3500);
   };
@@ -704,8 +711,25 @@ async function popCondicoes(fid, camp, rodada, porMestre) {
   el.addEventListener('pointermove', e => { if (!ini) return; const x = Math.min(Math.max(6, e.clientX - ini.dx), innerWidth - el.offsetWidth - 6), y = Math.min(Math.max(6, e.clientY - ini.dy), innerHeight - 60); el.style.left = x + 'px'; el.style.top = y + 'px'; });
   el.addEventListener('pointerup', () => { if (!ini) return; ini = null; try { localStorage.setItem('adr-popcond', JSON.stringify({ x: parseInt(el.style.left), y: parseInt(el.style.top) })); } catch (e) {} });
   document.body.appendChild(el); desenhar();
-  if (feito.every(Boolean)) checar();
+  if (feito.every(Boolean) && !quedaAtiva(F).length) checar();
 }
+/* Caído: quando PV, PS ou PST chega a 0, aquele status fica "Caído" com 3 bolinhas de morte.
+   Cada turno caído gasta uma; quando as três zeram, o status volta com 1. */
+const NOME_VITAL = { pv: 'PV', ps: 'PS', pst: 'PST' };
+function ajustarQueda(f) {
+  const K = calc(f), a = { ...K.max, ...(f.atual || {}) }, q = { ...(f.queda || {}) }; let mudou = false;
+  for (const k of ['pv', 'ps', 'pst']) { if ((a[k] ?? 1) <= 0 && q[k] == null) { q[k] = 3; mudou = true; } else if ((a[k] ?? 1) > 0 && q[k] != null) { q[k] = null; mudou = true; } }
+  if (mudou) f.queda = q; return mudou;
+}
+// gasta uma bolinha; devolve o texto do que aconteceu
+function gastarBolinha(f, k) {
+  const q = { ...(f.queda || {}) }; if (q[k] == null) return '';
+  q[k]--; let txt = `${f.nome} caído (${NOME_VITAL[k]}): ${q[k]} bolinha${q[k] === 1 ? '' : 's'} de morte restante${q[k] === 1 ? '' : 's'}.`;
+  if (q[k] <= 0) { q[k] = null; f.atual = { ...calc(f).max, ...(f.atual || {}), [k]: 1 }; txt = `${f.nome} se levantou: ${NOME_VITAL[k]} volta com 1.`; }
+  f.queda = q; return txt;
+}
+const quedaAtiva = f => Object.entries(f?.queda || {}).filter(([, v]) => v != null);
+const bolinhas = n => `<span class="bolinhas" aria-label="${n} de 3 bolinhas de morte">${[0, 1, 2].map(i => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span>`;
 function qtdPassivas(nivel) { return [2, 6, 9, 11].filter(x => nivel >= x).length; }
 
 /* ---------- regras de cálculo ---------- */
@@ -1082,7 +1106,7 @@ ROTAS.agente = async id => {
   const ref = db.doc('fichas/' + id);
   let F = null, aba = window._abaFicha || 'pericias', editando = false, mostrarTodas = false, podeEditar = false, ehMestre = false, pendente = false;
   window._abaFicha = null;
-  const salvarVitais = debounce(async () => { try { await ref.update({ atual: F.atual }); } catch (e) { toast('Não deu para salvar os vitais.'); } pendente = false; }, 500);
+  const salvarVitais = debounce(async () => { try { await ref.update({ atual: F.atual, queda: F.queda || {} }); } catch (e) { toast('Não deu para salvar os vitais.'); } pendente = false; }, 500);
   async function salvar(campos) { try { await ref.update(campos); } catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); } }
   function editarMods(i) {
     const it = F.equipamentos[i]; if (!ehArma(it)) return toast('Só armas recebem melhorias, bênçãos e maldições.');
@@ -1128,7 +1152,7 @@ ROTAS.agente = async id => {
         const n = Math.max(0, Math.min(20, +v('#au-n') || 0));
         const cfg = { custo: { pv: +v('#au-pv') || 0, ps: +v('#au-ps') || 0, pst: +v('#au-pst') || 0 }, pericia: v('#au-pe'), dt: +v('#au-dt') || 0, ataques: n, arma: v('#au-ar'), modo: v('#au-mo'), acerto: v('#au-ac'), bonus: +v('#au-ba') || 0, danoExtra: v('#au-de'), expr: v('#au-ex'), rotuloExpr: v('#au-rx') };
         F.autos = { ...(F.autos || {}), [nome]: cfg }; salvar({ autos: F.autos }); fechar(); render(); };
-      m.querySelector('#au-rm')?.addEventListener('click', () => { const x = { ...(F.autos || {}) }; delete x[nome]; F.autos = x; salvar({ autos: x }); fechar(); render(); });
+      m.querySelector('#au-rm')?.addEventListener('click', () => { const x = { ...(F.autos || {}), [nome]: null }; F.autos = x; salvar({ autos: x }); fechar(); render(); });
     });
   }
   function usarHab(nome, armaEscolhida) {
@@ -1204,6 +1228,7 @@ ROTAS.agente = async id => {
   function render() {
     const K = calc(F); const A = F.atributos || {};
     F.atual = F.atual || { ...K.max };
+    if (!pendente && ajustarQueda(F) && (F.dono === ME || ehMestre)) salvar({ queda: F.queda });
     const C = classe(F.classe), S = subclasse(F.classe, F.subclasse);
     const VA = vetorAtivo(F), VL = vetorLiberado(F), cv = F.vetor?.cor || '#b4333b';
     app.innerHTML = `${F.campanhas?.length ? `<button class="btn-hist" id="abrir-hist" aria-label="Histórico de rolagens" title="Histórico de rolagens"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></button>` : ''}<div id="ficha" class="${editando ? 'editando' : ''} ${VA ? 'vestido' : ''}" style="display:grid; gap:22px; --cv:${esc(cv)}">
@@ -1257,8 +1282,9 @@ ROTAS.agente = async id => {
         </div>
         ${['pv', 'ps', 'pst'].map(k => `<div class="vital ${k}"><div class="cab"><span class="nome">${{ pv: 'PV · Vida', ps: 'PS · Sanidade', pst: 'PST · Stamina' }[k]}</span><span class="faint mono" style="font-size:11px">${K.form[k]} = ${K.max[k]}</span></div>
           <div class="ctrl"><button class="vbtn" data-v="${k}" data-d="-5" ${podeEditar ? '' : 'disabled'}>−5</button><button class="vbtn" data-v="${k}" data-d="-1" ${podeEditar ? '' : 'disabled'}>−1</button>
-          <div class="trilho"><div class="cheio" style="width:${Math.min(100, (F.atual[k] / (K.max[k] || 1)) * 100)}%"></div><div class="txt">${F.atual[k]} / ${K.max[k]}</div></div>
-          <button class="vbtn" data-v="${k}" data-d="1" ${podeEditar ? '' : 'disabled'}>+1</button><button class="vbtn" data-v="${k}" data-d="5" ${podeEditar ? '' : 'disabled'}>+5</button></div></div>`).join('')}
+          <div class="trilho ${F.queda?.[k] != null ? 'caido' : ''}"><div class="cheio" style="width:${Math.min(100, (F.atual[k] / (K.max[k] || 1)) * 100)}%"></div><div class="txt">${F.queda?.[k] != null ? `Caído · ${F.atual[k]} / ${K.max[k]}` : `${F.atual[k]} / ${K.max[k]}`}</div></div>
+          <button class="vbtn" data-v="${k}" data-d="1" ${podeEditar ? '' : 'disabled'}>+1</button><button class="vbtn" data-v="${k}" data-d="5" ${podeEditar ? '' : 'disabled'}>+5</button></div>
+          ${F.queda?.[k] != null ? `<div class="queda"><span class="rotulo">Morte</span>${bolinhas(F.queda[k])}<span class="faint" style="font-size:12px">quando as três zerarem, volta com 1</span>${podeEditar || ehMestre ? `<button class="btn mini sec" data-bolinha="${k}">Passar turno caído</button>` : ''}</div>` : ''}</div>`).join('')}
       </div>
     </section>
 
@@ -1392,7 +1418,8 @@ ROTAS.agente = async id => {
     });
     $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
     $('#todas')?.addEventListener('click', () => { mostrarTodas = !mostrarTodas; render(); });
-    $$('[data-v]').forEach(b => b.onclick = () => { const k = b.dataset.v; F.atual[k] = Math.max(0, Math.min(K.max[k], (F.atual[k] ?? K.max[k]) + +b.dataset.d)); pendente = true; render(); salvarVitais(); });
+    $$('[data-v]').forEach(b => b.onclick = () => { const k = b.dataset.v; F.atual[k] = Math.max(0, Math.min(K.max[k], (F.atual[k] ?? K.max[k]) + +b.dataset.d)); const caiu = F.atual[k] === 0 && F.queda?.[k] == null; ajustarQueda(F); pendente = true; render(); salvarVitais(); if (caiu) toast(`${F.nome} caiu (${NOME_VITAL[k]} 0): 3 bolinhas de morte.`); });
+    $$('[data-bolinha]').forEach(b => b.onclick = async () => { const t = gastarBolinha(F, b.dataset.bolinha); pendente = true; render(); try { await ref.update({ atual: F.atual, queda: F.queda || {} }); } catch (e) {} pendente = false; toast(t); publicarRolagem(F, 'Caído', { total: '', detalhe: esc(t) }); });
     // edição
     $$('[data-at]').forEach(b => b.onclick = () => { const k = b.dataset.at; const v = (F.atributos[k] || 0) + +b.dataset.d; if (v < 0 || v > 9) return; F.atributos[k] = v; salvar({ atributos: F.atributos }); render(); });
     // troca de classe, subclasse, nível ou patente, sempre seguida da correção automática da ficha
@@ -1795,7 +1822,7 @@ async function registrarAbate(id, delta, q = cacPadrao()) {
   const atual = abatesDe(id, q), novo = atual < 0 ? (delta > 0 ? -1 : 0) : Math.max(0, atual + delta), k = String(id);
   try {
     if (q === 'arthur') { ABATES[k] = novo; const ref = db.doc('bestiario/abates'); const sn = await ref.get(); await ref.set({ abates: { ...(sn.data()?.abates || {}), [k]: novo } }); }
-    else { const ref = db.doc('cacadores/' + q); const sn = await ref.get(); const ab = { ...(sn.data()?.abates || {}), [k]: novo }; if (!novo) delete ab[k]; CACS[q] = { ...CACS[q], abates: ab }; await ref.update({ abates: ab }); }
+    else { const ref = db.doc('cacadores/' + q); const sn = await ref.get(); const ab = { ...(sn.data()?.abates || {}), [k]: novo }; CACS[q] = { ...CACS[q], abates: ab }; await ref.update({ abates: ab }); }
   } catch (e) { toast('Não deu para salvar o abate.'); }
   window.dispatchEvent(new Event('abates'));
 }
@@ -2360,7 +2387,7 @@ ROTAS.escudo = async id => {
           <div style="display:grid; gap:6px; min-width:0"><div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap"><b>${esc(x.nome)}</b>${x.tipo === 'ameaca' ? elTag(x.elemento) : `<span class="tag">${x.tipo === 'agente' ? 'Agente' : 'NPC'}</span>`}${(f ? (f.condicoes || []).map(condObj) : (x.cond || []).map(condObj)).map((cd, j) => `<span class="cond-chip" title="${esc(textoCond(cd))}">${esc(cd.turnos ? `${cd.nome} (${cd.turnos})` : cd.nome)}<button data-rmc="${i}" data-j="${j}" aria-label="Tirar ${esc(cd.nome)}">×</button></span>`).join('')}
             <select data-addc="${i}" style="width:auto; padding:2px 6px; font-size:12px"><option value="">+ condição</option>${SIS.condicoes.map(cd => `<option>${esc(cd.nome)}</option>`).join('')}</select></div>
             <div class="vital pv"><div class="ctrl"><button class="vbtn" data-cpv="${i}" data-d="-10">−10</button><button class="vbtn" data-cpv="${i}" data-d="-1">−1</button><div class="trilho fino" style="height:22px"><div class="cheio" style="width:${Math.min(100, (pv / (pvM || 1)) * 100)}%"></div><div class="txt" style="line-height:20px">${pv} / ${pvM}</div></div><button class="vbtn" data-cpv="${i}" data-d="1">+1</button><button class="vbtn" data-cpv="${i}" data-d="10">+10</button></div></div>
-            ${x.tipo === 'ameaca' ? `<button class="btn mini sec" style="justify-self:start" data-fam="${i}">Abrir ficha da ameaça</button>` : ''}${f && (f.condicoes || []).length ? `<button class="btn mini sec" style="justify-self:start" data-resolver="${esc(f.id)}" title="Abre o pop-up de condições para você resolver no lugar do jogador">Resolver condições de ${esc(f.nome.split(' ')[0])}</button>` : ''}</div>
+            ${x.tipo === 'ameaca' ? `<button class="btn mini sec" style="justify-self:start" data-fam="${i}">Abrir ficha da ameaça</button>` : ''}${f && ((f.condicoes || []).length || quedaAtiva(f).length) ? `<button class="btn mini sec" style="justify-self:start" data-resolver="${esc(f.id)}" title="Abre o pop-up de condições para você resolver no lugar do jogador">Resolver condições de ${esc(f.nome.split(' ')[0])}</button>` : ''}</div>
           <button class="btn-x" data-rmx="${i}" aria-label="Tirar do combate">×</button></div>`; }).join('') || '<div class="vazio">Adicione agentes e ameaças para montar a iniciativa.</div>'}</div>`;
       const mudou = () => { salvarE(); publicarCombate(); render(); };
       // fim do turno de quem estava na vez: aplica condições (dano, cura, duração)
