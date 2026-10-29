@@ -1078,5 +1078,1707 @@
    "Um escudo por aliado."
   ],
   "custo": "5 PS"
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Banquete de Adravis",
+  "alvo": "",
+  "descricao": "O ocultista traça o símbolo do ciclo faminto, diz o nome de Adravis e chama uma entidade devoradora. Ela aparece perto do lugar do ritual e não vai embora até comer todas as almas marcadas. Cada essência que devora a deixa mais real e mais difícil de parar. Se alguém oferecer a própria essência, por vontade ou sem querer, a criatura se funde em parte com essa pessoa e passa a fome para ela.",
+  "efeito": "Ao traçar o símbolo do ciclo faminto e recitar o nome de Adravis, o usuário invoca uma entidade devoradora ligada à fome eterna. A criatura surge próxima ao local do ritual e permanecerá na região até consumir completamente as almas marcadas pelo ritual.\n\nEnquanto estiver ativa, a criatura se fortalece ao devorar a essência de suas vítimas, tornando-se mais real e mais difícil de deter.",
+  "limitacoes": [
+   "O ritual só será completo quando a criatura consumir suas vítimas marcadas.",
+   "Caso alguém ofereça sua própria essência (voluntária ou involuntariamente), a criatura se funde parcialmente a essa pessoa, corrompendo-a com fome insaciável.",
+   "O ritual não pode ser desfeito, apenas interrompido se a criatura for destruída antes de completar sua fome."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Fera Invisível",
+  "alvo": "Próprio",
+  "descricao": "Os ossos do ocultista saem do corpo como garras negras, e ele some dos sentidos. Por um tempo curto, bate muito mais forte, e os golpes dele não podem ser desviados nem bloqueados.",
+  "efeito": "Os ossos do ocultista se projetam como garras negras e afiadas, enquanto sua presença desaparece dos sentidos comuns. Por 7 turnos, ganha +2 dados de dano com +8 de bônus, e seus ataques não podem ser desviados ou bloqueados, embora ainda possam ser contra-atacados.",
+  "limitacoes": [
+   "Não oculta sons ou vestígios físicos, apenas a percepção visual e sensorial."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Farejar Fraqueza",
+  "alvo": "Criatura / Área",
+  "descricao": "O ocultista acorda o instinto de predador. Pode olhar para um alvo e saber o quanto ele ainda aguenta, quanto fôlego tem e onde o corpo dele é fraco. Ou pode farejar o lugar em volta e descobrir quem está escondido e o que é.",
+  "efeito": "O ocultista ativa instintos predatórios extremos. Com um único uso, pode escolher um alvo e ver seu HP e Stamina atuais, bem como seus pontos fracos anatômicos. Alternativamente, pode farejar uma área de 10 metros para identificar inimigos ocultos e determinar seu tipo.\n\nPode ser usado apenas duas vezes por sessão e o ocultista deve escolher entre inspecionar um inimigo ou farejar a área, não ambos.",
+  "limitacoes": [],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Raiva Cegante",
+  "alvo": "Único",
+  "descricao": "O ocultista morde alguém e solta uma corrente de fúria. O mordido passa a raiva adiante para quem tocar ou atacar, e forma uma rede de corpos dominados. Durante um dia inteiro, o ocultista vê, ouve e controla cada infectado, um de cada vez.",
+  "efeito": "Ao morder uma criatura, o ocultista inicia uma corrente de fúria. O infectado passa essa raiva a outros com contato físico ou ataques, criando uma rede de corpos dominados. Durante 1 dia, o ocultista vê, ouve e controla as ações de todos os infectados, um de cada vez.\nPode infectar apenas um ser por vez diretamente; os outros são alcançados por propagação.",
+  "limitacoes": [
+   "Não afeta criaturas sem corpo físico."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Aparência Grotesca",
+  "alvo": "Único",
+  "descricao": "O corpo do ocultista se deforma de um jeito monstruoso, e a fome dele contamina a mente de quem olha. Cada golpe passa a ferir o corpo e a cabeça ao mesmo tempo. Quando a vítima cai, ele absorve um pedaço da essência dela e fica mais forte até o fim da missão.",
+  "efeito": "O corpo do usuário se deforma de maneira monstruosa, evocando uma fome antinatural que corrompe a percepção da vítima. Durante a duração do ritual, todo dano físico causado também reduz a sanidade. Quando o HP ou a sanidade do alvo chega a 0, o conjurador absorve parte da essência do inimigo, ganhando ⅕ do valor máximo de HP ou Sanidade perdido (o que zerar primeiro) por uma sessão inteira.",
+  "limitacoes": [
+   "Pode ser usado apenas uma vez por sessão.",
+   "O efeito não pode ser acumulado em múltiplos inimigos, apenas no primeiro que cair sob a maldição.",
+   "A transformação do conjurador é visível e grotesca, podendo causar testes de Sanidade em aliados próximos.",
+   "Inimigos cegos ou que não olhem para o conjurador são imunes a esse ritual."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Banquete de Vigor",
+  "alvo": "Único",
+  "descricao": "O ocultista suga o fôlego da vítima. Quem não resiste fica lento, cansado e pode até desmaiar. Metade do que ele tira volta para ele como saúde ou fôlego.",
+  "efeito": "O usuário invoca a essência da Fome para sugar a stamina de sua vítima. O alvo deve passar em um teste de Constituição ou perde 3d4 pontos de stamina, ficando mais lento, fatigado ou até desmaiando. O usuário recupera imediatamente metade do valor drenado em HP ou Stamina (à escolha).",
+  "limitacoes": [
+   "Se a stamina do alvo chegar a zero, ele desmaia e precisa rodar um teste de Constituição para acordar depois de 2 turnos.",
+   "Este ritual pode ser usado repetidamente, mas cada uso contínuo exige um teste de Sanidade do usuário (caso falhe, o ritual não pode ser usado pelo resto da sessão)."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Extensão Carnívora",
+  "alvo": "Próprio",
+  "descricao": "O ocultista come uma quantidade grotesca de carne ou sangue e joga tudo para uma parte do corpo. Nos braços, vira força. Nas pernas, vira velocidade. No estômago, vira resistência. O corpo incha, as veias saltam e a pele estica.",
+  "efeito": "O usuário consome grandes quantidades de carne ou sangue, canalizando o banquete para partes específicas do corpo. A energia devorada se transforma em força bruta, velocidade ou resistência, deformando o corpo de forma grotesca.\n\nBraços: +1 dado de rolagem em testes de Força e +1 dado de dano físico (Força) por 3 rodadas.\n\nPernas: +1 dado de rolagem em testes de Destreza e +1 dado em dano físico com ataques que dependam de movimento por 3 rodadas.\n\nEstômago/Interior: +1 dado em testes de Constituição e resistência contra efeitos debilitantes por 3 rodadas.",
+  "limitacoes": [
+   "Só pode concentrar em uma parte do corpo por vez.",
+   "Para conjurar, o usuário deve consumir uma quantidade grotesca de carne ou sangue.",
+   "O corpo sofre deformações temporárias (veias saltadas, músculos inchados, pele esticada). Após o efeito, o usuário sofre 2d8 de dano interno por sobrecarga."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Lâmina de Sangue",
+  "alvo": "Usuário",
+  "descricao": "Precisa apanhar primeiro. Depois de ferido, o sangue cobre o braço, endurece e vira uma lâmina viva, pulsando, que fica até o fim da luta.",
+  "efeito": "Para ativar o ritual, o usuário precisa sofrer dano físico de um oponente. Seu braço então é envolvido pelo próprio sangue, que se solidifica e se contorce, transformando-se em uma lâmina grotesca e pulsante. A arma se torna uma extensão do corpo, faminta por carne.\n\nSeu braço se transforma em uma arma viva, causando 1d10 + 2d8 + For de dano por ataque.\n\nA lâmina permanece até o fim do combate.",
+  "limitacoes": [
+   "Ao final do combate, o usuário deve realizar um teste de Constituição, se falhar, o usuário perde 2d4 de vida devido à exaustão e perda de sangue."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Banquete Interno",
+  "alvo": "Usuário",
+  "descricao": "Os órgãos do ocultista se mexem dentro do corpo como cobras. Costela range, músculo se torce, até o coração muda de lugar para fugir do golpe. Enquanto dura, todo dano físico que ele recebe cai pela metade.",
+  "efeito": "O usuário força seu corpo a se retorcer por dentro. Seus órgãos deslizam de lugar como serpentes famintas, tornando seu corpo imprevisível e resistente. Costelas rangem, músculos se contorcem e até o coração pode mudar de posição para escapar de um golpe fatal.\n\nEnquanto o ritual estiver ativo, todo dano físico recebido é reduzido pela metade.",
+  "limitacoes": [
+   "Duração de 1d8 rodadas.",
+   "O processo é extremamente doloroso: ao fim do efeito, o usuário perde 1d10 de Sanidade.",
+   "Usável três vezes por combate."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Devorar Vontade",
+  "alvo": "Inimigo derrotado",
+  "descricao": "O ocultista dá o golpe final e bebe o sangue de quem matou. Junto com a carne, leva um ritual da vítima para ele, para sempre. A vítima perde esse ritual mesmo que volte à vida.",
+  "efeito": "O usuário precisa dar o golpe final em um inimigo e beber de seu sangue. Ao fazê-lo, não consome apenas carne, mas a essência que molda sua alma e seus segredos arcanos. O poder do derrotado passa a ser uma parte do próprio corpo do conjurador, como se tivesse sido sempre seu.\n\nSe o usuário der o golpe final em um inimigo e provar seu sangue, pode roubar permanentemente 1 ritual conhecido pela vítima.",
+  "limitacoes": [
+   "O ritual roubado pode ser de qualquer alinhamento (Guerra, Peste, Fome, Morte ou Neutro).",
+   "O inimigo perde a conexão espiritual com o ritual para sempre, mesmo que seja ressuscitado.",
+   "Usável apenas uma vez por campanha.",
+   "O ritual roubado não pode ultrapassar o número máximo de rituais que o ocultista pode ter, se ultrapassar, o mais antigo aprendido deve ser abandonado."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Hemorragia",
+  "alvo": "Único",
+  "descricao": "O ocultista pega o sangue que circula dentro da vítima e usa contra ela. Aperta, desloca, força para fora. O ferimento continua por alguns instantes, e se a vítima enfraquecer o bastante, ele pode fazer o sangue explodir pelos cortes de uma vez.",
+  "efeito": "O usuário manipula o sangue que circula dentro do corpo do alvo, forçando-o a se mover de maneira antinatural. O sangue pode ser comprimido, deslocado ou expelido violentamente, transformando a própria circulação da vítima em uma arma contra ela.\n\nO alvo sofre 3d8 + 20 de dano físico e deve realizar um teste de Constituição. Se falhar, sofre 15 de dano adicional no início de cada turno durante 3 rodadas. Se o alvo sofrer dano suficiente para ficar com menos da metade do HP durante a duração, o usuário pode encerrar o ritual imediatamente para causar 2d6 de dano adicional, fazendo o sangue do alvo ser violentamente expelido por seus ferimentos.\n\nO ritual exige que o alvo possua sangue ou algum fluido equivalente circulando pelo corpo.",
+  "limitacoes": [],
+  "custo": "10 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Mandíbula Fantasma",
+  "alvo": "Único (até 10 metros)",
+  "descricao": "O ocultista morde o ar, e uma boca invisível fecha os dentes no alvo longe dali. A mordida não arranca carne: arranca a capacidade do corpo de se fechar. Por um tempo, a vítima não se cura por nada, nem cuidado, nem ritual, nem regeneração.",
+  "efeito": "O ocultista morde o ar, e uma boca invisível fecha os dentes no alvo à distância. A mordida não arranca carne, arranca a capacidade do corpo de se fechar.\n\nO alvo sofre 2d8 de dano físico e deve realizar um teste de Constituição DT20. Se falhar, fica Faminto por 1d4 rodadas: não recupera HP por nenhum meio, nem cura, nem ritual, nem regeneração.",
+  "limitacoes": [
+   "Criaturas com regeneração natural rolam o teste com desvantagem.",
+   "Não afeta criaturas sem corpo físico."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Estômago Abissal",
+  "alvo": "Próprio (reação)",
+  "descricao": "Quando um projétil ou ritual de alvo único vem na direção dele, o ocultista abre a boca além do possível e engole o ataque. Se conseguir, guarda o golpe no estômago e cospe de volta na rodada seguinte em quem quiser, com a mesma força.",
+  "efeito": "Quando um projétil ou ritual ofensivo de alvo único vem na direção do ocultista, ele abre a boca além do possível e engole o ataque.\n\nO usuário faz um teste de Vontade contra a DT do ataque ou do ritual. Se passar, o ataque é anulado e fica guardado no estômago. Na rodada seguinte, pode cuspir o ataque de volta em qualquer alvo à vista, com o mesmo dano original.\n\nSe falhar, recebe o ataque normalmente e mais 1d6 de dano interno.",
+  "limitacoes": [
+   "Uma vez por combate.",
+   "Não funciona contra ataques em área."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Banquete Coletivo",
+  "alvo": "Área (5 metros) ao redor de um cadáver",
+  "descricao": "O ocultista abre um cadáver recente e reparte a carne entre os aliados. Quem come recupera saúde e fôlego. Quem come demais fica com um apetite que precisa segurar na força de vontade.",
+  "efeito": "O ocultista abre um cadáver recente e reparte a carne entre os aliados. Quem aceita comer recupera 2d8 de HP e 1d8 de Stamina.\n\nCada aliado que comer faz um teste de Sanidade DT15. Se falhar, perde 1d6 de Sanidade e ganha a condição Apetite por uma cena: precisa passar em Vontade DT15 para não morder um cadáver próximo quando tiver a chance.",
+  "limitacoes": [
+   "O cadáver precisa ter morrido na mesma cena.",
+   "Uma vez por cadáver."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Memória Mastigada",
+  "alvo": "Cadáver",
+  "descricao": "O ocultista come um pedaço do cérebro ou do coração de um morto e engole as últimas lembranças dele. Vê os últimos minutos de vida como se fossem seus, com som e cheiro, e às vezes descobre um segredo que o morto guardava.",
+  "efeito": "O ocultista come um pedaço do cérebro ou do coração de um morto e engole junto as últimas lembranças dele.\n\nFaz um teste de Inteligência DT18. Se passar, vê os últimos minutos de vida do morto como se fossem seus, com som e cheiro. Se passar com folga de 10 ou mais, também descobre um segredo que o morto guardava.\n\nEm qualquer resultado, sofre 2d6 de dano de Sanidade pela morte que reviveu.",
+  "limitacoes": [
+   "O cadáver não pode ter mais de três dias."
+  ],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Dentes no Escuro",
+  "alvo": "Superfície (até 3 bocas)",
+  "descricao": "O ocultista desenha bocas com saliva e sangue no chão, numa parede ou porta. Elas somem da vista e ficam esperando. Quem pisa ou toca sem perceber é mordido e fica preso até se soltar na força.",
+  "efeito": "O ocultista desenha bocas com saliva e sangue no chão, parede ou porta. Elas somem da vista e ficam esperando.\n\nQuando uma criatura pisa ou toca a superfície, deve fazer um teste de Percepção DT20 para notar a armadilha antes. Se falhar, a boca morde: 3d6 de dano físico e o alvo fica preso até passar em um teste de Força DT18 no seu turno.",
+  "limitacoes": [
+   "As bocas duram até o fim da sessão ou até morderem.",
+   "O ocultista sabe quando uma boca morde, mas não vê quem foi."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Jejum Sagrado",
+  "alvo": "Próprio",
+  "descricao": "O ocultista para de comer e transforma a fome acumulada em força. Quanto mais horas sem comer, mais vontade e mais dano no corpo a corpo, até um limite.",
+  "efeito": "O ocultista para de comer e transforma a fome acumulada em força. Para cada 6 horas sem comer nada depois de ativar o ritual, ganha 1 acúmulo de Jejum, até o máximo de 4.\n\nCada acúmulo dá +2 em testes de Vontade e +1d4 de dano em ataques corpo a corpo.\n\nA cada 6 horas, o usuário faz um teste de Constituição DT15 mais 2 por acúmulo. Se falhar, perde todos os acúmulos e sofre 1d10 de dano por fraqueza.",
+  "limitacoes": [
+   "Comer qualquer coisa encerra o ritual."
+  ],
+  "custo": "3 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Gula Irresistível",
+  "alvo": "Único",
+  "descricao": "O ocultista sopra no rosto do alvo um cheiro de comida que não existe. Quem não resiste gasta o tempo procurando o que comer: rasga mochila, morde a própria mão, avança no que estiver perto.",
+  "efeito": "O ocultista sopra no rosto do alvo um cheiro de comida que não existe. O alvo deve passar em um teste de Vontade DT20.\n\nSe falhar, gasta a próxima ação procurando algo para comer: rasga mochila, morde a própria mão, avança no que estiver perto. Pode repetir o teste no início de cada turno. Dura no máximo 3 rodadas.",
+  "limitacoes": [
+   "Se o alvo for atacado enquanto come, o efeito acaba.",
+   "Criaturas que não comem são imunes."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Bile Corrosiva",
+  "alvo": "Cone (4 metros)",
+  "descricao": "O ocultista vomita uma bile verde e fervente que derrete o que toca. Quem não sai da frente queima e tem a armadura comida até ser consertada.",
+  "efeito": "O ocultista vomita uma bile verde e fervente que derrete o que toca.\n\nTodos no cone fazem um teste de Destreza DT20. Se falharem, sofrem 3d8 de dano ácido e a armadura perde 1 ponto de proteção até ser consertada. Se passarem, sofrem metade do dano e a armadura fica intacta.",
+  "limitacoes": [
+   "O usuário sofre 1d6 de dano interno a cada uso.",
+   "Duas vezes por combate."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Pele de Presa",
+  "alvo": "Próprio ou um aliado",
+  "descricao": "O ocultista se esfrega com sangue de um bicho pequeno e veste o cheiro de presa fraca. Criaturas que caçam pelo faro, pelo som ou pela fome deixam de ver o alvo como ameaça, e quando notam, atacam com menos cuidado.",
+  "efeito": "O ocultista se esfrega com sangue de um animal pequeno e veste o cheiro de presa fraca. Criaturas que caçam pelo faro, pelo som ou pela fome deixam de considerar o alvo uma ameaça.\n\nCriaturas paranormais predadoras devem passar em um teste de Percepção DT22 para notar o alvo enquanto ele não atacar. Se notarem, ainda o tratam como presa fácil e atacam com menos cuidado: o alvo ganha +1 dado na primeira esquiva ou contra-ataque.",
+  "limitacoes": [
+   "Termina no momento em que o alvo ataca.",
+   "Duração: 1 hora."
+  ],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Medula Roubada",
+  "alvo": "Único (toque ou mordida)",
+  "descricao": "O ocultista morde até o osso e chupa a medula da vítima. Se ela não resistir, ele leva um pedaço da força, da agilidade ou da resistência dela e fica com isso até o fim da cena.",
+  "efeito": "O ocultista morde até o osso e chupa a medula da vítima, levando junto um pedaço do que a faz forte.\n\nO alvo faz um teste de Constituição DT20. Se falhar, o ocultista escolhe Força, Destreza ou Constituição: o alvo perde 2 pontos nesse atributo e o ocultista ganha os mesmos 2 pontos até o fim da cena.",
+  "limitacoes": [
+   "Não pode roubar o mesmo atributo duas vezes do mesmo alvo na cena.",
+   "Ao fim da cena, o usuário faz um teste de Sanidade DT15 ou perde 1d8 de Sanidade."
+  ],
+  "custo": "7 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Ninhada",
+  "alvo": "Próprio",
+  "descricao": "O ocultista rasga a própria barriga e dela saem crias famintas do tamanho de ratos, com dentes demais. Elas lutam ao lado dele até o fim da luta.",
+  "efeito": "O ocultista rasga a própria barriga e dela saem pequenas criaturas famintas, do tamanho de ratos, com dentes demais.\n\nInvoca 1d4 + 1 crias. Cada uma tem 10 de HP, age no turno do ocultista e causa 1d6 de dano com mordida. Para acertar, a cria rola com o bônus de Pontaria ou Lutar do ocultista com desvantagem.\n\nO usuário perde 5 de HP por cria invocada.",
+  "limitacoes": [
+   "As crias somem ao fim do combate.",
+   "Uma vez por combate."
+  ],
+  "custo": "8 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Língua Serpente",
+  "alvo": "Único ou objeto (até 8 metros)",
+  "descricao": "A língua do ocultista se estica como chicote de carne e agarra. Puxa arma da mão de alguém ou puxa a própria pessoa até ficar colada nele, sem reação.",
+  "efeito": "A língua do ocultista se estica como um chicote de carne e agarra o alvo.\n\nContra objetos, puxa para a mão do usuário qualquer coisa que pese menos que Força x 5 quilos, se o portador falhar em um teste de Força DT18. Contra criaturas, o alvo faz um teste de Força ou Destreza DT20. Se falhar, é puxado até ficar ao lado do ocultista e perde a reação da rodada.",
+  "limitacoes": [
+   "Se a língua for cortada antes de recolher, o usuário sofre 2d6 de dano e não pode falar por uma cena."
+  ],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Fome de Luz",
+  "alvo": "Área (10 metros)",
+  "descricao": "O ocultista abre a boca e suga a luz do lugar. Lâmpada apaga, chama encolhe, lanterna morre. Por alguns instantes, escuridão total, e só ele enxerga.",
+  "efeito": "O ocultista abre a boca e suga a luz do ambiente. Lâmpadas apagam, chamas encolhem, lanternas morrem.\n\nA área fica em escuridão total por 1d6 rodadas. Fontes de luz trazidas para dentro durante o efeito precisam de um teste de Vontade DT18 do portador para continuarem acesas.\n\nO ocultista enxerga normalmente dentro da área.",
+  "limitacoes": [
+   "Rituais de luz ou lunares lançados dentro da área desfazem o efeito."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Fome",
+  "nome": "Eco da Presa",
+  "alvo": "Próprio",
+  "descricao": "O ocultista fala com a voz de alguém que ele já mordeu ou comeu. Sai perfeita, com sotaque, respiração e mania.",
+  "efeito": "O ocultista fala com a voz de alguém que ele já mordeu ou comeu. A voz sai perfeita, com sotaque, respiração e manias.\n\nQuem ouve e conhecia o dono da voz faz um teste de Percepção ou Intuição DT22. Se falhar, acredita que é a pessoa de verdade.",
+  "limitacoes": [
+   "Só funciona com vozes de quem o ocultista já provou o sangue ou a carne.",
+   "Duração: 10 minutos."
+  ],
+  "custo": "3 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Hálito Alucinógeno",
+  "alvo": "Área (4 metros)",
+  "descricao": "O hálito do ocultista vira uma névoa que entra na mente. Quem não resiste fica confuso por alguns instantes, e cada ataque que erra machuca o próprio atacante.",
+  "efeito": "O ocultista transforma seu hálito em uma névoa tóxica que invade a mente. Todos na área devem fazer um teste de Vontade (DT20). Se falharem, ficam confusos por 3 turnos. Durante esse tempo, se falharem em um ataque, tomam metade do dano desse ataque no próprio HP.",
+  "limitacoes": [
+   "Criaturas com máscaras ou proteção respiratória têm vantagem."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Paralisia Mental",
+  "alvo": "Único",
+  "descricao": "O ocultista infecta as próprias mãos. Qualquer acerto dele pode deixar o alvo desajeitado por alguns instantes.",
+  "efeito": "O ocultista infecta suas próprias mãos com uma praga mental invisível. Ao acertar um inimigo de qualquer modo, ele deve fazer um teste de Constituição. Se falhar, sofre desvantagem em testes de Destreza e semelhantes por 1d4 turnos.",
+  "limitacoes": [
+   "Não afeta criaturas imunes à doença."
+  ],
+  "custo": "3 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Absorção Decadente",
+  "alvo": "Armas Brancas ou de Longa distância, exceto de fogo",
+  "descricao": "Cada acerto da arma apodrece o alvo, e metade do ferimento volta como cura para quem usa. Em arma que já é encantada, o estrago aumenta.",
+  "efeito": "Ao realizar um ataque bem-sucedido com uma arma, o ocultista ativa a podridão do ritual. Metade do dano causado retorna como cura.\n\nPode ser ativado apenas uma vez por turno. Armas que já possuem efeitos mágicos ou alquímicos ganham 1d12 + 3 de dano adicional ao usar este ritual.",
+  "limitacoes": [],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Ninho de Vermes",
+  "alvo": "Único",
+  "descricao": "Larvas invisíveis entram no corpo da vítima e comem músculo e nervo por dentro, ignorando armadura. Enquanto não expulsa, a vítima perde força em tudo o que é físico. Se morrer com os vermes dentro, o corpo estoura num enxame que contamina quem estiver perto.",
+  "efeito": "O usuário invoca a podridão do Cavaleiro da Peste para implantar larvas invisíveis no corpo do alvo. Essas larvas começam a se mover sob a pele, corroendo músculos e nervos causando 4d8 + 10 de dano interno (ignora armadura). O alvo deve realizar um teste de Constituição DT 19 a cada rodada.\n\nAté passar no teste, o alvo sofre desvantagem de -1 dado em todos os testes físicos (Força, Destreza, Constituição), devido à dor e degeneração dos tecidos.",
+  "limitacoes": [
+   "Caso o alvo morra com os vermes dentro, seu corpo se rompe em um enxame putrefato, infectando qualquer criatura em até 2 metros (teste de Constituição para não ser contaminado).",
+   "Se usado repetidamente, o ritual cobra um preço: o corpo do próprio conjurador pode começar a ser consumido."
+  ],
+  "custo": "7 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Colheita Pestilenta",
+  "alvo": "Área (6 metros)",
+  "descricao": "Uma onda de pragas invisíveis entra em todo mundo na área e rouba vida e fôlego de dentro para fora. Em lugar já sujo, com cadáver, névoa ou podridão, fica muito pior.",
+  "efeito": "O usuário invoca uma onda de pestes invisíveis que se infiltram no corpo dos inimigos. Os organismos atingidos sentem seus corpos começarem a definhar de dentro para fora, como se algo estivesse roubando sua vitalidade.\n\nTodos os inimigos no raio devem fazer um teste de Constituição DT25.\n\nSe falharem, perdem imediatamente 4d8 de HP e 2d8 de Stamina, drenados pelo ritual.",
+  "limitacoes": [
+   "Se o ritual for usado em um ambiente já contaminado (neblina tóxica, cadáveres, sujeira extrema, etc.), o dano e a drenagem aumentam para d10."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Ossos Frágeis",
+  "alvo": "Único",
+  "descricao": "Palavras que fazem os ossos da vítima rangerem como vidro. A pele fica inteira, mas qualquer pancada machuca bem mais por um tempo.",
+  "efeito": "O usuário pronuncia palavras que reverberam nos ossos do inimigo, corroendo sua estrutura interna como se fossem feitos de vidro. A pele pode permanecer intacta, mas por dentro cada osso range e se parte com facilidade, transformando o corpo em uma casca prestes a ruir.\n\nO alvo fica com os ossos enfraquecidos, sofrendo +1d8 de dano extra sempre que receber dano físico.\n\nDuração de 1d6 rodadas.",
+  "limitacoes": [
+   "Pode ser usado apenas uma vez por combate no mesmo inimigo."
+  ],
+  "custo": "3 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Praga Enraizada",
+  "alvo": "Único",
+  "descricao": "O ocultista marca a vítima com uma praga. Cada ataque dele machuca mais, e a vítima fica muito pior em uma habilidade escolhida por ele, seja força, agilidade, cabeça ou presença.",
+  "efeito": "O usuário marca uma criatura dentro do seu movimento com uma praga invisível. Enquanto o ritual durar, o alvo sofre 2d10 de dano de Peste adicional sempre que for atingido por um ataque do usuário.\n\nAo lançar o ritual, o usuário deve escolher um atributo (Força, Destreza, Constituição, Inteligência, Tamanho, Vontade ou Carisma). O alvo sofre desvantagem de -5 em todos os testes do atributo ou de perícias relacionadas ao atributo escolhido enquanto estiver amaldiçoado.\n\nDuração: 1d8\nCusto: 5 PS",
+  "limitacoes": [
+   "A cada turno em que causar dano adicional com este ritual, o usuário deve fazer um teste de Constituição DT20. Se falhar, sofre 6 de dano de sanidade."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Tumor da Agonia",
+  "alvo": "Único (curta distância)",
+  "descricao": "Um tumor nasce no corpo da vítima e cresce até rasgar a pele. Machuca muito, atrapalha os ataques e deixa lento. Se a vítima morrer com o tumor, ele estoura em pus ácido em quem estiver perto.",
+  "efeito": "O conjurador pressiona a palma da mão no ar, como se amassasse algo. No mesmo instante, um tumor surge no corpo do alvo, crescendo rápido demais, esticando a pele até rasgar.\n\nO alvo faz teste de Constituição.\n\nFalha: toma 3d8 + 4d6 de dano interno, sofre Desvantagem de 1 dado em todos os ataques e tem seu deslocamento reduzido pela metade por 2 rodadas.\n\nSucesso: toma apenas 2d10 e sofre desvantagem de 1 dado somente no próximo ataque.\n\nExplosão: Se o alvo cair a 0 HP com o tumor ativo, ele explode em pus ácido, causando 6d6 de dano de Peste a todos em 2 metros.",
+  "limitacoes": [],
+  "custo": "7 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Chance pro Azar",
+  "alvo": "Único",
+  "descricao": "Uma praga que corrói a sorte. Enquanto dura, o alvo falha feio com muito mais frequência.",
+  "efeito": "O usuário invoca uma praga conceitual que corrói a sorte do alvo. No momento da ativação, escolha uma criatura na cena. Enquanto o ritual permanecer ativo, a margem de erro crítico do alvo é ampliada de 1 para 10, tornando falhas catastróficas muito mais frequentes.\n\nA cada turno, no início da sua vez, o usuário deve realizar um teste de Vontade.\nSe passar, o ritual continua ativo e o usuário sofre 5 PS de dano, sentindo a praga se alimentar da própria mente.\nSe falhar, o ritual se desfaz imediatamente, o usuário sofre 20 PS de dano e todos os efeitos cessam.\n\nO ritual permanece ativo indefinidamente até que o usuário falhe no teste de Vontade.",
+  "limitacoes": [],
+  "custo": "2 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Disfunção Profana",
+  "alvo": "Único",
+  "descricao": "O ocultista bagunça a lógica do corpo da vítima. Duas habilidades trocam de lugar por um tempo: quem lutava com força passa a lutar com agilidade, e assim por diante.",
+  "efeito": "O usuário distorce a “lógica interna” do alvo, fazendo com que suas capacidades deixem de funcionar como deveriam.\n\nAo ativar o ritual, escolha duas perícias do alvo.\nDurante 5 rodadas, os atributos base dessas perícias são trocados entre si.\nExemplo: se o alvo usa Lutar (Força) e Esquivar (Destreza), ele passa a usar Lutar (Destreza) e Esquivar (Força).",
+  "limitacoes": [
+   "Se as duas perícias usarem o mesmo atributo base, o ritual falha.",
+   "Usável uma vez por combate.",
+   "O alvo pode realizar um teste de Vontade no início de cada turno; em caso de sucesso, o efeito termina antecipadamente."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Infecção Perversa",
+  "alvo": "Único",
+  "descricao": "O ocultista contamina o próprio sangue e passa para a vítima no corte. Por alguns instantes, todo golpe que a vítima der machuca ela também.",
+  "efeito": "O usuário contamina o próprio sangue com uma essência de Peste e, ao ferir o alvo, transfere a infecção para dentro do corpo dele. A doença se espalha rapidamente pelos vasos sanguíneos, fazendo o organismo atacar a si mesmo. O alvo sofre 3d12 de dano físico e, durante 5 turnos, qualquer dano físico que ele causar também causa metade desse valor em si mesmo.\n\nO efeito termina quando o período se encerra ou quando o usuário decide dissipá-lo, a infecção não pode ser curada.",
+  "limitacoes": [],
+  "custo": "10 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Quarentena Maldita",
+  "alvo": "Perímetro (círculo de até 20 metros)",
+  "descricao": "O ocultista risca uma linha de pó cinzento em volta de uma área. Ela não segura ninguém, mas adoece quem atravessa, para dentro ou para fora, e deixa enjoado.",
+  "efeito": "O ocultista risca uma linha de pó cinzento ao redor de uma área. A linha não segura ninguém, mas adoece quem atravessa.\n\nToda criatura que cruzar a linha, para dentro ou para fora, faz um teste de Constituição DT20. Se falhar, sofre 2d8 de dano de Peste e fica Enjoada: desvantagem de 1 dado em ataques por 2 rodadas.",
+  "limitacoes": [
+   "Dura 1 hora ou até a linha ser apagada com água corrente ou fogo.",
+   "O próprio ocultista também precisa testar se atravessar."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Insônia Febril",
+  "alvo": "Único (toque)",
+  "descricao": "O ocultista encosta na testa da vítima e deixa uma febre que não deixa dormir. Por um dia, ela não recupera nada descansando e a cabeça vai cedendo.",
+  "efeito": "O ocultista encosta na testa do alvo e deixa nele uma febre que não deixa dormir.\n\nO alvo faz um teste de Constituição DT20. Se falhar, durante 24 horas não consegue descansar: não recupera HP, Stamina nem Sanidade por descanso, e perde 1d4 de Sanidade a cada 6 horas acordado.",
+  "limitacoes": [
+   "Rituais de cura ou purificação encerram o efeito.",
+   "Não afeta criaturas que não dormem."
+  ],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Sudário de Moscas",
+  "alvo": "Próprio",
+  "descricao": "Um enxame sai da boca e da roupa do ocultista e gira em volta dele como manto. Tiro de longe erra mais, e quem chega perto perde fôlego.",
+  "efeito": "Um enxame de moscas sai da boca e da roupa do ocultista e gira em volta dele como um manto vivo.\n\nEnquanto durar, ataques à distância contra o usuário rolam com desvantagem de 1 dado, e quem estiver a até 1 metro dele faz um teste de Constituição DT15 por turno ou perde 1d6 de Stamina.",
+  "limitacoes": [
+   "Duração: 1d6 rodadas.",
+   "Fogo em área dispersa o enxame imediatamente."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Esporos do Silêncio",
+  "alvo": "Único",
+  "descricao": "O ocultista sopra esporos na boca da vítima. A garganta incha e a voz some, e com ela qualquer ritual que precise de palavra, canto ou recitação.",
+  "efeito": "O ocultista sopra esporos na direção da boca do alvo. A garganta incha e a voz some.\n\nO alvo faz um teste de Constituição DT20. Se falhar, não consegue falar por 1d4 rodadas, e por isso não pode lançar rituais que exijam palavra, canto ou recitação.",
+  "limitacoes": [
+   "Proteção respiratória dá vantagem no teste.",
+   "Uma vez por combate no mesmo alvo."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Carne Pútrida",
+  "alvo": "Próprio",
+  "descricao": "A pele do ocultista apodrece por fora, mole, cheia de pus. Quem bate nele de perto leva a doença junto e erra o próximo golpe.",
+  "efeito": "A pele do ocultista apodrece por fora, mole, fedendo e cheia de pus. Quem bate nele leva a doença junto.\n\nSempre que uma criatura acertar o usuário com ataque corpo a corpo, faz um teste de Constituição DT18. Se falhar, sofre 1d10 de dano de Peste e desvantagem de 1 dado no próximo ataque.",
+  "limitacoes": [
+   "Duração: 1d6 rodadas.",
+   "Durante o efeito, o usuário perde 2 de Presença e causa teste de Sanidade DT12 em aliados que o veem pela primeira vez assim."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Contágio Encadeado",
+  "alvo": "Único, e quem estiver perto dele",
+  "descricao": "O ocultista infecta um alvo com uma doença que pula de corpo em corpo. A cada momento, salta para o mais próximo do último infectado, um pouco mais fraca a cada salto. Pode pular para aliado do próprio ocultista.",
+  "efeito": "O ocultista infecta um alvo com uma doença que pula de corpo em corpo.\n\nO primeiro alvo sofre 2d8 de dano de Peste se falhar em Constituição DT20. No início de cada turno do ocultista, a doença salta para a criatura mais próxima do último infectado, em até 3 metros, que faz o mesmo teste. O dano cai 1 dado a cada salto.",
+  "limitacoes": [
+   "Para quando ninguém estiver a até 3 metros ou quando o dano chegar a zero dados.",
+   "A doença pode saltar para aliados do ocultista."
+  ],
+  "custo": "7 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Pane Pestilenta",
+  "alvo": "Máquina, veículo ou aparelho (até 10 metros)",
+  "descricao": "O ocultista adoece aquilo que não deveria adoecer. Motor engasga, rádio chia, câmera trava, arma emperra.",
+  "efeito": "O ocultista adoece aquilo que não deveria poder adoecer. Motor engasga, rádio chia, câmera trava, arma emperra.\n\nO aparelho escolhido para de funcionar se o operador falhar em um teste de Mecânica ou Tecnologia DT20. Ele pode tentar consertar com uma ação e outro teste de mesma DT.",
+  "limitacoes": [
+   "Em armas de fogo, causa uma pane que exige uma ação para resolver.",
+   "Não afeta equipamentos paranormais ou abençoados."
+  ],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Enxame Mensageiro",
+  "alvo": "Enxame de insetos",
+  "descricao": "O ocultista sussurra para um enxame e passa a ver e ouvir através dele. O enxame voa longe e pode até formar palavras no ar ou na parede.",
+  "efeito": "O ocultista sussurra para um enxame e passa a enxergar e ouvir através dele.\n\nO enxame viaja até 1 quilômetro sob o controle do usuário e pode carregar uma mensagem curta, formando palavras no ar ou em uma parede. Quem tentar notar que o enxame está sendo controlado faz um teste de Percepção DT20.",
+  "limitacoes": [
+   "Duração: 1 hora.",
+   "Enquanto controla o enxame, o corpo do ocultista fica parado e vulnerável."
+  ],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Purulência Transferida",
+  "alvo": "Um aliado e um inimigo",
+  "descricao": "O ocultista suga a doença de um aliado e cospe no inimigo. Veneno, sangramento, praga, confusão ou paralisia saem de um e vão para o outro.",
+  "efeito": "O ocultista suga a doença de um aliado e cospe no inimigo. Uma condição negativa do aliado, como veneno, sangramento, praga, confusão ou paralisia, sai dele e passa para o alvo hostil.\n\nO inimigo faz um teste de Constituição DT20. Se falhar, recebe a condição com a duração restante. Se passar, a condição some do aliado, mas não vai para ninguém.",
+  "limitacoes": [
+   "O ocultista precisa tocar o aliado e ver o inimigo.",
+   "Não transfere morte, dano já sofrido nem maldições de Cavaleiro."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Hospedeiro Adormecido",
+  "alvo": "Único (toque)",
+  "descricao": "O ocultista planta uma praga que não faz nada. Ainda. Por alguns dias, basta ele dizer uma palavra, de qualquer distância, e a praga acorda de uma vez.",
+  "efeito": "O ocultista planta uma praga que não faz nada. Ainda.\n\nO alvo faz um teste de Constituição DT18 e, se falhar, carrega a praga sem sintoma. A qualquer momento nos próximos 7 dias, o ocultista pode dizer uma palavra escolhida na hora do ritual, em qualquer distância. A praga acorda: 5d8 de dano de Peste de uma vez.",
+  "limitacoes": [
+   "Exames comuns não detectam. Um teste de Medicina DT25 com equipamento adequado detecta e retira.",
+   "Só um hospedeiro por vez."
+  ],
+  "custo": "8 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Couro Imune",
+  "alvo": "Próprio ou um aliado",
+  "descricao": "O ocultista se infecta com uma praga controlada que expulsa todas as outras. Fica imune a veneno, gás, doença comum e efeito da Peste que dependa do corpo resistir.",
+  "efeito": "O ocultista se infecta com uma praga controlada que expulsa todas as outras.\n\nO alvo fica imune a venenos, gases, doenças comuns e efeitos de Peste que exijam teste de Constituição.",
+  "limitacoes": [
+   "Duração: 1 cena.",
+   "Ao fim do efeito, o alvo faz um teste de Constituição DT15 ou fica Enjoado por 1 hora: desvantagem de 1 dado em testes físicos."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Solo Pestilento",
+  "alvo": "Área (8 metros)",
+  "descricao": "O chão apodrece em lama negra cheia de raiz morta e larva. Andar ali é lento, e quem fica parado em cima adoece.",
+  "efeito": "O chão apodrece em lama negra cheia de raiz morta e larva. Andar ali é andar em cima de uma doença.\n\nA área vira terreno difícil: o deslocamento dentro dela cai pela metade. Quem terminar o turno dentro faz um teste de Constituição DT18 ou sofre 1d8 de dano de Peste.",
+  "limitacoes": [
+   "Duração: 1d6 rodadas.",
+   "Não funciona em chão de metal, vidro ou superfícies abençoadas."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Mão Murcha",
+  "alvo": "Único (um membro)",
+  "descricao": "O ocultista aponta para um braço ou uma perna e o membro seca como galho velho. Braço larga o que segura, perna derruba.",
+  "efeito": "O ocultista aponta para um braço ou uma perna do alvo, e o membro seca como galho velho.\n\nO alvo faz um teste de Constituição DT20. Se falhar, o membro escolhido fica inútil por 1d4 rodadas. Braço: larga o que estiver segurando e não pode usar aquela mão. Perna: cai e só se arrasta.",
+  "limitacoes": [
+   "Uma vez por combate no mesmo alvo.",
+   "Não afeta criaturas sem membros definidos."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Peste",
+  "nome": "Delírio Coletivo",
+  "alvo": "Área (6 metros)",
+  "descricao": "O ocultista solta no ar uma praga mental que faz todos verem a mesma mentira: uma parede que não existe, um aliado morto, uma porta aberta, um monstro.",
+  "efeito": "O ocultista solta no ar uma praga mental que faz todos verem a mesma mentira. Ele escolhe a cena: uma parede onde não tem, um aliado morto no chão, uma porta aberta, um monstro.\n\nCada criatura na área faz um teste de Intuição ou Vontade DT20. Quem falhar acredita na ilusão por 1d4 rodadas ou até tocar nela.",
+  "limitacoes": [
+   "A ilusão não causa dano direto.",
+   "O ocultista precisa manter a concentração. Se sofrer dano, faz Vontade DT15 ou a ilusão some."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Enfurecer",
+  "alvo": "Único",
+  "descricao": "Quando já perdeu mais da metade da vida, o ocultista desenha um símbolo no corpo com sangue ou tinta. A razão some, e o que sobra vira força e resistência até o fim da luta.",
+  "efeito": "O usuário, ao perder mais da metade de sua vida, pode recorrer ao ritual Enfurecer como último recurso. Para ativá-lo, ele deve desenhar um símbolo ritualístico em alguma parte de seu corpo usando sangue, tinta ou outro meio adequado. Assim que o símbolo estiver completo, sua mente é sobrecarregada e ele perde toda sua inteligência racional. O valor de Inteligência é dividido por dois, e essa fração é somada igualmente aos atributos Força e Constituição.\n\nO estado de fúria dura até o final do combate. Quando o efeito termina, o usuário sofre uma enxaqueca severa e precisa descansar por 8 horas para recuperar sua clareza mental. Caso entre em outro combate antes desse período, ele sofre desvantagem em todas as jogadas devido à exaustão mental.",
+  "limitacoes": [
+   "Este ritual pode ser aplicado em outros."
+  ],
+  "custo": "15 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Adrenalina",
+  "alvo": "Próprio",
+  "descricao": "Um grito e o sangue acelera. Por alguns instantes, golpe físico não machuca. Ele ainda é empurrado e cai, mas não sente.",
+  "efeito": "Ao invocar a pura essência da Guerra e acelerar o fluxo de sangue com um grito visceral, o usuário entra em um estado de resistência absoluta, como se a dor simplesmente deixasse de existir.\nDurante um curto período, ataques físicos não causam dano, como se o corpo estivesse além dos limites do sofrimento humano.",
+  "limitacoes": [
+   "Duração: 1d6 rodadas.",
+   "O corpo continua a sofrer os impactos (empurrões, quedas), mas não sofre dano físico.",
+   "Após o fim do efeito, o usuário recebe 12 pontos de dano não-prevenível, representando o colapso físico após a adrenalina cessar."
+  ],
+  "custo": "7 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Batalha Forçada",
+  "alvo": "Único",
+  "descricao": "A presença do ocultista fica impossível de ignorar. Todo inimigo consciente passa a atacar só ele até o efeito acabar. Ele brilha vermelho e a voz ecoa dobrada.",
+  "efeito": "O usuário encara seus inimigos com uma presença impossível de ignorar, como se o próprio campo de batalha se curvasse à sua vontade. Ao executar o ritual, todos os adversários conscientes na cena devem concentrar seus ataques exclusivamente no usuário, ignorando qualquer outro alvo até o fim do efeito.",
+  "limitacoes": [
+   "Duração: 1d8 rodadas.",
+   "Usável uma vez por combate.",
+   "Afeta apenas inimigos com algum nível de consciência ou intenção (não funciona em controladas diretamente).",
+   "Durante o efeito, o ocultista emana um brilho vermelho tênue e sua voz ecoa com duas camadas.",
+   "Se o ocultista morrer antes do fim da duração, o efeito cessa imediatamente."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Pele de Guerra",
+  "alvo": "Próprio",
+  "descricao": "Bebendo sangue fresco de um inimigo, o ocultista fica imune por alguns instantes a ritual que machuca, controla, corrompe ou prende. Rachaduras vermelhas aparecem sob a pele, como brasa.",
+  "efeito": "Ao recitar um cântico ancestral e ingerir o sangue de um oponente, o usuário invoca a maldição do Cavaleiro da Guerra. Durante um breve período, sua pele se torna como armadura espiritual, resistente à influência de rituais ofensivos diretos.\n\nEnquanto durar o efeito, o personagem se torna imune a rituais que causem dano, controle mental, corrupção ou efeitos físicos diretos, como paralisia, combustão, drenagem etc.",
+  "limitacoes": [
+   "Duração: 1d4 rodadas.",
+   "Requer: consumir sangue fresco (de inimigo derrotado ou ferido).",
+   "Durante o efeito, o corpo emite calor e traços vermelhos surgem sob a pele, como rachaduras em brasas."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Punho Furioso",
+  "alvo": "Próprio",
+  "descricao": "Por um tempo, os socos ganham uma força de concussão absurda. Arromba porta, racha parede, derruba com menos golpes.",
+  "efeito": "Por 1d10 rodadas, a força bruta do conjurador é tomada por uma fúria marcial. Durante esse período, todo golpe desferido com socos causa um adicional de +2d8 + 3 de dano de concussão. Além disso, sua força de impacto é aumentada, permitindo empurrar, quebrar estruturas frágeis ou desestabilizar inimigos com mais facilidade.",
+  "limitacoes": [
+   "Aumento da força de impacto pode ser usado criativamente (abrir portas, causar tremores em paredes, nocautear com menos golpes, etc.).",
+   "Não pode ser combinado com armas, apenas combate corpo a corpo.",
+   "Caso o conjurador esteja usando luvas com reforço metálico ou algo similar, o bônus ainda se aplica."
+  ],
+  "custo": "10 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Bomba Relógio",
+  "alvo": "Próprio",
+  "descricao": "O ocultista transforma o próprio corpo em bomba. Pode explodir um membro e perder para sempre, ou explodir inteiro e morrer.",
+  "efeito": "O usuário concentra a fúria em seus próprios ossos, músculos e sangue, transformando o corpo em uma bomba de carne. Ele pode escolher detonar membros específicos ou o corpo inteiro:\n\nExplosão de Membros: Cada membro explodido causa dano em área igual a (Força ÷ 5) + 2d6 de explosão. O usuário perde permanentemente o membro.\n\nExplosão Total: O corpo inteiro explode, liberando energia destrutiva em todos os lados. O dano em área é igual a (Soma de todos os atributos físicos ÷ 5), causando devastação massiva. O conjurador morre no processo.",
+  "limitacoes": [
+   "A explosão atinge tudo em um raio de 5 metros por membro, ou 15 metros no caso da explosão total.",
+   "A decisão de explodir membros ou o corpo deve ser feita antes da ativação."
+  ],
+  "custo": "20 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Mira Sangrenta",
+  "alvo": "Arma de longo alcance (arco, rifle, besta, etc.)",
+  "descricao": "A fúria entra na arma, e cada disparo fica mais forte quanto mais longe está o alvo. Quem mata com ele pode ser tomado por um êxtase e continuar atirando em qualquer coisa viva.",
+  "efeito": "O usuário canaliza a fúria da guerra através de sua arma, transformando cada disparo em um projétil que se alimenta da distância. Quanto mais longe do inimigo, maior o impacto.\n\nPara cada 2 metros de distância entre o conjurador e o alvo, o ataque recebe +1d4 de dano extra.\n\nSe o alvo for eliminado com esse ritual, o usuário deve passar em um teste de Sanidade. Em caso de falha, ele sente um êxtase violento e é compelido a continuar atirando em qualquer alvo vivo até o fim da rodada.",
+  "limitacoes": [
+   "Custa 4 pontos de Sanidade por disparo (o ritual força o usuário a sentir o impacto da matança à distância).",
+   "Ativo por 1d4 rodadas."
+  ],
+  "custo": "7 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Honra Compartilhada",
+  "alvo": "Único aliado",
+  "descricao": "O ocultista empresta a experiência de uma habilidade dele a um aliado, que passa a ser muito melhor naquilo por um instante.",
+  "efeito": "O usuário canaliza seu instinto de batalha e transfere temporariamente a essência de uma de suas perícias para um aliado. Durante uma rodada, o aliado pode rolar com duas vantagens testes que envolvam aquela perícia, como se tivesse herdado a experiência do conjurador.\n\nO aliado escolhido recebe vantagem em rolagens de uma perícia específica (escolhida no momento do uso) durante a rodada.",
+  "limitacoes": [
+   "O conjurador perde seu turno ao ativar o ritual.",
+   "Pode ser usado várias vezes por sessão, mas apenas em um combate."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Troca Tática",
+  "alvo": "Aliado",
+  "descricao": "Quando um aliado vai ser atingido, o ocultista troca de lugar com ele num piscar de olhos e recebe o golpe, mais preparado para desviar.",
+  "efeito": "A Guerra não é apenas força, é instinto, cálculo e sacrifício. Com este ritual, o ocultista lê o fluxo da batalha e, num instante, rompe o espaço entre si e o aliado. Em um piscar de olhos, as posições se invertem, e o golpe destinado ao companheiro é recebido pelo verdadeiro guerreiro.\n\nQuando um aliado for alvo de um ataque dentro do alcance do seu movimento, o ocultista pode ativar o ritual instantaneamente, trocando de lugar com o aliado.\n\nO ataque é redirecionado para o ocultista, mas ele recebe +1 dado em testes de Reação (Esquivar / Contra-atacar / Bloquear) para tentar evitar ou reduzir o dano.\n\nA movimentação é instantânea e não consome ação.",
+  "limitacoes": [
+   "3 usos por sessão.",
+   "O ritual não pode ser usado se o ocultista estiver impedido de se mover (enraizado, paralisado, etc.)."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Zona de Supremacia",
+  "alvo": "Área circular de até 15 metros",
+  "descricao": "O terreno vira zona militar viva. Inimigos dentro dela se defendem pior, e aliados se movem e se cobrem melhor. Quem não resiste ao entrar trava no lugar por um instante.",
+  "efeito": "O usuário demarca o terreno com precisão operacional, convertendo o espaço em uma zona militarizada viva.\nDurante 5 rodadas, qualquer inimigo que entrar, sair ou se mover dentro da área sofre queda automática de 1 dado em ações defensivas.\n\nAliados recebem +1 dado em ações de movimentação e cobertura, como se a própria geografia estivesse otimizando suas rotas.\n\nA área cria um campo de pressão psicológica que força inimigos a se deslocarem de forma ineficiente, caso um inimigo falhe em um teste de Vontade ao entrar na zona, ele fica paralisado por 1 rodada, como se o terreno agarrasse seus passos.",
+  "limitacoes": [],
+  "custo": "7 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Combate Crítico",
+  "alvo": "Único",
+  "descricao": "O ocultista marca uma arma, e até o fim da luta tudo o que ela acerta machuca como golpe perfeito.",
+  "efeito": "Durante um combate, ao custo de 12 PS, declare uma arma física e ponha uma marca, até o final do combate, todo dano causado por essa arma é multiplicado pelo seu multiplicador de crítico.\n\nAo final do combate, rode um teste de Vontade ou Resiliência DT20 pela sua arma, caso falhe, sua arma adquire +1 ponto no status \"Corroída\", ao chegar em 3 pontos, sua arma quebra e não pode mais ser utilizada.",
+  "limitacoes": [],
+  "custo": "12 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Estandarte Rubro",
+  "alvo": "Área (10 metros)",
+  "descricao": "O ocultista crava no chão uma arma, um pano ou um osso marcado com sangue, que vira bandeira de guerra. Aliados perto dele resistem a medo e pânico. Se o estandarte cai, todos sentem.",
+  "efeito": "O ocultista crava no chão uma arma, um pano ou um osso marcado com sangue, e ele vira bandeira de guerra.\n\nAliados dentro da área ganham +5 em testes de Sanidade e Vontade contra medo, pânico e intimidação.\n\nSe o estandarte for derrubado, todos os aliados na área fazem um teste de Sanidade DT15 ou perdem 1d6 de Sanidade.",
+  "limitacoes": [
+   "Duração: até o fim do combate.",
+   "O estandarte tem 20 de HP."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Trincheira Instantânea",
+  "alvo": "Terreno (até 6 metros de comprimento)",
+  "descricao": "O ocultista bate a mão no chão e a terra se levanta numa mureta de cobertura até meio corpo.",
+  "efeito": "O ocultista bate a mão no chão e a terra se levanta em uma mureta de cobertura.\n\nCria uma barreira de até meio corpo de altura, com 30 de HP. Quem estiver atrás recebe +1 dado em testes de cobertura e esquiva contra ataques à distância vindos do outro lado.",
+  "limitacoes": [
+   "Exige chão de terra, areia, cascalho ou entulho. Não funciona em piso de concreto, metal ou água.",
+   "Exige um teste de Força ou Vontade DT15 para erguer a tempo durante o combate."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Fogo Cruzado",
+  "alvo": "Único inimigo",
+  "descricao": "O ocultista aponta e marca um alvo para o grupo inteiro. Quem atacar o mesmo alvo naquele momento ataca sabendo de onde o outro vem, e cada golpe a mais pesa mais.",
+  "efeito": "O ocultista aponta o alvo e marca ele para o grupo inteiro. Quem atacar o mesmo alvo naquela rodada ataca sabendo de onde o outro vem.\n\nAté o início do próximo turno do usuário, cada ataque de aliado contra o alvo marcado recebe +2 de acerto, e o segundo ataque em diante recebe +1d6 de dano.",
+  "limitacoes": [
+   "O alvo pode tentar escapar da marca com um teste de Furtividade DT20, saindo da linha de visão do grupo."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Desarme Sangrento",
+  "alvo": "Único (reação)",
+  "descricao": "Quando é atacado de perto, o ocultista recebe o golpe de propósito e prende a arma do inimigo na própria carne, desarmando quem bateu.",
+  "efeito": "Quando é atacado corpo a corpo, o ocultista recebe o golpe de propósito e prende a arma do inimigo na própria carne.\n\nO usuário sofre metade do dano do ataque e faz um teste de Força DT igual ao Lutar do atacante +10. Se passar, a arma fica presa nele e o atacante é desarmado. O usuário pode arrancar a arma e usar no próprio turno.",
+  "limitacoes": [
+   "Não funciona contra ataques desarmados, garras ou mordidas.",
+   "Duas vezes por combate."
+  ],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Cicatriz de Batalha",
+  "alvo": "Próprio",
+  "descricao": "Quando sofre um golpe perfeito, o ocultista transforma a ferida em memória do corpo e fica mais resistente àquele tipo de dano até o fim da missão.",
+  "efeito": "Quando sofre um acerto crítico, o ocultista transforma a ferida em memória do corpo.\n\nEscolhe o tipo de dano do crítico: corte, perfuração, impacto, fogo, frio, ácido ou outro. Até o fim da sessão, o dano desse tipo contra ele é reduzido em 5.",
+  "limitacoes": [
+   "Precisa ser ativado logo após sofrer o crítico.",
+   "O usuário faz um teste de Constituição DT15. Se falhar, fica com a cicatriz para sempre, sem bônus depois da sessão."
+  ],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Leitura de Campo",
+  "alvo": "Único inimigo",
+  "descricao": "O ocultista olha o inimigo como general olha mapa e enxerga o próximo movimento antes de acontecer, avisando um aliado.",
+  "efeito": "O ocultista olha o inimigo como general olha um mapa e enxerga o próximo movimento antes de acontecer.\n\nFaz um teste de Tática ou Intuição contra a Vontade do alvo. Se passar, o mestre revela qual será a próxima ação do alvo. O usuário e um aliado que estiver ouvindo ganham +1 dado na primeira reação contra essa ação.",
+  "limitacoes": [
+   "Se o alvo mudar a ação depois de revelada, perde metade do seu deslocamento.",
+   "Duas vezes por combate."
+  ],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Marcha Forçada",
+  "alvo": "Grupo (até 8 pessoas)",
+  "descricao": "O ocultista canta uma cadência de marcha, e o grupo anda como exército em campanha, o dobro da distância sem cansar.",
+  "efeito": "O ocultista canta uma cadência de marcha, e o grupo anda como exército em campanha.\n\nDurante até 12 horas de viagem a pé, o grupo percorre o dobro da distância normal e não sofre cansaço por caminhada.",
+  "limitacoes": [
+   "Ao fim da marcha, cada participante faz um teste de Constituição DT15. Se falhar, perde 1d10 de Stamina e precisa de 4 horas de descanso.",
+   "Não funciona em combate."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Arma Juramentada",
+  "alvo": "Uma arma",
+  "descricao": "O ocultista jura lealdade a uma arma com o próprio sangue. Ela volta para a mão dele de longe e ninguém além dele consegue ferir com ela.",
+  "efeito": "O ocultista jura lealdade a uma arma com o próprio sangue, e ela passa a jurar de volta.\n\nA arma volta para a mão do usuário com uma ação de movimento, de até 30 metros, mesmo se estiver presa ou com outra pessoa, desde que o portador falhe em um teste de Força DT18. Além disso, ninguém além do usuário consegue causar dano com ela.",
+  "limitacoes": [
+   "O vínculo é permanente até o usuário morrer ou fazer o ritual em outra arma.",
+   "Se a arma quebrar, o usuário perde 2d6 de Sanidade."
+  ],
+  "custo": "8 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Duelo Selado",
+  "alvo": "Único inimigo",
+  "descricao": "O ocultista desenha um círculo com a ponta da arma e chama o inimigo para dentro. Se ele aceitar ou não resistir, os dois ficam presos no duelo, e ninguém de fora interfere até um cair ou se render.",
+  "efeito": "O ocultista desenha um círculo no chão com a ponta da arma e chama o inimigo para dentro. Se aceitar, ou se falhar em um teste de Vontade DT20, os dois ficam presos no duelo.\n\nNinguém de fora pode atacar, curar ou lançar ritual em quem está dentro, e ninguém de dentro pode sair até um dos dois cair ou se render.",
+  "limitacoes": [
+   "O círculo tem 6 metros de diâmetro.",
+   "Se o usuário perder, fica com desvantagem de 1 dado em ataques até o fim da sessão."
+  ],
+  "custo": "8 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Contra-Ofensiva",
+  "alvo": "Próprio",
+  "descricao": "O ocultista para de atacar e passa a guardar a raiva de cada golpe que recebe. Quando encerra, o próximo ataque devolve metade de tudo.",
+  "efeito": "O ocultista para de atacar e passa a guardar a raiva de cada golpe que recebe.\n\nDurante até 3 rodadas, todo dano físico sofrido pelo usuário é anotado. No turno em que ele encerrar o ritual, o próximo ataque causa dano extra igual à metade de todo o dano guardado.",
+  "limitacoes": [
+   "Enquanto acumula, o usuário não pode atacar.",
+   "Se cair a 0 HP enquanto acumula, o ritual se perde."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Pólvora Eterna",
+  "alvo": "Uma arma de fogo",
+  "descricao": "O ocultista sopra no cano e a arma passa a disparar a raiva dele no lugar de munição, sem recarregar e sem emperrar, por um tempo.",
+  "efeito": "O ocultista sopra dentro do cano, e a arma passa a disparar a raiva dele no lugar de munição.\n\nDurante 1d6 rodadas, a arma não precisa ser recarregada e nunca emperra.",
+  "limitacoes": [
+   "Cada disparo cobra 1 ponto de Sanidade do usuário.",
+   "Ao fim do efeito, a arma fica quente demais para ser usada por 1 rodada."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Sangue de Veterano",
+  "alvo": "Próprio",
+  "descricao": "Quando o corpo cai, o ocultista se recusa a deitar. Continua lutando por alguns instantes, pior em tudo, e no fim pode ficar de pé ou cair de vez.",
+  "efeito": "Quando o corpo cai, o ocultista se recusa a deitar.\n\nAo chegar a 0 HP, o usuário pode ativar o ritual em vez de ficar inconsciente. Continua lutando por mais 2 rodadas, com desvantagem de 1 dado em tudo. No fim das 2 rodadas, faz um teste de Constituição DT20. Se passar, fica estável com 1 de HP. Se falhar, cai inconsciente e morrendo.",
+  "limitacoes": [
+   "Uma vez por sessão.",
+   "Qualquer dano recebido durante as 2 rodadas aumenta a DT do teste final em 2."
+  ],
+  "custo": "8 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Guerra",
+  "nome": "Brado de Pavor",
+  "alvo": "Área (10 metros)",
+  "descricao": "O ocultista solta um urro de campo de batalha, como mil soldados mortos gritando juntos. Quem não resiste fica apavorado, se afasta e luta mal contra ele.",
+  "efeito": "O ocultista solta um urro de campo de batalha, o grito de mil soldados mortos ao mesmo tempo.\n\nTodo inimigo na área faz um teste de Vontade DT20. Se falhar, fica Apavorado por 1d4 rodadas: precisa usar o movimento para se afastar do usuário e tem desvantagem de 1 dado em ataques contra ele.",
+  "limitacoes": [
+   "Criaturas sem mente ou imunes a medo não são afetadas.",
+   "Uma vez por combate."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Toque do Além",
+  "alvo": "Único",
+  "descricao": "O ocultista sacrifica um pedaço da própria cabeça e coloca na arma ou no ritual um fragmento do além. O golpe causa um frio cortante que atravessa resistência comum.",
+  "efeito": "Usando a energia da Morte, o ocultista envolve sua arma ou feitiço com fragmentos do além. Ele pode sacrificar um valor de Sanidade à sua escolha (mínimo 6, máximo 12) antes de realizar um ataque ou lançar um ritual ofensivo. Esse valor é somado com +10 de dano direto, ignorando resistências comuns, causando um frio cortante e paralisante no alvo.",
+  "limitacoes": [
+   "O dano extra é considerado necrosante e espiritual."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Influência Temporal",
+  "alvo": "Toque",
+  "descricao": "Volta um objeto ou uma parte do corpo para um estado anterior. Cura ferida recente, enferruja arma, desfaz desgaste. Em gente, só funciona em uma parte por vez e nunca traz ninguém de volta à vida.",
+  "efeito": "Um ritual antigo que permite ao ocultista reverter um item ou uma parte do corpo a um estado anterior, seja curando uma ferida recente, enferrujando uma arma, ou desfazendo meses de desgaste.\n\nLimite: Até 2 dias no passado para itens.\n\nPara corpos humanos: só pode ser usado em partes específicas (ex: um olho, uma mão, o fígado), e nunca traz alguém de volta à vida.",
+  "limitacoes": [],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Ultimato",
+  "alvo": "Único",
+  "descricao": "Com o sangue e a identidade do alvo, o ocultista domina a última ação de quem está morrendo: puxar um gatilho, virar um volante, soltar uma corda.",
+  "efeito": "Ao traçar um símbolo com sangue e canalizar a essência da Morte, o ocultista pode dominar a última ação de uma criatura marcada, obrigando-a a fazer exatamente o que ele desejar, contanto que esteja nos segundos finais antes de morrer.\n\nA ação deve ser algo realizável em uma ação de movimento (puxar o gatilho, desviar o carro, soltar algo, etc.)\n\nRequisitos: Contato com o sangue e conhecimento da identidade do alvo.",
+  "limitacoes": [],
+  "custo": "2 pontos de Sanidade",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Olhar da Penitência",
+  "alvo": "Único",
+  "descricao": "Enquanto o olhar se mantém, a vítima é obrigada a encarar cada pecado, falha e morte que causou. Quem carrega culpa de verdade sofre muito mais e pode travar em pânico.",
+  "efeito": "Inspirado pelo mito do Julgamento Final, esse ritual convoca a culpa e a dor das almas condenadas. O alvo é forçado a confrontar todos os pecados, falhas e mortes pelas quais foi responsável.\n\nO alvo sofre 4d12 + 20 de dano mental enquanto o contato visual for mantido. Se o alvo tiver crimes reais ou culpas profundas, o dano aumenta para 6d12 + 30 e pode entrar em estado de pânico ou catatonia caso falhe em dois testes de Vontade.",
+  "limitacoes": [
+   "Criaturas sem alma ou isentas de culpa são imunes."
+  ],
+  "custo": "10 PS por turno de sustentação",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Fogo Negro",
+  "alvo": "Arma ou Mãos",
+  "descricao": "Chamas negras que não iluminam nem esquentam como fogo comum. Queimam vida e sanidade, ignoram armadura e não apagam com água nem vento. O que queima vira algo frágil como cinza, sem marca de fogo.",
+  "efeito": "O usuário invoca chamas negras que não iluminam e não produzem calor comum. Essas chamas queimam a essência vital e a sanidade das vítimas.\n\nCada alvo atingido deve realizar um teste de Constituição ou sofrer 2d10 + 8 de dano de vitalidade (ignora armadura) e 2d6 de perda de Sanidade.",
+  "limitacoes": [
+   "O fogo negro não pode ser apagado por água ou vento; só desaparece quando o conjurador cancela ou após 1d8 rodadas.",
+   "O conjurador sente frio extremo durante o uso, ganhando -5 em testes de Constituição até descansar.",
+   "Objetos queimados pelo fogo negro se tornam frágeis como cinza, mas não deixam marcas comuns de fogo, apenas um vazio enegrecido."
+  ],
+  "custo": "3 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Horror Paranormal",
+  "alvo": "Único",
+  "descricao": "O ocultista abre mão de metade da própria vida até o fim da missão e vira emissário da Morte. Se a vítima não resistir, a alma dela é banida para sempre e a mente é destruída sem volta. Quem vê o ocultista nesse estado sente pavor.",
+  "efeito": "O usuário abre mão de metade da própria vida até o final da sessão, tornando-se um emissário da própria Morte. Ao assumir esse fardo, adquire o poder de condenar uma alma ao esquecimento eterno, banindo-a e destruindo sua sanidade de forma irreversível.\n\nO conjurador reduz seu HP Máximo pela metade até o final da sessão. Esse valor não pode ser recuperado até a próxima sessão.\n\nUma vez ativado, o usuário pode escolher uma criatura e, caso o alvo falhe em um teste de Vontade de DT30 com -1d de desvantagem, sua alma é banida para sempre.\n\nO alvo tem sua Sanidade reduzida a 0 imediatamente e não pode ser restaurada. Para todos os efeitos, sua mente foi destruída e sua alma arrastada ao “inferno” ou equivalente.\n\nO usuário assume, até o fim da sessão, o “papel da Morte”: sua presença inspira pavor sobrenatural (inimigos próximos devem testar Sanidade ao vê-lo).",
+  "limitacoes": [
+   "Só pode ser usado uma vez por campanha.",
+   "O preço do ritual é permanente para aquela sessão: mesmo que o adversário passe no teste, o usuário ainda sofre o corte do HP.",
+   "Criaturas sem Sanidade (constructos, mortos-vivos, entidades abstratas) são imunes."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Forjado no Céu",
+  "alvo": "Usuário ou inimigo escolhido",
+  "descricao": "No começo da luta, o tempo pesa ou acelera. Ou o inimigo fica lento em tudo o que é agilidade, ou o ocultista fica rápido e anda o dobro.",
+  "efeito": "No instante em que um combate inicia, o ocultista invoca fragmentos da eternidade, moldando o fluxo do tempo ao seu favor ou contra o adversário. O ar ao redor parece distorcer, como se o mundo se tornasse pesado ou veloz demais.\n\n1. Desacelerar Inimigo: o alvo sofre desvantagem em todos os testes envolvendo Destreza.\n\n2. Acelerar Reflexos: o usuário recebe vantagem em todos os testes envolvendo Destreza e seu Movimento é dobrado.",
+  "limitacoes": [
+   "Duração: 1d8 rodadas.",
+   "A escolha entre acelerar ou desacelerar deve ser feita no início do combate, antes da primeira ação."
+  ],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Teleporte das Sombras",
+  "alvo": "Usuário",
+  "descricao": "O ocultista se desfaz na escuridão e aparece em outro ponto que consiga ver. Durante o efeito, fica mais ágil e acerta golpes perfeitos com mais frequência.",
+  "efeito": "O usuário envolve seu corpo em trevas etéreas e se dissolve na escuridão, surgindo em outro ponto como se tivesse deslizado pelo próprio véu da morte. Durante alguns instantes, seus movimentos se tornam impossíveis de prever, como se a sombra estivesse guiando cada passo.\n\nO usuário pode se teleportar até 30 metros para um ponto que esteja dentro de sua visão.\n\nEnquanto o efeito durar, ganha +1 dado em testes de Destreza.\n\nSua margem de crítico é aumentada em +2 em ataques físicos e rituais ofensivos.",
+  "limitacoes": [
+   "Usável até 3 vezes por combate.",
+   "Se usado em áreas iluminadas, a distância do teleporte é reduzida pela metade e o custo de Sanidade dobra."
+  ],
+  "custo": "3 / 6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Retorno dos Mortos",
+  "alvo": "Usuário ou Um alvo",
+  "descricao": "O ocultista atravessa o coração de uma oferenda viva para levantar um morto. O morto volta mais forte, sem memória, movido a instinto, tentando cumprir as últimas vontades por cerca de uma semana. Depois vira casca vazia.",
+  "efeito": "Com um corpo em mãos o ocultista atravessa o coração de uma oferenda ainda viva, pessoas, animal ou criatura, a oferecendo em tributo de ressuscitar o corpo que estava até então morto. Uma vez ressuscitado, a alma que foi trazida de volta não se lembrará nada que tinha em sua vida, retomando ao estado nulificado completo: emoções, dor, lembranças, tudo irá se desfazer rápido e eventualmente até que seja uma cascata mortal inconsciente das próprias ações.\n\nO corpo ressuscitado se levanta mais forte do que era quando morto; movido pelos instintos inicialmente, o alvo avança com o objetivo de cumprir suas últimas vontades em vida pela próxima uma semana de vida, caso falhado torna-se uma casca vazia sem ideais, uma marionete de carne.",
+  "limitacoes": [
+   "Usável uma vez por campanha.",
+   "Ao usar o ritual parte das memórias do alvo é transportada para a cabeça de quem reviveu, retorcidas e modificadas pela vontade da própria morte, assombrando a cabeça de quem ousou enganá-la, sofrendo 3d6 de dano de sanidade e 2d4 de sanidade permanente.",
+   "O dano permanente pode ser evitado ao ter \"Transcendido\" e ganhado esse ritual como consequência."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Erosão Cronológica",
+  "alvo": "Único",
+  "descricao": "O tempo em volta da vítima envelhece rápido e errado. Músculo enfraquece, reflexo atrasa e duas habilidades escolhidas pioram por um tempo. Quando passa, vem cansaço extremo ou envelhecimento visível.",
+  "efeito": "O usuário rasga o fluxo do tempo ao redor do alvo, fazendo o envelhecimento natural ocorrer de forma errática e acelerada: músculos enfraquecem, reflexos atrasam e a mente luta para acompanhar a própria existência.\n\nO alvo sofre 4d8 + Int de dano temporal/espiritual imediatamente.\n\nAlém disso, o usuário escolhe dois atributos diferentes do alvo. Testes envolvendo esses atributos têm seus valores reduzidos em -5 por 3 rodadas.\n\nOs efeitos são cumulativos com ferimentos, mas não com outros rituais de redução direta de atributos.\n\nQuando o efeito termina, o alvo sente um “rebote temporal”, sofrendo fadiga extrema ou envelhecimento visível, a critério da narrativa.",
+  "limitacoes": [],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Sons de Eco",
+  "alvo": "Único",
+  "descricao": "Uma palavra qualquer, dita sem precisar ser alta, atravessa obstáculo e ecoa dentro da cabeça e do corpo da vítima, rompendo por dentro.",
+  "efeito": "O usuário entoa uma única palavra, fazendo com que sua voz atravesse o corpo do alvo e reverbere diretamente em sua alma. A palavra não precisa possuir nenhum significado específico; é a própria reverberação sobrenatural que causa o efeito. O alvo sofre 3d8 de dano mental e 3d10 de dano físico. A cada repetição do eco, a vítima sente como se a palavra estivesse sendo pronunciada dentro de sua própria cabeça, enquanto seu corpo sofre pequenos espasmos e rupturas internas.\n\nA palavra pode ser escolhida livremente pelo usuário no momento da ativação. O som não precisa ser alto para funcionar e pode atravessar obstáculos comuns, desde que o usuário consiga identificar o alvo.",
+  "limitacoes": [],
+  "custo": "10 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Mensageiro Póstumo",
+  "alvo": "Cadáver",
+  "descricao": "O ocultista coloca uma moeda na boca do morto e chama a alma de volta só para conversar. O morto responde algumas perguntas com a voz que tinha, e pode mentir se não gostava de quem pergunta.",
+  "efeito": "O ocultista coloca uma moeda na boca de um morto e chama a alma de volta, só para conversar.\n\nO morto responde até 3 perguntas, com a voz que tinha em vida. Responde só o que sabia e pode mentir se não gostava de quem pergunta. Para cada pergunta, o usuário faz um teste de Intuição DT18 para perceber se a resposta é mentira.",
+  "limitacoes": [
+   "O corpo precisa ter boca e o morto precisa ter morrido há menos de um mês.",
+   "Ao fim, o usuário perde 1d6 de Sanidade."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Mortalha",
+  "alvo": "Próprio",
+  "descricao": "O coração do ocultista para, a pele esfria e o corpo vira cadáver de verdade. Qualquer exame mostra um morto, mas ele continua ouvindo tudo e pode acordar quando quiser.",
+  "efeito": "O coração do ocultista para, a pele esfria e o corpo vira cadáver de verdade.\n\nQualquer exame, comum ou paranormal, mostra uma pessoa morta, a menos que passe em um teste de Medicina ou Ocultismo DT25. O usuário continua ouvindo tudo em volta e pode acordar quando quiser.",
+  "limitacoes": [
+   "Duração máxima: 1 hora.",
+   "Ao acordar, faz um teste de Constituição DT18. Se falhar, sofre 2d8 de dano e fica atordoado por 1 rodada."
+  ],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Atravessar o Véu",
+  "alvo": "Próprio",
+  "descricao": "O ocultista deixa o corpo meio do lado de cá e meio do lado de lá. Por alguns instantes atravessa parede, porta e objeto, e bala comum passa por ele, mas ele também não consegue ferir ninguém.",
+  "efeito": "O ocultista deixa o corpo meio do lado de cá e meio do lado de lá. Por alguns instantes, atravessa matéria como fantasma.\n\nDurante 1d4 rodadas, pode atravessar paredes, portas e objetos sólidos de até 1 metro de espessura. Ataques físicos comuns contra ele rolam com desvantagem de 2 dados, mas ele também não consegue causar dano físico.",
+  "limitacoes": [
+   "Se o efeito acabar com o usuário dentro de um objeto, ele é expelido e sofre 3d10 de dano.",
+   "Terreno abençoado ou consagrado não pode ser atravessado."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Data Marcada",
+  "alvo": "Único",
+  "descricao": "O ocultista escreve o nome do alvo com sangue na palma e fecha o punho. A Morte passa a esperar: quando o alvo cai abaixo de um quarto da vida, pode cair de vez.",
+  "efeito": "O ocultista escreve o nome do alvo com sangue na palma da mão e fecha o punho. A Morte passa a esperar por ele.\n\nEnquanto durar, sempre que o alvo cair abaixo de um quarto do HP máximo, faz um teste de Constituição DT20. Se falhar, cai a 0 HP imediatamente.",
+  "limitacoes": [
+   "Duração: até o fim do combate.",
+   "O usuário precisa saber o nome verdadeiro do alvo.",
+   "Uma vez por sessão."
+  ],
+  "custo": "10 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Mãos do Túmulo",
+  "alvo": "Único (até 10 metros)",
+  "descricao": "Mãos podres saem do chão e agarram as pernas do alvo, puxando para baixo como se o chão fosse cova, e roubando o fôlego enquanto prendem.",
+  "efeito": "Mãos podres saem do chão e agarram as pernas do alvo, puxando para baixo como se o chão fosse cova.\n\nO alvo faz um teste de Força ou Destreza DT20. Se falhar, fica preso e perde 1d6 de Stamina por turno enquanto estiver preso. Pode repetir o teste no início de cada turno.",
+  "limitacoes": [
+   "Exige chão de terra, lama ou areia, ou um lugar onde alguém tenha sido enterrado.",
+   "Duração máxima: 4 rodadas."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Relógio Parado",
+  "alvo": "Único (toque)",
+  "descricao": "O ocultista para o tempo de uma criatura ou objeto. Quem é tocado vira estátua do próprio instante: não age, não sente e não sofre dano, e sangramento e veneno também param.",
+  "efeito": "O ocultista para o tempo de uma criatura ou de um objeto. Quem é tocado vira estátua do próprio instante.\n\nSe o alvo for um aliado, pode aceitar. Se for inimigo, faz um teste de Vontade DT22. O alvo afetado não pode agir, não sente nada e não recebe dano de nenhuma fonte durante 1d4 rodadas. Sangramento, veneno e efeitos contínuos também ficam congelados.",
+  "limitacoes": [
+   "Serve para salvar um aliado à beira da morte ou tirar um inimigo da luta por alguns instantes.",
+   "Uma vez por combate."
+  ],
+  "custo": "8 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Velas dos Vivos",
+  "alvo": "Área (30 metros)",
+  "descricao": "O ocultista fecha os olhos e vê cada ser vivo em volta como vela acesa. Sabe quantos são, onde estão, mesmo atrás de parede, e quem está perto de morrer. Morto-vivo aparece como vela apagada.",
+  "efeito": "O ocultista fecha os olhos e vê cada ser vivo em volta como uma vela acesa. Quanto mais fraca a chama, mais perto da morte.\n\nSabe quantos seres vivos existem na área, onde estão, mesmo atrás de paredes, e quais estão abaixo da metade da vida. Mortos-vivos aparecem como velas apagadas.",
+  "limitacoes": [
+   "Duração: 1 rodada de concentração.",
+   "Faz um teste de Ocultismo DT15. Se falhar, só sabe o número, não a posição."
+  ],
+  "custo": "3 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Vestígio Final",
+  "alvo": "Local onde alguém morreu",
+  "descricao": "O ocultista se ajoelha onde alguém morreu e assiste à morte como fantasma. Vê e ouve o último minuto e às vezes o rosto de quem matou.",
+  "efeito": "O ocultista se ajoelha onde alguém morreu e assiste à morte como fantasma.\n\nFaz um teste de Ocultismo DT18. Se passar, vê e ouve o último minuto do morto naquele lugar, do ponto de vista de quem estava ali. Se passar com folga de 10, também vê o rosto do responsável, se houver.",
+  "limitacoes": [
+   "Funciona em mortes de até um ano.",
+   "O usuário sente a dor da morte: 2d6 de dano de Sanidade."
+  ],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Servo Espectral",
+  "alvo": "Uma alma presa ao lugar",
+  "descricao": "O ocultista prende um espírito que ainda está no mundo e obriga a cumprir uma tarefa simples: vigiar, abrir porta, assustar, levar recado. Ele é invisível para quem não tem sensibilidade.",
+  "efeito": "O ocultista prende um espírito que ainda está no mundo e o obriga a servir.\n\nO espírito faz um teste de Vontade DT20. Se falhar, cumpre uma tarefa simples por até 1 hora: vigiar, abrir uma porta, assustar alguém, carregar uma mensagem. Ele é intangível e invisível para quem não tem sensibilidade paranormal.",
+  "limitacoes": [
+   "O espírito não ataca nem causa dano físico.",
+   "Se falhar na tarefa, o espírito se volta contra o ocultista: 2d8 de dano de Sanidade."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Ceifar Lembrança",
+  "alvo": "Único (toque)",
+  "descricao": "O ocultista passa a mão na testa do alvo e corta os últimos minutos da memória dele, como foice em trigo.",
+  "efeito": "O ocultista passa a mão na testa do alvo e corta um pedaço da memória dele, como foice em trigo.\n\nO alvo faz um teste de Vontade DT20. Se falhar, esquece completamente os últimos 10 minutos.",
+  "limitacoes": [
+   "Memórias ceifadas podem voltar com outro ritual de Morte ou com o Exorcizar.",
+   "Uma vez por dia no mesmo alvo."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Segunda Chance",
+  "alvo": "Próprio",
+  "descricao": "O ocultista sente o resultado ruim chegar e volta o próprio relógio alguns segundos para tentar de novo, ficando com o segundo resultado, mesmo pior.",
+  "efeito": "O ocultista sente o resultado ruim chegar e volta o próprio relógio alguns segundos.\n\nDepois de ver o resultado de um teste próprio, pode rolar de novo e ficar com o segundo resultado, mesmo que seja pior.",
+  "limitacoes": [
+   "Duas vezes por sessão.",
+   "Cada uso faz o usuário envelhecer de forma visível e custa 1d6 de Sanidade."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Corpo Emprestado",
+  "alvo": "Cadáver recente",
+  "descricao": "O ocultista deixa o próprio corpo deitado e entra num cadáver, controlando ele por um tempo curto, com a força do morto e a cabeça dele.",
+  "efeito": "O ocultista deixa o próprio corpo deitado e entra num cadáver.\n\nControla o morto por até 10 minutos, com os atributos físicos do cadáver e os mentais do ocultista. O cadáver não sente dor e pode falar com a voz que tinha.",
+  "limitacoes": [
+   "O corpo verdadeiro fica indefeso. Se ele sofrer dano, o ocultista faz um teste de Vontade DT20 ou volta à força.",
+   "Se o cadáver for destruído com o ocultista dentro, ele sofre 4d8 de dano de Sanidade."
+  ],
+  "custo": "7 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Morte",
+  "nome": "Peso da Lápide",
+  "alvo": "Único",
+  "descricao": "O ocultista coloca sobre o alvo o peso de uma lápide que ele não vê. Quem não resiste cai e não levanta, e mesmo de pé anda devagar. Quem voa cai.",
+  "efeito": "O ocultista coloca sobre o alvo o peso de uma lápide que ele não vê.\n\nO alvo faz um teste de Força DT20. Se falhar, cai no chão e não consegue se levantar até passar no teste no seu turno. Mesmo de pé, enquanto durar, tem o deslocamento reduzido pela metade.",
+  "limitacoes": [
+   "Duração: 1d4 rodadas.",
+   "Criaturas voadoras que falharem caem."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Vontade Verdadeira",
+  "alvo": "Usuário",
+  "descricao": "A mente é tomada por um fogo branco de determinação. Durante toda a missão, nada abala a sanidade de quem usa, os rituais saem mais rápido e todo ritual ofensivo machuca mais.",
+  "efeito": "Por meio deste ritual, o usuário canaliza a essência pura da Conquista, a força de uma alma que se recusa a ceder ao desespero. Ao ativá-lo, a mente é envolta por um fogo branco de determinação, anulando o medo, a dor e a insanidade. Nenhuma presença cósmica, nenhum sussurro do além pode abalar aquele que impôs sua vontade sobre o próprio destino.\n\nO usuário não sofre dano de Sanidade durante toda a sessão.\n\nO tempo de execução de todos os rituais é reduzido.\n\nTodos os rituais ofensivos realizados pelo usuário recebem um bônus de 3d4 + 5 de dano adicional.",
+  "limitacoes": [
+   "Duração: Toda a sessão.",
+   "Após o término, o ocultista deve realizar um teste de Sanidade com desvantagem. Em caso de falha, sua mente permanece inflamada pela Vontade Verdadeira e ele se torna incapaz de sentir empatia ou medo até o fim da próxima sessão."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Selo da Conquista",
+  "alvo": "Próprio",
+  "descricao": "Uma marca ardente surge no peito, e uma pressão dominadora toma tudo em volta. Quem não resiste fica vulnerável a tudo o que o ocultista faz. Quem resiste ainda sente o peso e fica mais fácil de intimidar.",
+  "efeito": "Ao ativar o Selo, uma marca ardente surge no peito do usuário, liberando uma aura de pressão dominadora em um raio de 10 metros.\nQualquer criatura hostil dentro da área deve realizar um teste de Vontade contra a presença do usuário.\n\n• Se falhar, a criatura fica vulnerável à força do Selo: sofre +2 dados de dano físico de qualquer ataque que o usuário causar, e +1 dado de dano espiritual de qualquer ataque ou ritual que o usuário lançar.\n\n• Se passar, resiste à aura, mas a pressão constante impõe desvantagem em testes de Intimidação ou resistência contra efeitos de medo, enquanto permanecer no raio.",
+  "limitacoes": [
+   "Duração de 1d10 rodadas."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Profecia",
+  "alvo": "Universal",
+  "descricao": "O ocultista diz em voz alta: Eu profetizo que, e uma afirmação clara. Ela vira verdade inevitável, dentro do possível.",
+  "efeito": "O ritual exige que o usuário pronuncie, de forma consciente e direta, a frase: “Eu profetizo que…” seguido de uma declaração clara e objetiva.\nEssa afirmação se torna uma verdade inevitável, rompendo o tecido da realidade com o fogo da vontade absoluta.\nA profecia se cumpre de maneira direta, dentro do possível e do lógico para o cenário.\n\nA realização da profecia cobra um preço equivalente, retirando do usuário algo de valor igual ou maior ao impacto da profecia.\nO usuário não escolhe o que será perdido e não percebe a perda até o ritual se concluir.",
+  "limitacoes": [
+   "Pode ser usada uma única vez em todo o RPG.",
+   "Quanto mais grandeza houver na profecia, maior será a perda.",
+   "O Mestre define o custo: memória, poder, aliados, destino ou parte da própria alma, sem aviso prévio."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Pacto de Almas",
+  "alvo": "Dois ou mais seres conscientes que aceitem o pacto",
+  "descricao": "Um acordo selado na vontade. Enquanto vale, todos cooperam melhor, como se o mundo facilitasse. Quem quebra o pacto é castigado pela própria Conquista, sempre, sem escapatória.",
+  "efeito": "O usuário sela um acordo entre as partes usando a própria Vontade como alicerce. As almas dos envolvidos ficam alinhadas em um único vetor de propósito.\n\nEnquanto o pacto estiver válido, todos os participantes ganham +1 dado em testes sociais e de cooperação entre si, como se a realidade facilitasse o trabalho conjunto.\n\nSe qualquer participante quebrar o pacto, a própria estrutura do mundo reage. A punição não é escolhida pelo usuário, é ditada pelos fundamentos metafísicos da Conquista.\nO traidor sofre um castigo equivalente ao peso da quebra: pode ser perda permanente de atributo, destruição de um ritual, uma marca espiritual ou até ser caçado por fragmentos da Vontade que criou o pacto.\nA punição sempre acontece e nunca pode ser evitada.",
+  "limitacoes": [],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Penitência Escaldante",
+  "alvo": "Único",
+  "descricao": "O ocultista firma um acordo com a realidade, e a vítima é esmagada até deixar de existir. Não morre: é negada. Não sobra corpo, alma nem vestígio, e nada traz de volta.",
+  "efeito": "O usuário invoca a autoridade absoluta da Conquista e firma, em silêncio, um acordo direto com a Realidade. O alvo é submetido a uma pressão intolerável, como se estivesse sendo comprimido entre camadas do mundo que se recusam a aceitá-lo. Se o ritual for bem-sucedido, o alvo é banido para fora da Realidade, sofrendo um apagamento existencial completo. O alvo deixa de existir no plano material, espiritual e conceitual, não podendo ser trazido de volta por rituais, desejos ou manipulação temporal.\n\nCriaturas afetadas não morrem; elas são negadas. Não há corpo, alma ou vestígio.\n\nO usuário deve sacrificar algo significativo no momento da conjuração, definido pelo narrador, como parte do acordo com a Realidade. Esse sacrifício é permanente e proporcional à importância existencial do alvo.",
+  "limitacoes": [],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Aniquilação Soberana",
+  "alvo": "Área de até 12 metros ou um único alvo intensificado",
+  "descricao": "A vontade concentrada vira uma onda de pressão que esmaga tudo, ignora proteção e queima. Em um alvo só, a força é ainda maior e derruba. O chão fica destruído.",
+  "efeito": "O usuário concentra sua Vontade em um único ponto e a libera como uma onda de pressão absoluta. O ar se comprime, a luz distorce e tudo dentro do alcance é esmagado pela imposição da Conquista.\n\nSe usado em área, todos os alvos sofrem 8d8 de dano físico + 5d6 de dano de queimadura, ignorando qualquer resistência ou proteção.\n\nSe usado em alvo único, o dano se intensifica para 10d8 físico + 7d6 espiritual, e o alvo deve passar em um teste de Constituição ou fica derrubado e incapacitado por 1 rodada.\n\nApós o impacto, o terreno na área fica comprometido, dificultando movimentação até o fim da cena.",
+  "limitacoes": [],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Coroa Imposta",
+  "alvo": "Aliados que aceitarem (até 6)",
+  "descricao": "O ocultista coroa a si mesmo diante do grupo, e quem aceita a coroa luta melhor, mas luta para ele. Recusar uma ordem dele vira esforço de vontade.",
+  "efeito": "O ocultista coroa a si mesmo diante do grupo, e quem aceita a coroa luta melhor, mas luta para ele.\n\nAliados que aceitarem ganham +1 dado em ataques e testes de Vontade.\n\nEnquanto durar, quando o usuário der uma ordem, quem aceitou faz um teste de Vontade DT15 para desobedecer. Se falhar, obedece.",
+  "limitacoes": [
+   "Duração: 1 cena.",
+   "Se o usuário cair a 0 HP, todos que aceitaram perdem 1d8 de Sanidade."
+  ],
+  "custo": "8 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Juramento de Vitória",
+  "alvo": "Próprio",
+  "descricao": "O ocultista declara em voz alta um objetivo da cena. Enquanto persegue, fica melhor em tudo que leva a ele. Cumprindo, se recupera. Falhando, a cabeça paga caro.",
+  "efeito": "O ocultista declara em voz alta um objetivo da cena, como matar aquele homem, tomar aquela porta ou sair com aquele livro.\n\nEnquanto persegue o objetivo, ganha +2 em todos os testes ligados a ele. Se cumprir, recupera 2d10 de Sanidade e 2d10 de HP.\n\nSe falhar ou desistir, perde 3d10 de Sanidade.",
+  "limitacoes": [
+   "Um juramento por sessão.",
+   "O mestre decide o que conta como desistir."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Território Reivindicado",
+  "alvo": "Área (até 30 metros)",
+  "descricao": "O ocultista planta o próprio sangue no centro da área e declara que é dele. Enquanto está ali, sabe onde está cada criatura, e inimigos que entram ficam piores em tudo.",
+  "efeito": "O ocultista planta o próprio sangue no centro da área e declara: isto é meu.\n\nEnquanto estiver dentro da área, sabe a posição de toda criatura dentro dela. Inimigos que entrarem fazem um teste de Vontade DT20 ou sofrem desvantagem de 1 dado em todos os testes enquanto permanecerem.",
+  "limitacoes": [
+   "Duração: até o fim da sessão ou até o usuário sair da área.",
+   "Um território por vez."
+  ],
+  "custo": "10 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Coleira",
+  "alvo": "Criatura paranormal",
+  "descricao": "O ocultista põe uma coleira invisível numa criatura e obriga a servir por um tempo, sem atacar ele nem quem ele protege.",
+  "efeito": "O ocultista põe uma coleira invisível no pescoço de uma criatura e a obriga a servir.\n\nA criatura faz um teste de Vontade DT20 mais o grau de perigo dela. Se falhar, obedece ao usuário por 1 hora, sem atacá-lo nem atacar quem ele proteger.",
+  "limitacoes": [
+   "Criaturas de grau Cidade para cima rolam com vantagem.",
+   "Quando a coleira se rompe, a criatura sabe quem a prendeu."
+  ],
+  "custo": "10 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Ajoelhar",
+  "alvo": "Único",
+  "descricao": "O ocultista olha para o alvo e diz uma palavra só: ajoelhe. Quem não resiste cai de joelhos e não levanta até conseguir, e fica fácil de acertar.",
+  "efeito": "O ocultista olha para o alvo e diz uma palavra só: ajoelhe.\n\nO alvo faz um teste de Vontade DT22. Se falhar, cai de joelhos e não pode se levantar nem se mover até passar no teste no seu turno. Ataques corpo a corpo contra ele recebem +1 dado.",
+  "limitacoes": [
+   "Criaturas sem joelhos ficam presas ao chão do mesmo jeito.",
+   "Duas vezes por combate."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Espólio",
+  "alvo": "Itens soltos ou de inimigos derrotados (10 metros)",
+  "descricao": "O ocultista estende a mão e tudo o que caiu na luta reconhece um novo dono. Armas no chão e itens de quem caiu voam para ele. Quem está de pé ainda pode segurar.",
+  "efeito": "O ocultista estende a mão e tudo o que foi derrubado na luta reconhece um novo dono.\n\nArmas e objetos caídos na área voam para os pés do usuário. Itens nas mãos de inimigos caídos ou inconscientes também vêm, sem teste. Itens nas mãos de inimigos de pé exigem que o portador falhe em Força DT20.",
+  "limitacoes": [
+   "Uma vez por combate."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Mandato",
+  "alvo": "Único",
+  "descricao": "O ocultista dá uma ordem de uma palavra: pare, solte, corra, cale, caia, venha. Quem não resiste obedece na hora.",
+  "efeito": "O ocultista dá uma ordem de uma palavra só: pare, solte, corra, cale, caia, venha.\n\nO alvo faz um teste de Vontade DT22. Se falhar, cumpre a ordem no próximo turno da forma mais direta possível.",
+  "limitacoes": [
+   "A ordem não pode ser suicida nem fazer o alvo atacar um aliado.",
+   "Três vezes por sessão."
+  ],
+  "custo": "7 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Inabalável",
+  "alvo": "Próprio",
+  "descricao": "O ocultista decide que não vai sair do lugar, e o mundo aceita. Não é empurrado, derrubado, puxado nem teleportado, nem por força nem por ritual.",
+  "efeito": "O ocultista decide que não vai sair do lugar, e o mundo aceita.\n\nDurante 1d6 rodadas, não pode ser empurrado, derrubado, puxado, teleportado nem movido contra a vontade, por força física ou ritual. Recebe +2 em testes de resistência contra efeitos que tentem isso.",
+  "limitacoes": [
+   "Durante o efeito, o próprio usuário também não pode se mover."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Glória",
+  "alvo": "Próprio",
+  "descricao": "Cada vitória vira degrau. A cada inimigo que o ocultista derruba, fica mais forte. Se passa um tempo sem derrubar ninguém, perde força.",
+  "efeito": "Cada vitória vira degrau.\n\nEnquanto durar, a cada inimigo que o usuário derrubar, ganha 1 acúmulo de Glória, até 5. Cada acúmulo dá +1 em acerto e +1d4 de dano.",
+  "limitacoes": [
+   "Se o usuário ficar uma rodada inteira sem derrubar ninguém, perde 1 acúmulo.",
+   "Duração: até o fim do combate.",
+   "No fim do combate, faz um teste de Sanidade DT15 mais 2 por acúmulo. Se falhar, fica arrogante a ponto de recusar ajuda até o fim da sessão."
+  ],
+  "custo": "8 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Exílio",
+  "alvo": "Único",
+  "descricao": "O ocultista proíbe o alvo de estar num lugar. Quem não resiste é expulso e não consegue voltar por um dia inteiro. Toda tentativa machuca e empurra para fora.",
+  "efeito": "O ocultista proíbe o alvo de estar em um lugar.\n\nO alvo faz um teste de Vontade DT22. Se falhar, é expulso da área em que está, até 30 metros, e não consegue voltar a entrar nela por 24 horas. Toda vez que tentar, sofre 3d6 de dano espiritual e é empurrado para fora.",
+  "limitacoes": [
+   "A área é um cômodo, um prédio pequeno ou um círculo de até 30 metros.",
+   "Uma vez por sessão."
+  ],
+  "custo": "10 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Conquista",
+  "nome": "Trono",
+  "alvo": "Próprio",
+  "descricao": "O ocultista se senta, e onde ele se senta vira trono. Enquanto continua sentado, se defende e resiste muito mais, recebe metade do dano, e chegar perto dele exige vontade.",
+  "efeito": "O ocultista se senta, e onde ele se senta vira trono.\n\nEnquanto continuar sentado, recebe +2 dados em todos os testes de defesa e resistência, e reduz pela metade todo dano recebido. Inimigos a até 5 metros fazem um teste de Vontade DT18 por rodada ou não conseguem se aproximar mais.",
+  "limitacoes": [
+   "Levantar encerra o ritual.",
+   "Uma vez por sessão."
+  ],
+  "custo": "10 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Exorcizar",
+  "alvo": "Único",
+  "descricao": "Um dos mais antigos e perigosos. Quebra o vínculo entre um Arauto e o Cavaleiro dele e devolve a consciência à alma presa. A pessoa continua sendo algo pós-morte, mas livre.",
+  "efeito": "O ritual de Exorcizar é um dos mais antigos e perigosos. Criado por ocultistas rebeldes há séculos, ele é usado para quebrar o vínculo entre um Arauto e seu Cavaleiro, libertando a alma aprisionada e devolvendo à pessoa uma consciência independente ainda que ela permaneça como uma entidade pós-morte.\n\nSe bem-sucedido, o Arauto se torna uma entidade autônoma, podendo manter ou abandonar seus poderes. Alguns escolhem se esconder, outros desejam vingança contra os Cavaleiros ou seus antigos mestres.",
+  "limitacoes": [
+   "A alma libertada não volta a ser humana sem interferência do além."
+  ],
+  "custo": "10 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Névoa Influente",
+  "alvo": "Área (média a grande)",
+  "descricao": "Uma névoa fria e inofensiva que, com uma relíquia de um Cavaleiro, passa a carregar o elemento dele: fúria, doença, fome canibal, envelhecimento. Na versão neutra, queima com luz qualquer criatura paranormal que ataque dentro dela.",
+  "efeito": "Um ritual ancestral que invoca uma névoa densa e fria, carregada com a essência de um dos quatro Cavaleiros. A névoa em si é inofensiva, mas ao ser imbuída com um item ou artefato carregado com a essência de um Cavaleiro, ela passa a afetar profundamente todos os que a respiram, tocando suas emoções, corpo e mente.\n\nRequisitos: Um item ou relíquia que contenha a essência ativa de um Cavaleiro.\n\nDuração: 1d6 rodadas.\n\nEfeitos (dependendo da energia infundida):\n\n• Guerra: Induz fúria cega, sede de sangue e perda de controle. Criaturas entram em estado de raiva por 1d4 rodadas.\n\n• Peste: A névoa torna-se fétida e infecciosa. Alvos devem passar em um teste de resistência mental ou sofrer efeitos aleatórios como confusão, envenenamento ou paralisia parcial.\n\n• Fome: Os sentidos dos afetados se alteram, desenvolvendo uma fome canibal incontrolável. Criaturas afetadas perdem 5 pontos de Sanidade por rodada se não comerem.\n\n• Morte: A névoa penetra os pulmões e órgãos dos afetados. Eles envelhecem 1d10 anos temporariamente e recebem 3d6 de dano interno por rodada (ignora armadura).\n\n• Neutro: Toda e qualquer criatura paranormal não humana, ao realizar um ataque dentro da área da névoa, deve rodar um teste de Constituição DT25, caso falhe, recebe 2d12 de dano de luz e 2d4 de queimadura.",
+  "limitacoes": [
+   "Os efeitos cessam assim que a névoa se dissipa."
+  ],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Selamento",
+  "alvo": "Entidade, item, passagem, portal ou ritual ativo\nDuração: Permanente (até ser quebrado por outro ritual ou falha crítica)",
+  "descricao": "Com sangue, ossos e fragmentos de lua, o ocultista sela o alvo. Serve para trancar um Cavaleiro, travar uma arma profana ou prender uma criatura num círculo.",
+  "efeito": "Por meio de sangue, ossos e fragmentos lunares, o ocultista sela um alvo específico. Esse ritual pode ser usado para trancar um Cavaleiro, impedir a ativação de uma arma profana, ou prender uma criatura em um círculo ritualístico.\n\nExige um teste de Inteligência e Vontade.\n\nCada Cavaleiro precisa de selos específicos (feitos com materiais e símbolos únicos).\n\nArmas dos Cavaleiros podem ser seladas, mas continuam influenciando sutilmente.",
+  "limitacoes": [
+   "Criaturas seladas não podem agir, a menos que o selo seja quebrado.",
+   "Portais selados não podem ser reabertos sem o Ritual da Ruptura Lunar.",
+   "O ritual falha se o ocultista não estiver concentrado."
+  ],
+  "custo": "20 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Ruptura Lunar",
+  "alvo": "Dimensões Diferentes",
+  "descricao": "Criado pelos primeiros Sacerdotes para quebrar a prisão dos Cavaleiros. A lua racha e o que estava enterrado na luz desce. Liberta Cavaleiro, destrói selo antigo ou cria eclipse permanente.",
+  "efeito": "Este ritual foi criado pelos primeiros Sacerdotes para quebrar a prisão dos Cavaleiros. Ele não é apenas um feitiço, é um evento cósmico, uma blasfêmia contra o equilíbrio do mundo. Quando realizado com sucesso, a Lua começa a rachar, e entidades enterradas em sua luz descem à Terra.\n\nExige quatro Sacerdotes ou um portador de duas Relíquias.\n\nPrecisa do sangue negro de um Arauto, fragmentos lunares, um círculo completo de rituais de cada Cavaleiro, e uma noite sem nuvens.\n\nSeus efeitos podem variar: libertar um Cavaleiro adormecido, destruir um selo antigo ou criar um eclipse permanente em determinada região.",
+  "limitacoes": [
+   "Uma vez iniciado, o ritual não pode ser parado, a não ser com o sacrifício voluntário do próprio conjurador."
+  ],
+  "custo": "50 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Telecinese",
+  "alvo": "Único em uma área de 10 metros",
+  "descricao": "Força mental vira energia invisível: ergue peso, arremessa gente, mexe arma, chave e ferramenta, segura projétil no ar.",
+  "efeito": "O usuário concentra sua força mental e a converte em energia invisível, movendo objetos ou seres contra a vontade deles.\n\nPode erguer até \"Força × 10\" em quilos sem esforço; para pesos maiores, o usuário precisa passar em um teste de Inteligência, ou sofre 10 pontos de dano de Sanidade por rodada de esforço.\n\nContra inimigos, pode arremessá-los a até 3 metros, causando 4d6 de dano de impacto (ou mais, dependendo do ambiente).\n\nPode manipular armas, chaves, ferramentas e até segurar projéteis no ar por 3 rodadas.",
+  "limitacoes": [
+   "O uso prolongado desgasta a mente: depois das 3 rodadas base, o usuário perde 8 pontos de Sanidade por turno.",
+   "Em ambientes de forte influência lunar ou ritualística, o alcance dobra."
+  ],
+  "custo": "",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Recriar Lua Imperfeita",
+  "alvo": "Área (20 metros de raio)",
+  "descricao": "Um reflexo torto da lua aparece no céu dentro de um campo. Ninguém sai até acabar. Inimigos enxergam pior, aliados se escondem melhor, e quem usa Fogo Negro fica mais forte.",
+  "efeito": "O usuário ergue um reflexo imperfeito da lua no céu, visível apenas dentro do campo criado. A energia lunar distorce a percepção e as sombras, tornando o ambiente opressivo e sombrio. Nenhum ser ou objeto pode sair da área até o ritual ser encerrado.\n\nInimigos dentro do campo sofrem -1d de desvantagem em testes de Percepção.\n\nAliados ganham vantagem em testes de Furtividade e em qualquer ação que envolva se ocultar ou se mover silenciosamente.\n\nSe houver usuários do ritual Fogo Negro presentes, eles recebem +1 dado de dano em seus ataques enquanto a lua permanecer ativa.",
+  "limitacoes": [
+   "Dura até o usuário encerrar ou for incapacitado."
+  ],
+  "custo": "7 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Raio Lunar",
+  "alvo": "Único",
+  "descricao": "Um feixe prateado que queima carne, osso e alma, ignora armadura e deixa a vítima pior para se defender. Marca a pele com luas crescentes.",
+  "efeito": "O ocultista ergue as mãos e canaliza a energia prateada da Lua, liberando um feixe instável de luz que queima carne, ossos e até a alma. Sua beleza é hipnótica, mas seu toque é morte.\n\nCausa 3d10 + 7 de dano espiritual, ignorando qualquer proteção física ou armadura comum.\n\nO alvo deve realizar um teste de Constituição. Em caso de falha, sofre desvantagem no próximo teste para Esquiva / Contra-ataque / Bloqueio.",
+  "limitacoes": [
+   "Dano cheio contra criaturas de Morte ou Peste.",
+   "O feixe deixa marcas de queimaduras em formato de luas crescentes no corpo da vítima."
+  ],
+  "custo": "7 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Limiar Quebrado",
+  "alvo": "Linha reta (até 20 metros)",
+  "descricao": "O ocultista rasga a realidade e solta um feixe de luz branca divina que atravessa tudo na linha, queimando matéria e espírito. Criaturas paranormais sofrem mais.",
+  "efeito": "O ocultista rasga a Realidade à força, abrindo uma fenda instável no ar. Da ruptura emerge um feixe brutal de luz branca divina. O raio atravessa tudo em seu caminho, queimando matéria, espírito e coerência existencial.\n\nTodas as criaturas na linha sofrem 4d10 de dano energético + 2d8 de dano espiritual, ignorando armaduras físicas comuns.\n\nCriaturas sobrenaturais, entidades ou seres ligados a rituais sofrem +1d10 adicional.\n\nO uso do ritual deixa a área marcada por fissuras luminosas por alguns segundos, causando desconforto e vertigem em quem testemunha.\n\nSe usado em um local instável ou próximo a outros rituais ativos, o mestre pode impor consequências narrativas imprevisíveis.",
+  "limitacoes": [],
+  "custo": "10 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Benzer Arma",
+  "alvo": "Uma arma",
+  "descricao": "O ocultista reza sobre a arma e lava o metal com luz. Até o fim da cena, ela fere o que é intangível e o que ignora dano comum, e machuca mais qualquer criatura paranormal.",
+  "efeito": "O ocultista reza sobre a arma e lava o metal com luz.\n\nAté o fim da cena, a arma consegue ferir criaturas intangíveis e criaturas imunes a dano físico comum, e causa +1d8 de dano contra criaturas paranormais.",
+  "limitacoes": [
+   "A arma precisa estar limpa de sangue antes do ritual.",
+   "Uma arma de cada vez."
+  ],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Círculo de Sal",
+  "alvo": "Círculo (até 4 metros de diâmetro)",
+  "descricao": "O ocultista desenha um círculo de sal e fecha a linha com oração. Criaturas paranormais têm dificuldade de entrar ou atacar quem está dentro.",
+  "efeito": "O ocultista desenha um círculo de sal e fecha a linha com uma oração.\n\nCriaturas paranormais que tentarem entrar ou atacar alguém dentro do círculo fazem um teste de Vontade DT20 mais o grau de perigo delas. Se falharem, não conseguem atravessar a linha nesse turno.",
+  "limitacoes": [
+   "Se a linha for quebrada por vento, água ou pé, o círculo cai.",
+   "Não impede ataques à distância comuns, só os de criaturas paranormais."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Luz de Vigília",
+  "alvo": "Área (15 metros)",
+  "descricao": "Uma luz prateada fraca acende em volta do ocultista e revela invisível, ilusão e presença escondida.",
+  "efeito": "Uma luz fraca, prateada, acende em volta do ocultista e revela o que se esconde.\n\nCriaturas invisíveis, ilusões e presenças paranormais escondidas na área precisam passar em um teste de Furtividade ou Vontade DT22, ou ficam visíveis enquanto estiverem dentro da luz.",
+  "limitacoes": [
+   "Duração: 1d6 rodadas.",
+   "Rituais de escuridão lançados dentro da área enfrentam um teste de Vontade do usuário."
+  ],
+  "custo": "4 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Maré Lunar",
+  "alvo": "Área (6 metros)",
+  "descricao": "O ocultista puxa a luz da lua para dentro da área como maré subindo. Aliados se curam aos poucos enquanto durar.",
+  "efeito": "O ocultista puxa a luz da lua para dentro da área como maré subindo.\n\nTodos os aliados dentro recuperam 1d8 de HP no início de cada turno, por 3 rodadas.",
+  "limitacoes": [
+   "Só funciona à noite ou sob luz lunar artificial criada por ritual.",
+   "O usuário faz um teste de Vontade DT15 por rodada para manter. Se falhar, a maré recua."
+  ],
+  "custo": "8 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Purificar",
+  "alvo": "Único aliado (toque)",
+  "descricao": "O ocultista coloca as mãos sobre o aliado e lava o que é estranho ao corpo. Tira veneno, praga, sangramento, medo, confusão, paralisia ou marca de ritual. Maldição de Cavaleiro ou Sacerdote é bem mais difícil.",
+  "efeito": "O ocultista coloca as mãos sobre o aliado e lava o que é estranho ao corpo.\n\nRemove uma condição ou maldição ativa: veneno, praga, sangramento, medo, confusão, paralisia ou marca de ritual. Para maldições de Cavaleiro ou de Sacerdote, o usuário faz um teste de Ocultismo DT25.",
+  "limitacoes": [
+   "O usuário sente parte do que tirou: 1d6 de dano de Sanidade."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Âncora",
+  "alvo": "Único aliado",
+  "descricao": "O ocultista prende a alma do aliado no corpo com uma corrente de luz. Por um tempo, fica muito mais difícil possuir, controlar ou dominar essa pessoa.",
+  "efeito": "O ocultista prende a alma do aliado no corpo com uma corrente de luz.\n\nPor 1 hora, o aliado recebe +5 em testes contra possessão, controle mental, dominação e troca de corpo. Se mesmo assim for dominado, pode repetir o teste no início de cada turno.",
+  "limitacoes": [
+   "Uma âncora por vez."
+  ],
+  "custo": "5 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Passagem Lunar",
+  "alvo": "Dois pontos marcados",
+  "descricao": "O ocultista marca dois lugares com uma lua crescente. Enquanto a lua estiver no céu, atravessa de um para o outro, levando poucas pessoas que estejam tocando nele.",
+  "efeito": "O ocultista marca dois lugares com um símbolo de lua crescente. Enquanto a lua estiver no céu, pode atravessar de um para o outro.\n\nO usuário e até 3 pessoas que estejam tocando nele saem de um símbolo e chegam ao outro, a qualquer distância.",
+  "limitacoes": [
+   "Os dois símbolos precisam estar sob o céu aberto e à noite.",
+   "Cada viagem exige um teste de Vontade DT18. Se falhar, a viagem não acontece e todos perdem 1d6 de Sanidade."
+  ],
+  "custo": "10 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Leitura de Essência",
+  "alvo": "Único ou objeto",
+  "descricao": "O ocultista olha através do alvo e vê a cor da essência que corre nele. Descobre o elemento, se é ocultista, Arauto, Sacerdote ou abençoado, e a qual Cavaleiro está ligado.",
+  "efeito": "O ocultista olha através do alvo e vê a cor da essência que corre nele.\n\nFaz um teste de Ocultismo DT18. Se passar, descobre o elemento do alvo ou do objeto, se ele é ocultista, Arauto, Sacerdote ou abençoado, e a qual Cavaleiro está ligado, se estiver.",
+  "limitacoes": [
+   "O alvo pode resistir com Vontade DT20 se souber que está sendo lido."
+  ],
+  "custo": "3 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Véu Prateado",
+  "alvo": "Grupo (até 6 pessoas)",
+  "descricao": "Um véu de luz fina cobre o grupo e esconde todos dos olhos que não são humanos.",
+  "efeito": "Um véu de luz fina cobre o grupo e esconde todos dos olhos que não são humanos.\n\nCriaturas paranormais precisam passar em um teste de Percepção DT22 para notar o grupo enquanto ninguém atacar ou lançar ritual.",
+  "limitacoes": [
+   "Não esconde de humanos, câmeras nem animais comuns.",
+   "Duração: 30 minutos."
+  ],
+  "custo": "6 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Eclipse Menor",
+  "alvo": "Área (10 metros)",
+  "descricao": "O ocultista cobre a área com uma sombra de eclipse onde nenhum ritual quer funcionar. Lançar qualquer ritual ali exige muita vontade, e efeitos que já estavam ativos ficam suspensos.",
+  "efeito": "O ocultista cobre a área com uma sombra de eclipse onde nenhum ritual quer funcionar.\n\nQualquer ritual lançado dentro da área, inclusive aliado, exige do conjurador um teste de Vontade DT22 para funcionar. Rituais contínuos que já estavam ativos dentro da área ficam suspensos enquanto durar.",
+  "limitacoes": [
+   "Duração: 1d4 rodadas.",
+   "O próprio usuário não pode lançar rituais enquanto durar."
+  ],
+  "custo": "10 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Consagrar Solo",
+  "alvo": "Área (10 metros)",
+  "descricao": "O ocultista abençoa o chão com água, sal e luz. Criaturas de Morte e mortos-vivos sofrem ao entrar, e rituais de Morte lançados de dentro custam o dobro.",
+  "efeito": "O ocultista abençoa o chão com água, sal e luz.\n\nCriaturas de Morte e mortos-vivos que entrarem ou começarem o turno na área fazem um teste de Constituição DT20 ou sofrem 2d10 de dano de luz. Rituais de Morte lançados de dentro da área custam o dobro.",
+  "limitacoes": [
+   "Duração: 1 hora.",
+   "Sangue derramado em cima do solo consagrado enfraquece o efeito: a DT cai 2 a cada morte na área."
+  ],
+  "custo": "7 PS",
+  "antigo": true
+ },
+ {
+  "elemento": "Neutro",
+  "nome": "Orientação Lunar",
+  "alvo": "Uma pessoa, objeto ou lugar",
+  "descricao": "O ocultista segura algo que pertença ao que procura e deixa a luz da lua apontar o caminho, sentindo direção e distância por um tempo.",
+  "efeito": "O ocultista segura algo que pertença ao que procura e deixa a luz da lua apontar o caminho.\n\nFaz um teste de Ocultismo DT18. Se passar, sente a direção e a distância aproximada do que procura, por até 1 hora. Se o alvo estiver protegido por ritual, a DT sobe para 25.",
+  "limitacoes": [
+   "Precisa de um objeto ligado ao alvo: cabelo, roupa, foto, sangue ou algo que ele usava.",
+   "Só funciona à noite."
+  ],
+  "custo": "4 PS",
+  "antigo": true
  }
 ]

@@ -1711,7 +1711,7 @@ ROTAS.agente = async id => {
     $('#nova-hab')?.addEventListener('click', () => formHabilidade(h => add('habilidades', h)));
     $('#add-rit')?.addEventListener('click', async () => { const hb = (await homebrewVisivel('ritual')).map(r => ({ ...r, origem: 'Homebrew' }));
       const todos = [...RIT, ...hb];
-      seletor('Rituais', todos, r => `<b>${esc(r.nome)}</b> ${elTag(r.elemento)} <span class="tag">${esc(r.custo || '')}</span><p>${esc(r.efeito)}</p>`, r => add('rituais', { nome: r.nome, elemento: r.elemento, alvo: r.alvo, custo: r.custo, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] })); });
+      seletor('Rituais', todos, r => `<b>${esc(r.nome)}</b> ${elTag(r.elemento)}${r.antigo ? ' <span class="tag">Antigo</span>' : ''} <span class="tag">${esc(r.custo || '')}</span><p>${esc(r.efeito)}</p>`, r => add('rituais', { nome: r.nome, elemento: r.elemento, alvo: r.alvo, custo: r.custo, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] })); });
     $('#novo-rit')?.addEventListener('click', () => formRitual(r => add('rituais', r)));
     $$('[data-ascender]').forEach(b => b.onclick = () => { const nome = b.dataset.ascender;
       abrirModal(`Ascender a ${elDe(nome)}`, `<p>Você pisa no símbolo do outro mundo e a realidade pergunta pela sua vontade. <b>${esc(F.nome)}</b> recebe o primeiro nível de <b>${esc(nome)}</b>.</p><p class="dim">Depois de escolhido, só o mestre retira ou troca o alinhamento.</p><div style="display:flex; gap:8px"><button class="btn" id="asc-ok">Ascender</button></div>`, (m, fechar) => {
@@ -1720,7 +1720,7 @@ ROTAS.agente = async id => {
     $$('[data-al-nv]').forEach(b => b.onclick = () => { const nv = Math.max(1, Math.min(4, (+F.alinhamento?.nivel || 1) + +b.dataset.alNv)); salvar({ alinhamento: { ...F.alinhamento, nivel: nv } }); if (+b.dataset.alNv > 0) toast(`${F.nome} despertou o nível ${nv} de ${F.alinhamento.nome}.`); });
     $('#al-trocar')?.addEventListener('click', () => abrirModal('Retirar alinhamento', `<p>O alinhamento some quando a vontade do personagem muda ou outra entidade se interessa por ele. Retirar <b>${esc(F.alinhamento.nome)}</b> de ${esc(F.nome)}?</p><button class="btn" id="rt-ok">Retirar</button>`, (m, fechar) => { m.querySelector('#rt-ok').onclick = async () => { await salvar({ alinhamento: null }); fechar(); }; }));
     $('#al-rit')?.addEventListener('click', () => { const el = elDe(F.alinhamento.nome);
-      seletor(`Rituais de ${el}`, RIT.filter(r => r.elemento === el), r => `<b>${esc(r.nome)}</b> <span class="tag">${esc(r.custo || '')}</span><p>${esc(r.efeito)}</p>`, r => add('rituais', { nome: r.nome, elemento: r.elemento, alvo: r.alvo, custo: r.custo, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] })); });
+      seletor(`Rituais de ${el}`, RIT.filter(r => r.elemento === el), r => `<b>${esc(r.nome)}</b>${r.antigo ? ' <span class="tag">Antigo</span>' : ''} <span class="tag">${esc(r.custo || '')}</span><p>${esc(r.efeito)}</p>`, r => add('rituais', { nome: r.nome, elemento: r.elemento, alvo: r.alvo, custo: r.custo, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] })); });
     $('#add-item')?.addEventListener('click', () => seletor('Itens do livro', SIS.itens, it => `<b>${esc(it.nome)}</b> <span class="faint">${esc(it.categoria)}</span> ${it.dano ? `<span class="tag">${esc(it.dano)}${it.mult > 1 ? ' ×' + it.mult : ''}</span>` : ''} ${it.peso ? `<span class="tag">${fmtKg(it.peso)}</span>` : ''}<p>${esc(it.obs || '')}</p>`, it => add('equipamentos', { ...it, qtd: 1 })));
     $('#add-item-hb')?.addEventListener('click', async () => { const hb = await homebrewVisivel('item'); if (!hb.length) return toast('Nenhum item no homebrew ainda.');
       seletor('Itens do homebrew', hb, it => `<b>${esc(it.nome)}</b> ${it.dano ? `<span class="tag">${esc(it.dano)}</span>` : ''}<p>${esc(it.obs || '')}</p>`, it => add('equipamentos', { nome: it.nome, dano: it.dano, mult: +it.mult || 1, peso: +it.peso || 0, pericia: it.pericia, obs: it.obs, qtd: 1 })); });
@@ -2239,9 +2239,9 @@ ROTAS.grimorio = async () => {
         const q = $('#busca').value.toLowerCase();
         let html = '';
         if (abaGr === 'rituais') {
-          html = RIT.filter(r => (elGr === 'Todos' || r.elemento === elGr) && (!q || JSON.stringify(r).toLowerCase().includes(q))).map(r => `<article class="hab"><div class="cab"><span class="nm">${esc(r.nome)}</span>${elTag(r.elemento)}</div>
-            <div class="stats"><div><div class="rotulo">Alvo</div><div class="v">${esc(r.alvo)}</div></div><div><div class="rotulo">Custo</div><div class="v">${esc(r.custo)}</div></div></div>
-            <p style="font-style:italic">${esc(r.descricao)}</p><p>${esc(r.efeito)}</p>${r.limitacoes?.length ? `<p class="faint" style="font-size:13px">${r.limitacoes.map(esc).join('<br>')}</p>` : ''}</article>`).join('');
+          html = RIT.filter(r => (elGr === 'Todos' || r.elemento === elGr) && (!q || JSON.stringify(r).toLowerCase().includes(q))).map(r => `<article class="hab"><div class="cab"><span class="nm">${esc(r.nome)}</span>${elTag(r.elemento)}${r.antigo ? ' <span class="tag">Antigo</span>' : ''}</div>
+            <div class="stats"><div><div class="rotulo">Alvo</div><div class="v">${esc(r.alvo)}</div></div><div><div class="rotulo">Custo</div><div class="v">${esc(r.custo || 'Variável')}</div></div></div>
+            <p style="font-style:italic">${esc(r.descricao)}</p><p>${nl(r.efeito)}</p>${r.limitacoes?.length ? `<p class="faint" style="font-size:13px">${r.limitacoes.map(esc).join('<br>')}</p>` : ''}</article>`).join('');
         } else {
           html = LORE.elementos.filter(e => elGr === 'Todos' || e.elemento === elGr).flatMap(e => e.rituais.filter(r => !q || JSON.stringify(r).toLowerCase().includes(q)).map(r => `<article class="hab"><div class="cab"><span class="nm">${esc(r.nome)}</span>${elTag(e.elemento)}</div>
             ${r.alcance ? `<span class="faint" style="font-size:12.5px">Alcance: ${esc(r.alcance)}</span>` : ''}<p>${esc(r.efeito)}</p>
