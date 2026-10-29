@@ -12,8 +12,8 @@
  "atributos": {
   "forca": 1,
   "destreza": 4,
-  "constituicao": 2,
-  "inteligencia": 3,
+  "constituicao": 4,
+  "inteligencia": 4,
   "presenca": 1
  },
  "pericias": [
@@ -28,6 +28,11 @@
    "atributo": "inteligencia"
   },
   {
+   "nome": "Vigor",
+   "pontos": 4,
+   "atributo": "constituicao"
+  },
+  {
    "nome": "Investigação",
    "pontos": 3,
    "atributo": "inteligencia"
@@ -38,13 +43,8 @@
    "atributo": "forca"
   },
   {
-   "nome": "Vigor",
-   "pontos": 3,
-   "atributo": "constituicao"
-  },
-  {
    "nome": "Furtividade",
-   "pontos": 2,
+   "pontos": 3,
    "atributo": "destreza"
   },
   {
@@ -55,12 +55,12 @@
  ],
  "passivas": [
   {
-   "nome": "Leitura Avançada",
-   "texto": "Se passar em um teste de Investigação ou Percepção, revele uma fraqueza, resistência ou padrão de um inimigo em cena, concedendo +2 nos 3 próximos testes contra ele."
+   "nome": "Esforço Máximo",
+   "texto": "Se acertar um ataque tendo gastado pelo menos 10 de PST / PS durante seu turno completo, multiplique seu dano por 2."
   },
   {
-   "nome": "Passo Fantasma",
-   "texto": "Caso o resultado de um teste de Furtividade seja 18 ou mais, você fica fora da linha de visão de qualquer inimigo, causa +1d de dano no próximo ataque furtivo que der e recebe +5 de defesa até o seu próximo turno."
+   "nome": "Pressão Mortal",
+   "texto": "Contra alvos com menos de 50% de PV, o personagem escolhe entre +1d de dano ou +0,5 no multiplicador de crítico."
   }
  ],
  "habilidades": [
@@ -81,6 +81,11 @@
    "origem": "Homebrew",
    "texto": "+1 de margem de crítico e dano ×1,5 com a Eclipsa.",
    "homebrew": true
+  },
+  {
+   "nome": "Modificação Avançada: Mortal",
+   "origem": "Inventor",
+   "texto": "A modificação da Eclipsa é a melhoria Mortal (+1 no multiplicador de crítico). Junto com Letal, ocupa as duas melhorias da arma."
   }
  ],
  "rituais": [
@@ -120,19 +125,30 @@
   {
    "nome": "Eclipsa (Favorita)",
    "dano": "2d10+6",
-   "mult": 3,
+   "mult": 4,
    "margem": 19,
    "peso": 6,
    "qtd": 1,
    "pericia": "Pontaria",
    "categoria": "Armas de Fogo",
-   "obs": "Rifle de precisão montado e ajustado por ele, dispara em sequência. Arma Favorita (Sniper): +1 de margem de crítico e dano ×1,5 nos dados (caixinha no combate).",
+   "obs": "Rifle de precisão montado e ajustado por ele, dispara em sequência. Já aplicado: Arma Favorita (+1 margem, dados ×1,5 na caixinha), Aprimoramento Avançado (+1 no multiplicador, base ×4), Modificação Avançada = Mortal, Letal, Precisão Mortal. Dano extra 2d6 = balas .50. Modo Experimental (+2 margem, +2d10) entra no campo de dano extra quando ativar.",
    "alcance": "Longo",
    "tipoDano": "Balístico",
-   "extra": "",
+   "extra": "2d6",
    "homebrew": true,
    "multExtra": 1.5,
-   "multExtraOn": true
+   "multExtraOn": true,
+   "mods": {
+    "melhorias": [
+     "Letal",
+     "Mortal"
+    ],
+    "bencaos": [
+     "Bênção da Precisão Mortal",
+     "Bênção do Caçador de Monstros"
+    ],
+    "maldicoes": []
+   }
   },
   {
    "nome": "Submetralhadora",
