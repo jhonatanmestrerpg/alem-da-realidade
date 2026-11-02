@@ -58,6 +58,11 @@ img { max-width: 100%; }
 .marca svg { width: 34px; height: 34px; }
 .marca b { font: 400 22px/1 var(--f-disp); letter-spacing: .14em; }
 .nav { display: flex; gap: 2px 18px; flex-wrap: wrap; flex: 1; }
+.volta-camp { display: inline-flex; align-items: center; gap: 8px; max-width: 240px; padding: 6px 12px 6px 10px; border: 1px solid var(--linha-2); background: var(--painel-2); color: var(--lua); text-decoration: none; font: 600 13px var(--f-body); border-radius: 999px; }
+.volta-camp:hover { border-color: var(--ouro); }
+.volta-camp[hidden] { display: none; }
+.volta-camp svg { flex: none; width: 15px; height: 15px; color: var(--ouro); }
+.volta-camp span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nav a { color: var(--lua-dim); text-decoration: none; font: 400 19px/1 var(--f-disp); padding: 8px 0; border-bottom: 1px solid transparent; }
 .nav a:hover { color: var(--lua); }
 .nav a.aqui { color: var(--lua); border-bottom-color: var(--ouro); }
@@ -398,7 +403,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .dado-btn { margin-left: auto; background: none; border: none; color: var(--lua); padding: 2px; }
 .dado-btn:hover { color: var(--ouro); }
 html, body { overflow-x: clip; max-width: 100%; }
-@media (max-width: 600px) { .hist-gaveta { left: 0; width: 100vw; border-left: none; } .hist-lista .rol { padding: 10px 12px; } }
+@media (max-width: 600px) {
+  .volta-camp { max-width: 38vw; padding: 5px 10px; }
+  .quem > a > span:first-child { display: none; } .hist-gaveta { left: 0; width: 100vw; border-left: none; } .hist-lista .rol { padding: 10px 12px; } }
 .rol .l1 b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .rol .total { flex-shrink: 0; }
 .rol-tx > span { overflow-wrap: anywhere; }
 .best-stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13.5px; color: var(--lua-dim); margin-top: 4px; }
@@ -576,7 +583,8 @@ button, a, input, select, textarea { touch-action: manipulation; }
 @media (max-width: 760px) {
   .topo-in { gap: 6px 12px; min-height: 0; padding-block: 8px 0; }
   .marca { order: 1; }
-  .quem { order: 2; margin-left: auto; }
+  .quem { order: 2; }
+  .volta-camp { order: 2; margin-left: auto; }
   .quem > a > span:first-child { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .nav { order: 3; flex: 1 0 100%; flex-wrap: nowrap; overflow-x: auto; gap: 18px; padding-bottom: 2px; scrollbar-width: none; -webkit-overflow-scrolling: touch;
     mask-image: linear-gradient(90deg, #000 85%, transparent); -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); }
@@ -657,6 +665,7 @@ button, a, input, select, textarea { touch-action: manipulation; }
       <a href="#homebrew" data-sec="homebrew">Homebrew</a>
       <a href="#patente" data-sec="patente">Patente</a>
     </nav>
+    <a class="volta-camp" id="volta-camp" hidden></a>
     <div class="quem" id="quem"></div>
   </div>
   <div class="linha-destino"></div>
@@ -1085,6 +1094,16 @@ async function rotear() {
   window.scrollTo(0, 0);
   if (CH.dentro) desenharVoz();
   if (db && ME) carregarPart().then(vigiarTurnos);
+  desenharVolta();
+}
+/* atalho para a última campanha visitada (fica no topo, some quando você já está nela) */
+function guardarUltima(id, nome, escudo) { try { localStorage.setItem('ultimaCampanha', JSON.stringify({ id, nome, escudo: !!escudo, uid: ME })); } catch (e) {} desenharVolta(); }
+function desenharVolta() {
+  const el = $('#volta-camp'); if (!el) return; let u = null; try { u = JSON.parse(localStorage.getItem('ultimaCampanha') || 'null'); } catch (e) {}
+  const [base, ...resto] = (location.hash.slice(1) || '').split('-'), arg = resto.join('-');
+  if (!u || !ME || u.uid !== ME || ((base === 'campanha' || base === 'escudo') && arg === u.id)) { el.hidden = true; return; }
+  el.hidden = false; el.href = `#${u.escudo ? 'escudo' : 'campanha'}-${u.id}`; el.title = `Voltar para ${u.nome}`;
+  el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg><span>${esc(u.nome)}</span>`;
 }
 addEventListener('hashchange', rotear);
 
@@ -2749,6 +2768,7 @@ ROTAS.campanha = async id => {
     if (st.camp === null) { app.innerHTML = '<div class="vazio">Abrindo a campanha…</div>'; return; }
     if (st.camp === false) { app.innerHTML = '<div class="vazio">Campanha não encontrada.</div>'; return; }
     const C = st.camp, mestre = C.mestre === ME, membro = st.membros.some(m => m.uid === ME) || mestre;
+    if (membro) guardarUltima(id, C.nome, false);
     const fichas = Object.values(st.fichas).filter(Boolean);
     const nomes = await nomeDe([...new Set([C.mestre, ...st.membros.map(m => m.uid), ...fichas.map(f => f.dono).filter(Boolean)])]);
     let corpo = '';
@@ -2823,6 +2843,7 @@ ROTAS.escudo = async id => {
   const camp = await db.doc('campanhas/' + id).get();
   if (!camp.exists) { app.innerHTML = '<div class="vazio">Campanha não encontrada.</div>'; return; }
   if (camp.data().mestre !== ME) { app.innerHTML = `<div class="vazio">Só o mestre desta campanha abre o escudo. <a href="#campanha-${esc(id)}">Voltar para a campanha</a></div>`; return; }
+  guardarUltima(id, camp.data().nome, true);
   const refE = db.doc(`mestre/${ME}/escudo/${id}`);
   let E = { anotacoes: { geral: '', futuras: '', anteriores: '' }, combate: { rodada: 1, turno: 0, lista: [], ativo: false }, pistas: [], ocultas: [] };
   try { const s = await refE.get(); if (s.exists) E = { ...E, ...s.data() }; } catch (e) {}
