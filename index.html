@@ -451,8 +451,7 @@ hr.sep-at { border: 0; border-top: 1px dashed var(--linha-2); margin: 8px 0; }
 .rc-par { display: grid; grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr); gap: 10px; align-items: center; width: 100%; } .rc-par.um { grid-template-columns: 1fr; }
 .rc-par > i { width: 1px; height: 46px; background: var(--linha-2); }
 .rc-par div { display: grid; justify-items: center; gap: 2px; } .rc-par b { font: 700 34px/1 var(--f-mono); color: #fff; } .rc-par b.crit { color: var(--fole); }
-.rc-par div { min-width: 0; } .rc-par b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rc-par b.n4 { font-size: 27px; } .rc-par b.n5 { font-size: 22px; } .rc-par b.n6 { font-size: 18px; }
+.rc-par div { min-width: 0; container-type: inline-size; } .rc-par b { white-space: nowrap; font-size: min(34px, calc(100cqi / (var(--n, 2) * .62))); }
 .rc-par span { font: 700 11px var(--f-body); letter-spacing: .14em; text-transform: uppercase; color: var(--lua-dim); }
 .rc-det summary { cursor: pointer; font-size: 11.5px; color: var(--lua-faint); } .rc-det .mono { display: block; font-size: 11.5px; color: var(--lua-dim); overflow-wrap: anywhere; margin-top: 4px; }
 .bonus-atq { display: grid; gap: 8px; }
@@ -3121,8 +3120,8 @@ const rolHtml = r => { const tit = r.titulo || String(r.rotulo || '').replace(/^
   const tipo = r.tipo || (/^Acerto · /.test(r.rotulo || '') ? 'acerto' : /^Dano · /.test(r.rotulo || '') ? 'dano' : '');
   const aviso = !tipo && (r.total === '' || r.total == null);
   const corpo = aviso ? `<div class="rc-aviso">${htmlSeguro(r.detalhe)}</div>` : tipo === 'ataque'
-    ? `<div class="rc-par"><div><b class="${r.critico ? 'crit' : ''} ${tamNum(r.ataque, r.dano)}">${esc(r.ataque)}</b><span>Ataque</span></div><i aria-hidden="true"></i><div><b class="${tamNum(r.ataque, r.dano)}">${esc(r.dano)}</b><span>Dano</span></div></div>`
-    : `<div class="rc-par um"><div><b class="${r.critico || /crítico/i.test(r.rotulo || '') ? 'crit' : ''} ${tamNum(r.total)}">${esc(r.total)}</b><span>${tipo === 'acerto' ? 'Ataque' : tipo === 'dano' ? 'Dano' : 'Total'}</span></div></div>`;
+    ? `<div class="rc-par"><div><b class="${r.critico ? 'crit' : ''}" style="--n:${tamNum(r.ataque, r.dano)}">${esc(r.ataque)}</b><span>Ataque</span></div><i aria-hidden="true"></i><div><b style="--n:${tamNum(r.ataque, r.dano)}">${esc(r.dano)}</b><span>Dano</span></div></div>`
+    : `<div class="rc-par um"><div><b class="${r.critico || /crítico/i.test(r.rotulo || '') ? 'crit' : ''}" style="--n:${tamNum(r.total)}">${esc(r.total)}</b><span>${tipo === 'acerto' ? 'Ataque' : tipo === 'dano' ? 'Dano' : 'Total'}</span></div></div>`;
   return `<div class="rol2 ${r.oculta ? 'oculta' : ''}"><div class="rc-autor">${esc(r.autor)}</div>
     <div class="rc-card ${r.critico || /crítico/i.test(r.rotulo || '') ? 'crit' : ''}" style="${(() => { const e = estiloCartao(r.estilo); return e ? `--rc:${e.borda}; background:${e.fundo}; border-image:linear-gradient(90deg, ${e.borda}, ${e.borda2}) 1` : r.cor ? `--rc:${esc(r.cor)}` : ''; })()}">
       <div class="rc-ico" style="${r.foto ? `background-image:url('${esc(r.foto)}')` : ''}">${r.foto ? '' : DADO_SVG}</div>
@@ -3159,7 +3158,7 @@ function removerDaCampanha(campId, f, nomeCamp) {
   });
 }
 // número grande no cartão de rolagem encolhe conforme os dígitos (os dois lados do par usam o mesmo tamanho)
-const tamNum = (...v) => { const n = Math.max(...v.map(x => String(x ?? '').length)); return n >= 6 ? 'n6' : n === 5 ? 'n5' : n === 4 ? 'n4' : ''; };
+const tamNum = (...v) => Math.max(2, ...v.map(x => String(x ?? '').length));
 const vitalMini = (cls, a, m) => `<div class="${cls}"><div class="trilho fino"><div class="cheio" style="width:${Math.min(100, (a / (m || 1)) * 100)}%"></div><div class="txt">${a}/${m}</div></div></div>`;
 
 /* abas laterais: no computador ficam fixas; no celular viram gavetas puxadas por botões na borda */
