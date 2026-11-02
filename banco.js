@@ -94,8 +94,9 @@ window.criarBanco = function criarBanco(sb) {
         disparar(pai(path), path); avisar(pai(path), path);
       },
       onSnapshot(next, falha) {
-        let vivo = true, seq = 0;
-        const rodar = async () => { const n = ++seq; try { const s = await ref.get(); if (vivo && n === seq) next(s); } catch (e) { if (vivo) falha?.(e); } };
+        // só avisa a tela quando o documento mudou de verdade (evita redesenhar à toa a cada varredura)
+        let vivo = true, seq = 0, ultimo;
+        const rodar = async () => { const n = ++seq; try { const s = await ref.get(); if (!vivo || n !== seq) return; const k = JSON.stringify(s.exists ? s.data() : null); if (k === ultimo) return; ultimo = k; next(s); } catch (e) { if (vivo) falha?.(e); } };
         rodar();
         const sair = registrar('d:' + path, rodar);
         return () => { vivo = false; sair(); };
@@ -131,8 +132,8 @@ window.criarBanco = function criarBanco(sb) {
         return { docs, size: docs.length, empty: !docs.length, docChanges: () => [], metadata: { fromCache: false, hasPendingWrites: false } };
       },
       onSnapshot(next, falha) {
-        let vivo = true, seq = 0;
-        const rodar = async () => { const n = ++seq; try { const s = await q.get(); if (vivo && n === seq) next(s); } catch (e) { if (vivo) falha?.(e); } };
+        let vivo = true, seq = 0, ultimo;
+        const rodar = async () => { const n = ++seq; try { const s = await q.get(); if (!vivo || n !== seq) return; const k = JSON.stringify(s.docs.map(d => [d.id, d.data()])); if (k === ultimo) return; ultimo = k; next(s); } catch (e) { if (vivo) falha?.(e); } };
         rodar();
         const sair = registrar('c:' + col, rodar);
         return () => { vivo = false; sair(); };
