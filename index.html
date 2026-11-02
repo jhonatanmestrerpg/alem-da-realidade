@@ -61,6 +61,22 @@ img { max-width: 100%; }
 .volta-camp { display: inline-flex; align-items: center; gap: 8px; max-width: 240px; padding: 6px 12px 6px 10px; border: 1px solid var(--linha-2); background: var(--painel-2); color: var(--lua); text-decoration: none; font: 600 13px var(--f-body); border-radius: 999px; }
 .trilho.clicavel { cursor: pointer; } .trilho.clicavel:hover { outline: 1px solid var(--linha-2); }
 .bcris .v.clicavel { cursor: pointer; text-decoration: underline dotted rgba(255,255,255,.5); text-underline-offset: 3px; }
+/* tela de morto */
+.tela-morto { position: relative; display: grid; justify-items: center; text-align: center; gap: 10px; padding: 56px 16px 64px; overflow: hidden; border: 1px solid rgba(180,51,59,.35); background: radial-gradient(ellipse at 50% 30%, rgba(120,20,28,.45), rgba(8,6,10,.96) 65%), #07060a; animation: tmEntra 1.4s ease both; }
+.tm-nevoa { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(255,255,255,.015) 0 2px, transparent 2px 4px); pointer-events: none; }
+.tm-retrato { position: relative; width: 168px; height: 210px; overflow: hidden; border: 1px solid rgba(255,255,255,.12); box-shadow: 0 0 60px rgba(180,51,59,.35); }
+.tm-img { position: absolute; inset: 0; background: var(--painel-3) center top/cover no-repeat; filter: grayscale(1) contrast(1.1) brightness(.7); display: grid; place-items: center; font: 400 56px var(--f-disp); color: var(--lua-faint); }
+.tm-x::before, .tm-x::after { content: ""; position: absolute; left: 50%; top: 50%; width: 140%; height: 3px; background: var(--sangue); transform-origin: center; filter: none; box-shadow: 0 0 12px rgba(227,102,109,.8); }
+.tm-x::before { transform: translate(-50%, -50%) rotate(52deg); } .tm-x::after { transform: translate(-50%, -50%) rotate(-52deg); }
+.tm-rot { color: var(--sangue-hi) !important; letter-spacing: .3em; margin-top: 10px; }
+.tm-nome { margin: 0; font-size: clamp(34px, 7vw, 64px); text-shadow: 0 0 30px rgba(180,51,59,.5); }
+.tm-sub { margin: 0; color: var(--lua-dim); }
+.tm-datas { display: flex; gap: 8px 22px; flex-wrap: wrap; justify-content: center; font: 13px var(--f-mono); color: var(--lua); }
+.tm-palavras { margin: 10px 0 0; max-width: 46ch; font: italic 20px/1.4 var(--f-ital); color: var(--lua); }
+.tm-acoes { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 18px; }
+@keyframes tmEntra { from { opacity: 0; filter: brightness(2) saturate(0); } }
+.card-ag.morto { position: relative; } .card-ag.morto .foto { filter: grayscale(1) brightness(.6); } .card-ag.morto .nm { text-decoration: line-through; text-decoration-color: var(--sangue); }
+.ini-card.morto { opacity: .45; } .ini-card.morto .ft { filter: grayscale(1); } .ini-card.morto .nm::before { content: "✝ "; color: var(--sangue-hi); }
 .volta-camp:hover { border-color: var(--ouro); }
 .volta-camp[hidden] { display: none; }
 .volta-camp svg { flex: none; width: 15px; height: 15px; color: var(--ouro); }
@@ -1205,8 +1221,32 @@ ROTAS.agentes = async () => {
   $('#busca').addEventListener('input', desenhar);
   $('#todos')?.addEventListener('click', e => { todos = !todos; e.target.textContent = todos ? 'Só os meus' : 'Ver todos os agentes'; ouvir(); });
 };
+/* ---------- morte ---------- */
+const VER_MORTO = {};
+function declararMorte(f, aoConfirmar) {
+  abrirModal('Declarar morte', `<p>${esc(f.nome)} morre de vez. A ficha passa a abrir na tela de morto para todo mundo. Só o mestre pode reviver.</p>
+    <div class="campo"><label class="rotulo" for="mt-c">Causa</label><input type="text" id="mt-c" placeholder="Devorado pelo Cão de Guerra"></div>
+    <div class="campo"><label class="rotulo" for="mt-p">Últimas palavras (opcional)</label><input type="text" id="mt-p"></div>
+    <div style="display:flex; gap:8px"><button class="btn" id="mt-ok">Declarar morte</button><button class="btn sec" data-c>Cancelar</button></div>`, (m, fechar) => {
+    m.querySelector('[data-c]').onclick = fechar;
+    m.querySelector('#mt-ok').onclick = () => { aoConfirmar({ em: Date.now(), causa: m.querySelector('#mt-c').value.trim(), palavras: m.querySelector('#mt-p').value.trim() }); fechar(); };
+  });
+}
+function telaMorto(f, { ehMestre, aoVer, aoReviver }) {
+  const foto = fotoEf(f), M = f.morto || {};
+  app.className = 'pagina';
+  app.innerHTML = `<section class="tela-morto"><div class="tm-nevoa"></div>
+    <div class="tm-retrato"><div class="tm-img" style="${foto ? `background-image:url('${esc(foto)}')` : ''}">${foto ? '' : esc(iniciais(f.nome))}</div><span class="tm-x"></span></div>
+    <span class="rotulo tm-rot">Tombou em serviço</span>
+    <h1 class="tm-nome">${esc(f.nome)}</h1>
+    <p class="tm-sub">${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''} · Nível ${+f.nivel || 1}</p>
+    <div class="tm-datas"><span>Morto em ${dataBR(M.em)}</span>${M.causa ? `<span>${esc(M.causa)}</span>` : ''}</div>
+    ${M.palavras ? `<blockquote class="tm-palavras">“${esc(M.palavras)}”</blockquote>` : ''}
+    <div class="tm-acoes"><button class="btn sec" id="tm-ver">Ver a ficha</button>${ehMestre ? '<button class="btn ouro" id="tm-reviver">Reviver</button>' : ''}<a class="btn sec" href="#agentes" style="text-decoration:none">Voltar</a></div></section>`;
+  $('#tm-ver').onclick = aoVer; $('#tm-reviver')?.addEventListener('click', aoReviver);
+}
 function cardAgente(f, extra = '', dono = '') {
-  return `<article class="card-ag">
+  return `<article class="card-ag ${f.morto ? 'morto' : ''}">${f.morto ? '<span class="carimbo">Morto</span>' : ''}
     <div class="foto" style="${fotoEf(f) ? `background-image:url('${esc(fotoEf(f))}')` : ''}">${fotoEf(f) ? '' : esc(iniciais(f.nome))}</div>
     <div class="corpo"><div class="nm">${esc(f.nome || 'Sem nome')}</div>
       <div class="dim" style="font-weight:600">${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''} · Nv ${+f.nivel || 1}</div>
@@ -1320,7 +1360,7 @@ ROTAS.novo = async () => {
 ROTAS.agente = async id => {
   if (!db) { app.innerHTML = semBanco(); return; }
   app.innerHTML = '<div class="vazio">Abrindo dossiê…</div>';
-  const ref = db.doc('fichas/' + id);
+  const ref = db.doc('fichas/' + id); VER_MORTO[id] = false;
   let F = null, aba = window._abaFicha || 'pericias', editando = false, mostrarTodas = false, podeEditar = false, ehMestre = false, pendente = false;
   window._abaFicha = null;
   const salvarVitais = debounce(async () => { try { await ref.update({ atual: F.atual, queda: F.queda || {} }); } catch (e) { toast('Não deu para salvar os vitais.'); } pendente = false; }, 500);
@@ -1426,6 +1466,8 @@ ROTAS.agente = async id => {
     publicarRolagem(F, `Usou ${nome}`, { total: totalPub, detalhe: esc(resumo.join(' · ') || 'Habilidade') });
   }
 
+  async function reviver() { const K = calc(F); F.morto = null; F.atual = { ...K.max, ...(F.atual || {}), pv: Math.max(1, F.atual?.pv || 0) }; ajustarQueda(F); render();
+    try { await ref.update({ morto: null, atual: F.atual, queda: F.queda || {} }); toast(`${F.nome} voltou.`); } catch (e) { toast('Não deu para salvar.'); } }
   async function checarPermissao() {
     ehMestre = DONO;
     if (F.campanhas?.length) {
@@ -1443,6 +1485,7 @@ ROTAS.agente = async id => {
   }, e => { app.innerHTML = `<div class="vazio">Não deu para abrir a ficha (${esc(e.code)}).</div>`; }));
 
   function render() {
+    if (F.morto && !VER_MORTO[F.id]) return telaMorto(F, { ehMestre, aoVer: () => { VER_MORTO[F.id] = true; render(); }, aoReviver: () => reviver() });
     const K = calc(F); const A = F.atributos || {};
     F.atual = F.atual || { ...K.max };
     if (!pendente && ajustarQueda(F) && (F.dono === ME || ehMestre)) salvar({ queda: F.queda });
@@ -1456,7 +1499,7 @@ ROTAS.agente = async id => {
         ${VA ? `<h1 class="nome-vetor">${esc(F.vetor.nome || 'Vetor')}</h1><div class="dim" style="margin-top:-4px">${esc(F.nome)}, vestindo o vetor</div>` : `<h1>${esc(F.nome)}</h1>`}
         <div class="dim">${esc(F.classe)} · ${esc(F.subclasse)} · Nível ${+F.nivel || 1}${F.vontade ? ` · Vontade de ${esc(F.vontade)}` : ''}</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px">
-          ${podeEditar ? `<button class="btn ${editando ? '' : 'sec'}" id="editar">${editando ? 'Concluir edição' : 'Editar ficha'}</button>${editando ? '<button class="btn sec" id="corrigir" title="Ajusta atributos, perícias, passivas e vitais às regras do nível e da patente">Corrigir ficha</button>' : ''}${editando && (F.dono === ME || DONO) ? '<button class="btn sec perigo" id="apagar-ag">Apagar agente</button>' : ''}` : ''}
+          ${ehMestre ? (F.morto ? '<button class="btn ouro" id="reviver">Reviver</button>' : '<button class="btn sec" id="matar" title="Só o mestre declara a morte">Declarar morte</button>') : ''}${podeEditar ? `<button class="btn ${editando ? '' : 'sec'}" id="editar">${editando ? 'Concluir edição' : 'Editar ficha'}</button>${editando ? '<button class="btn sec" id="corrigir" title="Ajusta atributos, perícias, passivas e vitais às regras do nível e da patente">Corrigir ficha</button>' : ''}${editando && (F.dono === ME || DONO) ? '<button class="btn sec perigo" id="apagar-ag">Apagar agente</button>' : ''}` : ''}
           ${VL ? (podeEditar ? `<button class="btn btn-vetor ${VA ? 'ativo' : ''}" id="vestir">${VA ? 'Tirar o vetor' : 'Vestir vetor'}</button>` : '')
             : `<button class="btn btn-vetor" disabled title="Só o mestre libera">${CADEADO} Vestir vetor</button>`}
           ${F.dono === ME ? (MEU_PRINCIPAL === id ? `<a class="btn sec principal-on" href="#dossie-${esc(ME)}" title="Abrir seu dossiê de caçador">★ Personagem principal · caçador</a>` : `<button class="btn sec" id="tornar-principal" title="Vira seu caçador no Bestiário, com dossiê e registro de abates">☆ Tornar personagem principal</button>`) : ''}
@@ -1628,6 +1671,8 @@ ROTAS.agente = async id => {
     $('#dt')?.addEventListener('input', e => window._dt = e.target.value);
     $('#bonus')?.addEventListener('input', e => window._bonus = e.target.value);
     $('#editar')?.addEventListener('click', () => { editando = !editando; render(); });
+    $('#matar')?.addEventListener('click', () => declararMorte(F, async morto => { VER_MORTO[F.id] = false; F.morto = morto; render(); try { await ref.update({ morto }); } catch (e) { toast('Não deu para salvar.'); } }));
+    $('#reviver')?.addEventListener('click', () => reviver());
     $('#vestir')?.addEventListener('click', async () => {
       if (!vetorLiberado(F)) return;
       const vestir = !F.vetorVestido, b = 5 * (+F.nivel || 1);
@@ -2783,8 +2828,8 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.menu-pop') || e.target.closest('.menu-pop > div button')) document.querySelectorAll('.menu-pop > div').forEach(d => d.hidden = true);
 });
 // cartão da ordem de iniciativa (mestre e jogador)
-function cardIni({ i, nome, foto, ameaca, pv, pvM, ps, psM, conds = [], ini, vez, sel, meu, editavel, mostrarPV = true, rotTipo = '' }) {
-  return `<div class="ini-card ${vez ? 'vez' : ''} ${sel ? 'sel' : ''} ${meu ? 'meu' : ''} ${mostrarPV && pv != null && pv <= 0 ? 'caido' : ''}" data-selcb="${i}" role="button" tabindex="0">
+function cardIni({ i, nome, foto, ameaca, pv, pvM, ps, psM, conds = [], ini, vez, sel, meu, editavel, mostrarPV = true, rotTipo = '', morto = false }) {
+  return `<div class="ini-card ${morto ? 'morto' : ''} ${vez ? 'vez' : ''} ${sel ? 'sel' : ''} ${meu ? 'meu' : ''} ${mostrarPV && pv != null && pv <= 0 ? 'caido' : ''}" data-selcb="${i}" role="button" tabindex="0">
     <div class="ft ${ameaca && foto ? 'am' : ''}" style="${foto ? `background-image:url('${esc(foto)}')` : ''}">${foto ? '' : esc(iniciais(nome))}</div>
     <div style="min-width:0"><div class="nm">${esc(nome)}</div><div class="vs">${mostrarPV && pv != null ? `<span class="p">${pv} / ${pvM}</span>` : ''}${ps != null ? `<span class="s">${ps} / ${psM}</span>` : ''}${rotTipo ? `<span class="faint">${esc(rotTipo)}</span>` : ''}</div>${conds.length ? `<div class="conds">${conds.map(c => `<span class="cond-chip">${esc(c)}</span>`).join('')}</div>` : ''}</div>
     <div class="n">${editavel ? `<input type="number" aria-label="Iniciativa de ${esc(nome)}" data-ini="${i}" value="${esc(ini ?? '')}">` : esc(ini ?? '')}</div></div>`;
@@ -2808,7 +2853,7 @@ ROTAS.campanha = async id => {
     if (aba === 'jogadores') corpo = `<div class="lista">${[...new Set([C.mestre, ...st.membros.map(m => m.uid)])].map(u => `<div class="item"><div class="cab"><span style="display:flex; gap:10px; align-items:center"><span class="ava" style="background:${corDe(u)}">${esc(iniciais(nomes[u]))}</span><b>${esc(nomes[u])}${u === ME ? ' (você)' : ''}</b></span><span class="tag ${u === C.mestre ? 'crit' : ''}">${u === C.mestre ? 'Mestre' : 'Jogador'}</span></div></div>`).join('')}</div>`;
     if (aba === 'combate') corpo = st.combate?.ativo ? `<div class="cb-topo"><h2>Rodada ${st.combate.rodada || 1}</h2><span class="dim">Ordem de iniciativa</span></div>
       <section class="ini-lista" style="max-width:560px">${(st.combate.ordem || []).map((o, i) => { const f = o.tipo === 'agente' ? st.fichas[o.ref] : null; const K = f ? calc(f) : null; const a = f ? { ...K.max, ...(f.atual || {}) } : null;
-        return cardIni({ i, nome: o.nome, foto: f ? fotoEf(f) : (o.img || ''), ameaca: o.tipo !== 'agente', pv: a?.pv, pvM: K?.max.pv, ps: a?.ps, psM: K?.max.ps, conds: o.cond || [], ini: o.ini, vez: i === st.combate.turno, meu: f?.dono === ME, mostrarPV: !!f, rotTipo: o.tipo === 'ameaca' ? 'Ameaça' : o.tipo === 'npc' ? 'NPC' : '' }); }).join('')}</section>`
+        return cardIni({ i, nome: o.nome, foto: f ? fotoEf(f) : (o.img || ''), ameaca: o.tipo !== 'agente', pv: a?.pv, pvM: K?.max.pv, ps: a?.ps, psM: K?.max.ps, conds: o.cond || [], ini: o.ini, vez: i === st.combate.turno, meu: f?.dono === ME, morto: !!f?.morto, mostrarPV: !!f, rotTipo: o.tipo === 'ameaca' ? 'Ameaça' : o.tipo === 'npc' ? 'NPC' : '' }); }).join('')}</section>`
       : '<div class="vazio">Nenhum combate em andamento.</div>';
     if (aba === 'pistas') corpo = `<div class="lista">${st.pistas.map(p => `<div class="item"><span class="nm">${esc(p.titulo)}</span><p class="dim">${nl(p.texto)}</p>${p.imagem ? `<img src="${esc(p.imagem)}" alt="" style="max-width:420px">` : ''}</div>`).join('') || '<div class="vazio">Nenhuma pista revelada.</div>'}</div>`;
     if (aba === 'relatorios') corpo = `<div class="lista">${st.relatorios.slice().reverse().map(r => `<div class="item"><div class="cab"><span class="nm">${esc(r.titulo)}</span><span class="faint">${dataBR(r.t)}</span></div><p class="dim">${nl(r.texto)}</p></div>`).join('') || '<div class="vazio">Nenhum relatório de missão ainda.</div>'}</div>`;
@@ -2950,7 +2995,7 @@ ROTAS.escudo = async id => {
           ${['pv', 'ps', 'pst'].map(k => barraCris(k, a[k], K.max[k], 'data-cbv-' + k, [5, 1]).replace('<span class="v">', `<span class="v clicavel" data-cbaj="${k}" role="button" tabindex="0" title="Digitar valor ou mudar o máximo">`)).join('')}
           <div class="abas abas-mini">${[['atributos', 'Atributos'], ['combate', 'Combate'], ['condicoes', `Condições${I0.conds.length ? ' ' + I0.conds.length : ''}`]].map(([k, l]) => `<button class="${ab === k ? 'aqui' : ''}" data-dab="${k}">${l}</button>`).join('')}</div>
           <div style="display:grid; gap:10px">${cx}</div><div class="res" id="cb-res"></div>
-          <div class="lin-acoes"><button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`; }
+          <div class="lin-acoes">${f.morto ? `<span class="tag crit">Morto${f.morto.causa ? ': ' + esc(f.morto.causa) : ''}</span><button class="btn mini ouro" data-cb-reviver>Reviver</button>` : '<button class="btn mini sec" data-cb-matar>Declarar morte</button>'}<button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`; }
       else if (x0 && (x0.tipo === 'ameaca' || x0.ficha)) det = `<div id="cb-amf"></div>${blocoCond}<div class="lin-acoes"><button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`;
       else if (x0) det = `<div class="am-banner" style="--bc:var(--ouro)"><div class="am-ft ag">${esc(iniciais(x0.nome))}</div><div class="am-tx"><b>${esc(x0.nome)}</b><span class="am-el">NPC</span></div></div>
           ${barraCris('pv', x0.pv, x0.pvMax, 'data-cbv-pv', [10, 1]).replace('<span class="v">', '<span class="v clicavel" data-npcaj role="button" tabindex="0">')}${blocoCond}<div class="lin-acoes"><button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`;
@@ -2961,7 +3006,7 @@ ROTAS.escudo = async id => {
             <div class="menu-pop"><button class="btn mini" data-menu>Adicionar</button><div hidden><button id="cb-ag">Agentes da campanha</button><button id="cb-am">Ameaça</button><button id="cb-npc">NPC</button></div></div></div></div>
         <div class="cb-wrap"><section class="ini-lista">
           <div class="ini-cab"><div><b>Iniciativa</b><div class="sub">Rodada atual: ${c.ativo ? c.rodada : 0}</div></div><div style="display:flex; gap:6px"><button class="btn sec mini" id="cb-voltar">Voltar turno</button><button class="btn mini" id="cb-prox">Próximo turno</button></div></div>
-          ${c.lista.map((x, i) => { const I = infoX(x); return cardIni({ i, nome: x.nome, foto: I.foto, ameaca: x.tipo === 'ameaca', pv: I.pv, pvM: I.pvM, ps: I.f ? I.a.ps : null, psM: I.f ? I.K.max.ps : null, conds: I.conds.map(cd => cd.nome), ini: x.ini, vez: c.ativo && i === c.turno, sel: i === sel, editavel: true, rotTipo: x.tipo === 'npc' ? 'NPC' : '' }); }).join('') || '<div class="vazio" style="font-size:15px">Use Adicionar para montar a iniciativa.</div>'}
+          ${c.lista.map((x, i) => { const I = infoX(x); return cardIni({ i, nome: x.nome, foto: I.foto, ameaca: x.tipo === 'ameaca', pv: I.pv, pvM: I.pvM, ps: I.f ? I.a.ps : null, psM: I.f ? I.K.max.ps : null, conds: I.conds.map(cd => cd.nome), ini: x.ini, vez: c.ativo && i === c.turno, sel: i === sel, editavel: true, morto: !!I.f?.morto, rotTipo: x.tipo === 'npc' ? 'NPC' : '' }); }).join('') || '<div class="vazio" style="font-size:15px">Use Adicionar para montar a iniciativa.</div>'}
           <p class="faint" style="font-size:12px; margin:4px 2px 0">Os jogadores veem a ordem e as condições, nunca os PV das ameaças.</p></section>
         <aside class="cb-det" id="cb-det">${det}</aside></div></div>`;
       if (x0 && (x0.tipo === 'ameaca' || x0.ficha)) { const base = x0.tipo === 'ameaca' ? CRI.find(k => String(k.id) === String(x0.ref)) || {} : {};
@@ -2972,6 +3017,8 @@ ROTAS.escudo = async id => {
       for (const k of ['pv', 'ps', 'pst']) $$(`[data-cbv-${k}]`).forEach(b => b.onclick = async () => { const dd = +b.getAttribute('data-cbv-' + k);
         if (x0.tipo !== 'agente') { x0.pv = Math.max(0, Math.min(x0.pvMax, x0.pv + dd)); salvarE(); render(); return; }
         const f = I0.f; const a = { ...I0.a }; a[k] = Math.max(0, Math.min(I0.K.max[k], a[k] + dd)); f.atual = a; ajustarQueda(f); render(); try { await db.doc('fichas/' + f.id).update({ atual: a, queda: f.queda || {} }); } catch (e) { toast('Não deu para alterar a ficha.'); } });
+      $('[data-cb-matar]')?.addEventListener('click', () => declararMorte(I0.f, async morto => { I0.f.morto = morto; render(); try { await db.doc('fichas/' + I0.f.id).update({ morto }); } catch (e) { toast('Não deu para salvar.'); } }));
+      $('[data-cb-reviver]')?.addEventListener('click', async () => { const f = I0.f, a = { ...I0.a, pv: Math.max(1, I0.a.pv) }; f.morto = null; f.atual = a; ajustarQueda(f); render(); try { await db.doc('fichas/' + f.id).update({ morto: null, atual: a, queda: f.queda || {} }); } catch (e) { toast('Não deu para salvar.'); } });
       $('[data-npcaj]')?.addEventListener('click', () => abrirModal2(`PV de ${x0.nome}`, `<div class="campo"><label class="rotulo" for="hp-n">Quantidade</label><input type="number" id="hp-n" min="0"></div><div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn" data-op="-">Tirar</button><button class="btn sec" data-op="+">Somar</button><button class="btn sec" data-op="=">Definir como</button></div>`, (m2, f2) => {
         const nI = m2.querySelector('#hp-n'); nI.focus(); const ap = op => { const v = Math.abs(+nI.value || 0); x0.pv = Math.max(0, Math.min(x0.pvMax, op === '-' ? x0.pv - v : op === '+' ? x0.pv + v : v)); salvarE(); f2(); render(); };
         m2.querySelectorAll('[data-op]').forEach(b => b.onclick = () => ap(b.dataset.op)); nI.onkeydown = e => { if (e.key === 'Enter') ap('-'); }; }));
