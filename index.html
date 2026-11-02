@@ -82,6 +82,7 @@ img { max-width: 100%; }
 .fase2-btn { background: linear-gradient(90deg, #5a1218, var(--sangue)); border-color: var(--sangue-hi); }
 .fx-fase { animation: fxFase 1.1s ease; }
 @keyframes fxFase { 0% { box-shadow: 0 0 0 0 rgba(227,102,109,.9); filter: brightness(2.2) saturate(0); } 40% { box-shadow: 0 0 60px 10px rgba(227,102,109,.6); } 100% { box-shadow: none; filter: none; } }
+.zona-perigo { border: 1px solid rgba(180,51,59,.4); padding: 10px 12px; } .zona-perigo summary { cursor: pointer; color: var(--sangue-hi); font-weight: 700; }
 .volta-camp:hover { border-color: var(--ouro); }
 .volta-camp[hidden] { display: none; }
 .volta-camp svg { flex: none; width: 15px; height: 15px; color: var(--ouro); }
@@ -2790,7 +2791,13 @@ function editarCampanha(id, C) {
   abrirModal('Editar campanha', `<div class="campo"><label class="rotulo" for="ec-n">Nome</label><input type="text" id="ec-n" value="${esc(C.nome)}"></div>
     <div class="campo"><label class="rotulo" for="ec-d">Descrição</label><textarea id="ec-d">${esc(C.descricao)}</textarea></div>
     <div class="campo"><label class="rotulo" for="ec-c">Nova capa</label><input type="file" id="ec-c" accept="image/*"></div>
-    <button class="btn" id="ec-ok">Salvar</button>`, (m, fechar) => {
+    <button class="btn" id="ec-ok">Salvar</button>
+    <details class="zona-perigo"><summary>Excluir campanha</summary><p class="dim" style="margin:8px 0">Apaga a campanha, o combate, o chat, as rolagens, as pistas, os relatórios e o homebrew dela. Os agentes continuam existindo, só saem da campanha. Não tem volta.</p>
+      <div class="campo"><label class="rotulo" for="ec-x">Digite o nome da campanha para confirmar</label><input type="text" id="ec-x" placeholder="${esc(C.nome)}" autocomplete="off"></div><button class="btn" id="ec-del" disabled>Excluir para sempre</button></details>`, (m, fechar) => {
+    const cx = m.querySelector('#ec-x'), bx = m.querySelector('#ec-del');
+    cx.oninput = () => { bx.disabled = cx.value.trim() !== String(C.nome).trim(); };
+    bx.onclick = async () => { bx.disabled = true; bx.textContent = 'Excluindo…';
+      try { await excluirCampanha(id); fechar(); toast('Campanha excluída.'); location.hash = 'campanhas'; } catch (e) { toast('Não deu para excluir: ' + (e.message || e.code)); bx.disabled = false; bx.textContent = 'Excluir para sempre'; } };
     let capa = C.capa || '';
     m.querySelector('#ec-c').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) { capa = u; toast('Capa enviada.'); } };
     m.querySelector('#ec-ok').onclick = async () => {
@@ -2800,6 +2807,15 @@ function editarCampanha(id, C) {
       catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); }
     };
   });
+}
+async function excluirCampanha(id) {
+  const ags = await db.collection(`campanhas/${id}/agentes`).get();
+  for (const d of ags.docs) { try { const f = (await db.doc('fichas/' + d.id).get()).data(); if (f) await db.doc('fichas/' + d.id).update({ campanhas: (f.campanhas || []).filter(c => c !== id) }); } catch (e) {} }
+  if (sb) { const { error } = await sb.from('docs').delete().like('path', `campanhas/${id}/%`); if (error) throw error; }
+  try { await db.doc(`mestre/${ME}/escudo/${id}`).delete(); } catch (e) {}
+  await db.doc('campanhas/' + id).delete();
+  PART.campanhas = (PART.campanhas || []).filter(c => c !== id); await salvarPart();
+  try { const u = JSON.parse(localStorage.getItem('ultimaCampanha') || 'null'); if (u?.id === id) localStorage.removeItem('ultimaCampanha'); } catch (e) {}
 }
 async function entrarCampanha(id) {
   try { await db.doc(`campanhas/${id}/membros/${ME}`).set({ uid: ME, entrou: Date.now(), papel: 'jogador' }); } catch (e) { toast('Não deu para entrar: ' + (e.message || e.code)); return; }
