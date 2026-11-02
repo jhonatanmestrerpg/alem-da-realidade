@@ -3945,7 +3945,9 @@ ROTAS.entrar = async () => {
         <div class="linha-acao"><span><span class="rotulo">E-mail</span> ${esc(email || '(sem e-mail)')}</span></div>
         <div class="linha-acao"><span style="min-width:0; overflow-wrap:anywhere"><span class="rotulo">ID</span> <span class="mono" style="font-size:12px">${esc(ME)}</span></span><button class="btn mini sec" id="pf-copiar">Copiar</button></div>
         <p class="faint" style="margin:0; font-size:13px">${DONO ? 'Seu acesso de administrador está preso ao seu ID e ao seu e-mail, não ao nome. Pode trocar o nome e a foto à vontade.' : 'O nome e a foto podem mudar quando quiser; a conta é reconhecida pelo ID e pelo e-mail.'}</p>
-        <button class="btn sec" id="sair-conta" style="justify-self:start">Sair da conta</button></div>`;
+        <button class="btn sec" id="sair-conta" style="justify-self:start">Sair da conta</button></div>
+      ${DONO ? `<div class="caixa" style="display:grid; gap:10px"><h3 style="margin:0">Contas da mesa</h3><p class="faint" style="margin:0; font-size:13px">Busque pelo nome para ver o ID de alguém. Administrador é marcado no banco pelo ID, então trocar de nome não tira o acesso.</p>
+        <div class="busca">${ICON_BUSCA}<input type="search" id="pf-busca" placeholder="Nome, por exemplo: Yonne"></div><div id="pf-contas" class="lista"></div></div>` : ''}`;
     const ligarP = () => {
       $('#pf-foto').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) { foto = u; $('#pf-ava').style.backgroundImage = `url('${u}')`; $('#pf-ava').textContent = ''; toast('Foto enviada. Clique em Salvar perfil.'); } };
       $('#pf-tirar')?.addEventListener('click', () => { foto = ''; toast('Foto removida. Clique em Salvar perfil.'); });
@@ -3956,6 +3958,11 @@ ROTAS.entrar = async () => {
         try { await db.doc('usuarios/' + ME).set({ uid: ME, ...extra, t: Date.now() }); } catch (e) { return toast('O nome salvou, a foto e a frase não.'); }
         Object.assign(PERFIL, { nome, ...extra }); PERFIS[ME] = nome; desenharQuem(); toast('Perfil salvo.'); app.innerHTML = des(); ligarP(); };
       $('#sair-conta').onclick = async () => { await sb.auth.signOut(); location.hash = 'inicio'; location.reload(); };
+      const buscar = debounce(async () => { const el = $('#pf-contas'); if (!el) return; const q = $('#pf-busca').value.trim();
+        const { data, error } = await sb.from('perfis').select('id,nome,papel').ilike('nome', `%${q}%`).limit(30);
+        el.innerHTML = error ? `<span class="falha">${esc(error.message)}</span>` : (data || []).map(u => `<div class="linha-acao"><span style="min-width:0; overflow-wrap:anywhere"><b>${esc(u.nome || '(sem nome)')}</b> ${u.papel === 'admin' ? '<span class="tag crit">Admin</span>' : ''}<br><span class="mono faint" style="font-size:11.5px">${esc(u.id)}</span></span><button class="btn mini sec" data-cp-id="${esc(u.id)}">Copiar ID</button></div>`).join('') || '<span class="faint">Ninguém com esse nome.</span>';
+        el.querySelectorAll('[data-cp-id]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.cpId); toast('ID copiado.'); } catch (e) { toast(b.dataset.cpId); } }); }, 300);
+      $('#pf-busca')?.addEventListener('input', buscar); if ($('#pf-busca')) buscar();
     };
     app.innerHTML = des(); ligarP();
     return;
