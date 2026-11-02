@@ -2442,7 +2442,8 @@ const romano = n => ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX',
 const grausHtml = (n, max = 6) => `<span class="graus" aria-label="Grau ${n} de ${max}">${Array.from({ length: max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span>`;
 let CACS = {}, CAC_SEL = null;
 // O Arthur é o caçador da conta do administrador; os outros jogadores só veem o próprio caçador por padrão.
-const arthurVisivel = () => DONO;
+// O Arthur fixo foi aposentado: os abates dele passaram para o Arthur da conta do administrador (cacadores/<uid>).
+const arthurVisivel = () => false;
 const cacPadrao = () => (CAC_SEL === 'arthur' ? arthurVisivel() : CAC_SEL && CACS[CAC_SEL]) ? CAC_SEL : (arthurVisivel() ? 'arthur' : CACS[ME] ? ME : null);
 const nomeCac = q => q === 'arthur' ? (CACADOR?.nome || 'Arthur') : (CACS[q]?.nome || 'Caçador');
 const abatesDe = (id, q = cacPadrao()) => q ? +((q === 'arthur' ? ABATES : CACS[q]?.abates || {})[String(id)] || 0) : 0;
@@ -2454,8 +2455,18 @@ const podeRegistrar = q => q === 'arthur' ? DONO : (q === ME || DONO);
 let abatesOuvindo = false;
 function ouvirAbates() {
   if (abatesOuvindo || !db) return; abatesOuvindo = true;
-  db.doc('bestiario/abates').onSnapshot(sn => { const d = sn.data(); if (d?.abates) { ABATES = { ...ABATES, ...d.abates }; window.dispatchEvent(new Event('abates')); } }, () => {});
-  db.collection('cacadores').onSnapshot(sn => { CACS = Object.fromEntries(sn.docs.map(x => [x.id, x.data()]).filter(([, d]) => d?.ficha)); if (CAC_SEL && CAC_SEL !== 'arthur' && !CACS[CAC_SEL]) CAC_SEL = null; window.dispatchEvent(new Event('abates')); }, () => {});
+  let viuAbates = false, viuCacs = false;
+  db.doc('bestiario/abates').onSnapshot(sn => { const d = sn.data(); if (d?.abates) { ABATES = { ...ABATES, ...d.abates }; window.dispatchEvent(new Event('abates')); } viuAbates = true; migrarArthur(viuAbates && viuCacs); }, () => {});
+  db.collection('cacadores').onSnapshot(sn => { CACS = Object.fromEntries(sn.docs.map(x => [x.id, x.data()]).filter(([, d]) => d?.ficha)); if (CAC_SEL && CAC_SEL !== 'arthur' && !CACS[CAC_SEL]) CAC_SEL = null; window.dispatchEvent(new Event('abates')); viuCacs = true; migrarArthur(viuAbates && viuCacs); }, () => {});
+}
+// uma vez só, na conta do administrador: junta os abates do Arthur fixo no Arthur dele (fica o maior número de cada criatura; "incontáveis" vence)
+let migrandoArthur = false;
+async function migrarArthur(pronto) {
+  if (!pronto || migrandoArthur || !DONO || !CACS[ME] || CACS[ME].arthurMigrado) return; migrandoArthur = true;
+  const meu = { ...(CACS[ME].abates || {}) }; let n = 0;
+  for (const [k, v] of Object.entries(ABATES || {})) { const a = +v || 0, b = +meu[k] || 0; if (!a) continue; const novo = a < 0 || b < 0 ? -1 : Math.max(a, b); if (novo !== b) { meu[k] = novo; n++; } }
+  try { await db.doc('cacadores/' + ME).update({ abates: meu, arthurMigrado: Date.now() }); CACS[ME] = { ...CACS[ME], abates: meu, arthurMigrado: Date.now() }; if (n) toast(`${n} abates do Arthur fixo foram para ${CACS[ME].nome}.`); window.dispatchEvent(new Event('abates')); }
+  catch (e) { migrandoArthur = false; toast('Não deu para transferir os abates do Arthur.'); }
 }
 async function registrarAbate(id, delta, q = cacPadrao()) {
   if (!db || !podeRegistrar(q)) return;
