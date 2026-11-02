@@ -2482,7 +2482,8 @@ function abrirEscala() {
   });
 }
 ROTAS.ameacas = async () => {
-  const hb = (await homebrewVisivel('ameaca')).map(x => ({ ...x, id: 'hb' + x.id, homebrew: true }));
+  // no bestiário só entra homebrew compartilhado (ameaças e NPCs); o que não foi compartilhado fica oculto no Homebrew de quem criou
+  const hb = (await homebrewVisivel()).filter(x => (x.tipo === 'ameaca' || x.tipo === 'npc') && x.compartilhado).map(x => ({ ...x, id: 'hb' + x.id, homebrew: true, npc: x.tipo === 'npc' }));
   const todas = [...CRI, ...hb];
   ouvirAbates();
   app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Bestiário Senna · relatos de Arthur Henrique Senna</span><h1>Ameaças</h1>
@@ -2490,14 +2491,14 @@ ROTAS.ameacas = async () => {
       <div style="display:flex; gap:8px; flex-wrap:wrap"><a class="btn sec" id="ir-dossie" href="#dossie">Dossiê do caçador</a><button class="btn sec" id="ver-escala">Escala e elementos</button></div></div>
     <div id="cac-wrap"></div>
     <div class="aviso">Esta página é para consulta. Para usar uma ameaça em jogo, abra o escudo do mestre da campanha, vá em Combate e adicione a criatura.</div>
-    <div class="filtros" id="f-el">${['Todos', ...ELEMS.filter(e => todas.some(c => c.elemento === e)), ...(todas.some(c => capDe(c) === 'Servos') ? ['Servos'] : []), 'Homebrew'].map(e => `<button class="chip ${filtroAm.el === e ? 'aqui' : ''}" data-el="${e}">${e}</button>`).join('')}</div>
+    <div class="filtros" id="f-el">${['Todos', ...ELEMS.filter(e => todas.some(c => c.elemento === e)), ...(todas.some(c => capDe(c) === 'Servos') ? ['Servos'] : []), ...(todas.some(c => c.npc) ? ['NPCs'] : []), 'Homebrew'].map(e => `<button class="chip ${filtroAm.el === e ? 'aqui' : ''}" data-el="${e}">${e}</button>`).join('')}</div>
     <div class="filtros" id="f-nv"><button class="chip ${!filtroAm.nv ? 'aqui' : ''}" data-nv="0">Todo nível</button>${SIS.niveisAmeaca.map(n => `<button class="chip ${filtroAm.nv === n[0] ? 'aqui' : ''}" data-nv="${n[0]}">${n[0]} · ${n[1]}</button>`).join('')}</div>
     <div class="filtros" id="f-st">${[['todas', 'Todas'], ['abertas', 'Em aberto'], ['mortas', 'Eliminadas']].map(([k, l]) => `<button class="chip ${filtroAm.st === k ? 'aqui' : ''}" data-st="${k}">${l}</button>`).join('')}</div>
     <div class="busca">${ICON_BUSCA}<input type="search" id="busca" placeholder="Buscar criatura" value="${esc(filtroAm.q)}"></div>
     <div class="dim" id="contagem"></div><div class="grade-cards" id="lista-am"></div>`;
   const desenhar = () => {
     const q = filtroAm.q.toLowerCase();
-    const fil = todas.filter(c => (filtroAm.el === 'Todos' || (filtroAm.el === 'Homebrew' ? c.homebrew : filtroAm.el === 'Servos' ? capDe(c) === 'Servos' : c.elemento === filtroAm.el))
+    const fil = todas.filter(c => (filtroAm.el === 'Todos' || (filtroAm.el === 'Homebrew' ? c.homebrew : filtroAm.el === 'NPCs' ? c.npc : filtroAm.el === 'Servos' ? capDe(c) === 'Servos' : c.elemento === filtroAm.el))
       && (filtroAm.st === 'todas' || (filtroAm.st === 'mortas' ? eliminada(c) : !eliminada(c)))
       && (!filtroAm.nv || +c.nivel === filtroAm.nv) && (!q || (c.nome + ' ' + (c.origem || '')).toLowerCase().includes(q)));
     $('#contagem').textContent = `${fil.length} de ${todas.length} ameaças`;
@@ -2508,7 +2509,7 @@ ROTAS.ameacas = async () => {
     $('#cac-wrap').innerHTML = (arthurVisivel() ? 1 : 0) + Object.keys(CACS).length > 1 ? seletorCacador() : '';
     $('#f-cac')?.addEventListener('click', e => { const b = e.target.closest('[data-cac]'); if (!b) return; CAC_SEL = b.dataset.cac; desenhar(); });
     $('#lista-am').innerHTML = fil.map(c => `<a class="card-am ${eliminada(c) ? 'morta' : ''}" href="#ameaca-${esc(c.id)}" data-modal-am="${esc(c.id)}" style="text-decoration:none">${eliminada(c) ? `<span class="carimbo ${cacPadrao() === 'arthur' ? '' : 'jog'}">Eliminada${abatesDe(c.id) > 1 ? ' ×' + abatesDe(c.id) : abatesDe(c.id) < 0 ? ' ∞' : ''}</span>` : ''}<div class="img" style="${c.imagem ? `background-image:url('${esc(c.imagem)}')` : 'background:var(--painel-3)'}"></div>
-      <div class="corpo"><b style="font: 400 19px/1.15 var(--f-disp)">${esc(c.nome)}</b><div style="display:flex; gap:6px; flex-wrap:wrap">${elTag(c.elemento)}<span class="tag">Nv ${c.nivel} · ${esc(nivelAm(c.nivel)[1])}</span></div>
+      <div class="corpo"><b style="font: 400 19px/1.15 var(--f-disp)">${esc(c.nome)}</b><div style="display:flex; gap:6px; flex-wrap:wrap">${c.npc ? `<span class="tag" style="color:var(--ouro)">NPC${c.papel ? ' · ' + esc(c.papel) : ''}</span>${c.elemento ? elTag(c.elemento) : ''}<span class="tag">Nv ${c.nivel}</span>` : `${elTag(c.elemento)}<span class="tag">Nv ${c.nivel} · ${esc(nivelAm(c.nivel)[1])}</span>`}${c.homebrew ? '<span class="tag crit">Homebrew</span>' : ''}</div>
       <span class="mono dim" style="font-size:12px">PV ${c.ficha?.pv ?? '?'} · Def ${c.ficha?.intangivel ? `${c.ficha.intangivel.defesa}/${c.ficha.intangivel.defesaContornada} · intangível` : c.ficha?.defesa ?? '?'}</span></div></a>`).join('') || '<div class="vazio">Nenhuma criatura com esses filtros.</div>';
   };
   $('#f-el').onclick = e => { const b = e.target.closest('[data-el]'); if (!b) return; filtroAm.el = b.dataset.el; $$('#f-el .chip').forEach(x => x.classList.toggle('aqui', x === b)); desenhar(); };
