@@ -441,16 +441,18 @@ hr.sep-at { border: 0; border-top: 1px dashed var(--linha-2); margin: 8px 0; }
 .rol2 { padding: 12px 14px 10px; display: grid; gap: 6px; }
 .rol2.oculta { background: rgba(123,92,168,.10); }
 .rc-autor { font: 400 19px var(--f-disp); color: var(--lua); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rc-card { --rc: var(--ouro); position: relative; display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: center; padding: 12px 14px; border: 1.5px solid color-mix(in srgb, var(--rc) 70%, transparent);
+.rc-card { --rc: var(--ouro); position: relative; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; align-items: center; padding: 12px 14px; border: 1.5px solid color-mix(in srgb, var(--rc) 70%, transparent);
   background: radial-gradient(circle at 12% 50%, color-mix(in srgb, var(--rc) 14%, transparent), transparent 60%), #10131c; }
 .rc-card.crit { --rc: var(--sangue-hi); box-shadow: 0 0 18px rgba(196,48,60,.35); }
 .rc-ico { width: 64px; height: 64px; clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%); background: color-mix(in srgb, var(--rc) 55%, #1a1d27) center/cover no-repeat; display: grid; place-items: center; color: #0b0d14; }
 .rc-ico svg { width: 30px; height: 30px; }
 .rc-meio { min-width: 0; display: grid; gap: 4px; justify-items: center; }
 .rc-tit { font: 700 17px var(--f-body); color: var(--lua); text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rc-par { display: grid; grid-template-columns: 1fr 1px 1fr; gap: 14px; align-items: center; width: 100%; } .rc-par.um { grid-template-columns: 1fr; }
+.rc-par { display: grid; grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr); gap: 10px; align-items: center; width: 100%; } .rc-par.um { grid-template-columns: 1fr; }
 .rc-par > i { width: 1px; height: 46px; background: var(--linha-2); }
 .rc-par div { display: grid; justify-items: center; gap: 2px; } .rc-par b { font: 700 34px/1 var(--f-mono); color: #fff; } .rc-par b.crit { color: var(--fole); }
+.rc-par div { min-width: 0; } .rc-par b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-par b.n4 { font-size: 27px; } .rc-par b.n5 { font-size: 22px; } .rc-par b.n6 { font-size: 18px; }
 .rc-par span { font: 700 11px var(--f-body); letter-spacing: .14em; text-transform: uppercase; color: var(--lua-dim); }
 .rc-det summary { cursor: pointer; font-size: 11.5px; color: var(--lua-faint); } .rc-det .mono { display: block; font-size: 11.5px; color: var(--lua-dim); overflow-wrap: anywhere; margin-top: 4px; }
 .bonus-atq { display: grid; gap: 8px; }
@@ -3119,8 +3121,8 @@ const rolHtml = r => { const tit = r.titulo || String(r.rotulo || '').replace(/^
   const tipo = r.tipo || (/^Acerto · /.test(r.rotulo || '') ? 'acerto' : /^Dano · /.test(r.rotulo || '') ? 'dano' : '');
   const aviso = !tipo && (r.total === '' || r.total == null);
   const corpo = aviso ? `<div class="rc-aviso">${htmlSeguro(r.detalhe)}</div>` : tipo === 'ataque'
-    ? `<div class="rc-par"><div><b class="${r.critico ? 'crit' : ''}">${esc(r.ataque)}</b><span>Ataque</span></div><i aria-hidden="true"></i><div><b>${esc(r.dano)}</b><span>Dano</span></div></div>`
-    : `<div class="rc-par um"><div><b class="${r.critico || /crítico/i.test(r.rotulo || '') ? 'crit' : ''}">${esc(r.total)}</b><span>${tipo === 'acerto' ? 'Ataque' : tipo === 'dano' ? 'Dano' : 'Total'}</span></div></div>`;
+    ? `<div class="rc-par"><div><b class="${r.critico ? 'crit' : ''} ${tamNum(r.ataque, r.dano)}">${esc(r.ataque)}</b><span>Ataque</span></div><i aria-hidden="true"></i><div><b class="${tamNum(r.ataque, r.dano)}">${esc(r.dano)}</b><span>Dano</span></div></div>`
+    : `<div class="rc-par um"><div><b class="${r.critico || /crítico/i.test(r.rotulo || '') ? 'crit' : ''} ${tamNum(r.total)}">${esc(r.total)}</b><span>${tipo === 'acerto' ? 'Ataque' : tipo === 'dano' ? 'Dano' : 'Total'}</span></div></div>`;
   return `<div class="rol2 ${r.oculta ? 'oculta' : ''}"><div class="rc-autor">${esc(r.autor)}</div>
     <div class="rc-card ${r.critico || /crítico/i.test(r.rotulo || '') ? 'crit' : ''}" style="${(() => { const e = estiloCartao(r.estilo); return e ? `--rc:${e.borda}; background:${e.fundo}; border-image:linear-gradient(90deg, ${e.borda}, ${e.borda2}) 1` : r.cor ? `--rc:${esc(r.cor)}` : ''; })()}">
       <div class="rc-ico" style="${r.foto ? `background-image:url('${esc(r.foto)}')` : ''}">${r.foto ? '' : DADO_SVG}</div>
@@ -3156,6 +3158,8 @@ function removerDaCampanha(campId, f, nomeCamp) {
     } catch (e) { toast('Não deu para remover: ' + (e.message || e.code)); } };
   });
 }
+// número grande no cartão de rolagem encolhe conforme os dígitos (os dois lados do par usam o mesmo tamanho)
+const tamNum = (...v) => { const n = Math.max(...v.map(x => String(x ?? '').length)); return n >= 6 ? 'n6' : n === 5 ? 'n5' : n === 4 ? 'n4' : ''; };
 const vitalMini = (cls, a, m) => `<div class="${cls}"><div class="trilho fino"><div class="cheio" style="width:${Math.min(100, (a / (m || 1)) * 100)}%"></div><div class="txt">${a}/${m}</div></div></div>`;
 
 /* abas laterais: no computador ficam fixas; no celular viram gavetas puxadas por botões na borda */
