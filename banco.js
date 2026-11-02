@@ -31,16 +31,40 @@ window.criarBanco = function criarBanco(sb) {
 
   /* ---------- ouvintes locais + tempo real ---------- */
   const ouvintes = new Map();
-  function registrar(chave, fn) { if (!ouvintes.has(chave)) ouvintes.set(chave, new Set()); ouvintes.get(chave).add(fn); return () => ouvintes.get(chave)?.delete(fn); }
   function disparar(colecao, path) { ouvintes.get('c:' + colecao)?.forEach(f => f()); ouvintes.get('d:' + path)?.forEach(f => f()); }
+
+  // aviso rápido: quem grava manda um "mudou" num canal da coleção (broadcast, sem passar pelo banco);
+  // quem está olhando a coleção recarrega na hora. O nome do canal é um hash, então não expõe códigos de campanha.
+  const hash = t => { let h = 2166136261; for (const c of t) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
+  const topico = col => 'm-' + hash(col);
+  const canais = new Map(); // topico -> { ch, n }
+  function entrarCanal(col) {
+    const t = topico(col); let c = canais.get(t);
+    if (!c) { const ch = sb.channel(t, { config: { broadcast: { self: false } } }).on('broadcast', { event: 'mudou' }, ({ payload }) => { if (payload?.c) disparar(payload.c, payload.p); }).subscribe(); c = { ch, n: 0 }; canais.set(t, c); }
+    c.n++;
+    return () => { if (--c.n <= 0) { canais.delete(t); sb.removeChannel(c.ch); } };
+  }
+  function avisar(col, path) {
+    const t = topico(col), c = canais.get(t);
+    const ch = c?.ch || sb.channel(t);
+    Promise.resolve(ch.send({ type: 'broadcast', event: 'mudou', payload: { c: col, p: path } })).catch(() => {}).finally(() => { if (!c) sb.removeChannel(ch); });
+  }
+  function registrar(chave, fn) {
+    if (!ouvintes.has(chave)) ouvintes.set(chave, new Set()); ouvintes.get(chave).add(fn);
+    const sairCanal = entrarCanal(chave.startsWith('c:') ? chave.slice(2) : pai(chave.slice(2)));
+    return () => { ouvintes.get(chave)?.delete(fn); sairCanal(); };
+  }
+
+  let tempoReal = false;
   sb.channel('docs-tempo-real')
     .on('postgres_changes', { event: '*', schema: 'public', table: T }, p => {
       const row = p.new && Object.keys(p.new).length ? p.new : p.old;
       if (row?.path) disparar(row.colecao || pai(row.path), row.path);
     })
-    .subscribe();
-  // rede de segurança: se o tempo real cair, as telas abertas se atualizam a cada 30 s
-  setInterval(() => { if (document.visibilityState === 'visible') ouvintes.forEach(set => set.forEach(f => f())); }, 30000);
+    .subscribe(st => { tempoReal = st === 'SUBSCRIBED'; });
+  // rede de segurança: com o tempo real de pé, recarrega a cada 30 s; caído, a cada 5 s
+  let ultimaVarredura = 0;
+  setInterval(() => { if (document.visibilityState !== 'visible') return; const agora = Date.now(); if (agora - ultimaVarredura < (tempoReal ? 30000 : 5000)) return; ultimaVarredura = agora; ouvintes.forEach(set => set.forEach(f => f())); }, 1000);
 
   /* ---------- documento ---------- */
   function doc(path) {
@@ -55,19 +79,19 @@ window.criarBanco = function criarBanco(sb) {
       async set(dados) {
         const { error } = await sb.from(T).upsert({ path, colecao: pai(path), dados }, { onConflict: 'path' });
         if (error) throw erro(error);
-        disparar(pai(path), path);
+        disparar(pai(path), path); avisar(pai(path), path);
       },
       async update(parcial) {
         const atual = await ref.get();
         if (!atual.exists) throw { code: 'invalid_argument', message: 'O documento não existe.' };
         const { error } = await sb.from(T).update({ dados: mesclar(atual.data(), parcial) }).eq('path', path);
         if (error) throw erro(error);
-        disparar(pai(path), path);
+        disparar(pai(path), path); avisar(pai(path), path);
       },
       async delete() {
         const { error } = await sb.from(T).delete().eq('path', path);
         if (error) throw erro(error);
-        disparar(pai(path), path);
+        disparar(pai(path), path); avisar(pai(path), path);
       },
       onSnapshot(next, falha) {
         let vivo = true, seq = 0;
