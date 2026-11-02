@@ -1636,7 +1636,7 @@ ROTAS.agente = async id => {
       </div>
     </section>
 
-    <div class="abas" role="tablist">${[['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ...(sabeFeitico(F) ? [['feiticos', 'Feitiços']] : []), ...(mecsFicha().length ? [['campanha', 'Campanha']] : []), ['inventario', 'Inventário'], ['descricao', 'Descrição']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
+    <div class="abas" role="tablist">${[['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ...(sabeFeitico(F) ? [['feiticos', 'Feitiços']] : []), ...(ehBruxa(F) ? [['maldicoes', 'Maldições']] : []), ...(mecsFicha().length ? [['campanha', 'Campanha']] : []), ['inventario', 'Inventário'], ['descricao', 'Descrição']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
     <section id="sec">${secao(K, C, S)}</section>
     </div>`;
     ligarFicha(K);
@@ -1711,6 +1711,11 @@ ROTAS.agente = async id => {
       return `<div style="display:grid; gap:14px">${barra}<div class="cab-pagina"><h2>Rituais</h2>${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" id="add-rit">Adicionar ritual</button><button class="btn sec mini" id="novo-rit">Novo ritual</button></div>' : ''}</div>
         <div class="grade-hab">${(F.rituais || []).map((r, i) => cardRitual(r, i)).join('') || '<div class="vazio">Você ainda não possui rituais.</div>'}</div></div>`;
     }
+    if (aba === 'maldicoes') { const cM = custoMaldicao(F), ML = F.maldicoes || [];
+      return `<div style="display:grid; gap:14px">${barra}<div class="cab-pagina"><div><h2>Maldições</h2><span class="dim" style="font-size:13px">${cM ? `Cada maldição custa <b>${cM} PS</b> ao ser lançada. No nível 10 a Bruxa deixa de pagar.` : '<b>Nível 10:</b> suas maldições não custam mais PS.'} O efeito vai para o alvo; maldições não se acumulam entre si.</span></div>${podeEditar ? '<button class="btn mini" id="add-mal">Aprender maldição</button>' : ''}</div>
+        <div class="grade-hab">${ML.map((m, i) => `<article class="hab mal-card"><div class="cab"><span class="nm">${esc(m.nome)}</span><span class="tag ${cM ? '' : 'crit'}">${cM ? cM + ' PS' : 'Grátis'}</span></div><p>${esc(m.texto)}</p>
+          ${podeEditar ? `<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap"><input type="text" data-mal-alvo="${i}" placeholder="Alvo (opcional)" style="flex:1; min-width:120px; padding:5px 8px"><button class="btn mini" data-mal="${i}">Lançar</button><button class="btn-x" data-mal-rm="${i}" aria-label="Esquecer ${esc(m.nome)}">×</button></div>` : ''}
+          <div class="res" id="res-mal-${i}">${(window._resHab ||= {})[id + '|mal|' + m.nome] || ''}</div></article>`).join('') || '<div class="vazio">Nenhuma maldição aprendida. Use "Aprender maldição".</div>'}</div></div>`; }
     if (aba === 'feiticos') {
       if (!sabeFeitico(F)) return '<div class="vazio">Feitiços só para Bruxas ou para quem tem a passiva Aprender Feitiço.</div>';
       const PB = dadosPericia(F, periciaConj(F));
@@ -1759,6 +1764,16 @@ ROTAS.agente = async id => {
     $('#dt')?.addEventListener('input', e => window._dt = e.target.value);
     $('#bonus')?.addEventListener('input', e => window._bonus = e.target.value);
     $('#editar')?.addEventListener('click', () => { editando = !editando; render(); });
+    $('#add-mal')?.addEventListener('click', () => { const ja = new Set((F.maldicoes || []).map(m => m.nome));
+      seletor('Aprender maldição', SIS.maldicoes.filter(m => !ja.has(m.nome)), m => `<b>${esc(m.nome)}</b><p>${esc(m.texto)}</p>`, m => { F.maldicoes = [...(F.maldicoes || []), { nome: m.nome, texto: m.texto }]; salvar({ maldicoes: F.maldicoes }); render(); }); });
+    $$('[data-mal-rm]').forEach(b => b.onclick = () => { F.maldicoes = (F.maldicoes || []).filter((_, i) => i !== +b.dataset.malRm); salvar({ maldicoes: F.maldicoes }); render(); });
+    $$('[data-mal]').forEach(b => b.onclick = () => { const i = +b.dataset.mal, m = F.maldicoes[i], cM = custoMaldicao(F), K = calc(F), a = { ...K.max, ...(F.atual || {}) };
+      if (a.ps < cM) return toast(`Sem PS para lançar (precisa de ${cM}).`);
+      const alvo = ($(`[data-mal-alvo="${i}"]`)?.value || '').trim();
+      if (cM) { F.atual = { ...a, ps: a.ps - cM }; ajustarQueda(F); pendente = true; salvarVitais(); }
+      const txt = `${esc(F.nome)} lançou <b>${esc(m.nome)}</b>${alvo ? ` em ${esc(alvo)}` : ''}${cM ? ` · −${cM} PS` : ' · sem custo'}. <span class="faint">${esc(m.texto)}</span>`;
+      (window._resHab ||= {})[id + '|mal|' + m.nome] = txt; render();
+      publicarRolagem(F, `Maldição · ${m.nome}`, { total: '', detalhe: `${esc(F.nome)} lançou ${esc(m.nome)}${alvo ? ' em ' + esc(alvo) : ''}${cM ? ` (−${cM} PS)` : ''}: ${esc(m.texto)}` }); });
     if (aba === 'campanha') ligarMecanicas($('#sec'), F, { salvarMec: async (mec, atual) => { F.mec = mec; if (atual) { F.atual = atual; ajustarQueda(F); } render();
       try { await ref.update({ mec, ...(atual ? { atual, queda: F.queda || {} } : {}) }); } catch (e) { toast('Não deu para salvar.'); } },
       publicar: (tit, txt, rr) => publicarRolagem(F, tit, { total: rr?.total ?? '', detalhe: esc(txt) }) });
@@ -1882,8 +1897,8 @@ ROTAS.agente = async id => {
       // toda maldição da arma cobra 3 PS de quem empunha quando o golpe sai; sem PS, ela não ativa
       const mals = modsDe(it).maldicoes, aV = { ...calc(F).max, ...(F.atual || {}) }; let malTxt = '';
       if (aV.pst < (B.custo || 0)) { toast(`Sem PST para os bônus ligados (precisa de ${B.custo}).`); return null; } if (aV.ps < (B.custoPs || 0)) { toast(`Sem PS para os bônus ligados (precisa de ${B.custoPs}).`); return null; }
-      const custoMal = mals.length && aV.ps - (B.custoPs || 0) >= CUSTO_MALDICAO * mals.length ? CUSTO_MALDICAO * mals.length : 0;
-      if (mals.length) malTxt = custoMal ? `<br><span class="faint">Maldição: ${esc(mals.join(', '))} · −${custoMal} PS</span>` : `<br><span class="falha">Maldição não ativou: falta PS (${CUSTO_MALDICAO} por maldição)</span>`;
+      const cM = custoMaldicao(F), custoMal = mals.length && aV.ps - (B.custoPs || 0) >= cM * mals.length ? cM * mals.length : 0;
+      if (mals.length) malTxt = !cM ? `<br><span class="faint">Maldição: ${esc(mals.join(', '))} · sem custo (Bruxa nível 10)</span>` : custoMal ? `<br><span class="faint">Maldição: ${esc(mals.join(', '))} · −${custoMal} PS</span>` : `<br><span class="falha">Maldição não ativou: falta PS (${cM} por maldição)</span>`;
       if (B.custo || B.custoPs || custoMal) { F.atual = { ...aV, pst: aV.pst - (B.custo || 0), ps: aV.ps - (B.custoPs || 0) - custoMal }; ajustarQueda(F); pendente = true; salvarVitais(); setTimeout(render, 60); }
       const nDist = B.distancia ? dadosDistancia($('[data-dist]')?.value ?? UI_ARMA[id + '|dist'], calc(F).mov) : 0;
       if (B.distancia && (+($('[data-dist]')?.value ?? UI_ARMA[id + '|dist']) || 0) > calc(F).mov * 2) toast(`Alvo além do alcance da ${B.distancia} (${calc(F).mov * 2} m): vale o teto.`);
@@ -2084,6 +2099,8 @@ function formRitual(salvarFn, r = {}) {
 /* Bênçãos, Maldições e Melhorias (regras do livro): só armas; até 2 de cada tipo; nunca os três tipos juntos.
    Melhoria marcada "(Armas de Fogo)" ou "(Armas Brancas)" só entra nesse tipo de arma. */
 const CUSTO_MALDICAO = 3;
+// Bruxa no nível 10 lança maldições sem gastar PS (na aba Maldições e nas armas amaldiçoadas)
+const custoMaldicao = f => ehBruxa(f) && nivelDe(f) >= 10 ? 0 : CUSTO_MALDICAO;
 const MOD_TIPOS = [['melhorias', 'Melhorias', 'melhorias'], ['bencaos', 'Bênçãos', 'bencaos'], ['maldicoes', 'Maldições', 'maldicoes']];
 const ehArma = it => !!it?.dano && it.categoria !== 'Granadas';
 const tipoArma = it => /fogo/i.test((it.categoria || '') + ' ' + (it.pericia || '')) ? 'Armas de Fogo' : 'Armas Brancas';
@@ -2696,7 +2713,7 @@ ROTAS.grimorio = async () => {
     } else if (abaGr === 'alquimia') {
       corpo = `<div class="grade-hab">${SIS.alquimia.map(a => `<article class="hab"><span class="nm">${esc(a.nome)}</span><p>${esc(a.efeito)}</p><span class="faint" style="font-size:13px">Componente: ${esc(a.componente)}</span></article>`).join('')}</div>`;
     } else {
-      const extra = { maldicoes: 'Só Bruxas concedem Maldições. O efeito vai para o alvo atingido pela arma. Toda maldição custa 3 PS de quem empunha a arma cada vez que o golpe sai.', bencaos: 'Só Ocultistas Destinados a partir do nível 5 concedem Bênçãos. O efeito vai para o portador da arma.', melhorias: 'Só Técnicos a partir do nível 3 concedem Melhorias. Podem ser retiradas com uma ação de interlúdio.', condicoes: '' }[abaGr];
+      const extra = { maldicoes: 'Só Bruxas concedem Maldições. O efeito vai para o alvo atingido pela arma. Toda maldição custa 3 PS cada vez que é lançada ou que o golpe com a arma amaldiçoada sai. Bruxas aprendem maldições na aba Maldições da ficha e, a partir do nível 10, não gastam mais PS com elas.', bencaos: 'Só Ocultistas Destinados a partir do nível 5 concedem Bênçãos. O efeito vai para o portador da arma.', melhorias: 'Só Técnicos a partir do nível 3 concedem Melhorias. Podem ser retiradas com uma ação de interlúdio.', condicoes: '' }[abaGr];
       corpo = `${extra ? `<div class="aviso">${extra} Nenhuma arma tem Bênção, Maldição e Melhoria ao mesmo tempo, nem mais de duas de cada.</div>` : ''}<div class="grade-hab">${SIS[abaGr].map(x => `<article class="hab"><div class="cab"><span class="nm">${esc(x.nome)}</span>${x.custo ? `<span class="tag">${esc(x.custo)}</span>` : ''}</div><p>${esc(x.texto)}</p></article>`).join('')}</div>`;
     }
     app.innerHTML = `<div><span class="rotulo">O que o Caos e o Destino deixaram escrito</span><h1>Grimório</h1></div>
