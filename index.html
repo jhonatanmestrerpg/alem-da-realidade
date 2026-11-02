@@ -806,7 +806,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261102194128';
+const BUILD = '20261102194230';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1968,10 +1968,10 @@ ROTAS.agente = async id => {
       if (!p) { p = { nome: n, pontos: 0 }; lista.push(p); } p.atributo = s.value; salvar({ pericias: lista }); render(); });
     // testes
     $$('[data-giro]').forEach(sel => sel.onchange = () => { UI_ARMA['giro|' + sel.dataset.giro] = sel.value; render(); });
-    // clicar no número do atributo rola o teste puro dele: valor = quantidade de d20, fica o melhor; com 0, rola 2d20 e fica o pior
-    $$('[data-rolar-atr]').forEach(b => b.onclick = () => { if (editando) return; const k = b.dataset.rolarAtr, nome = ATR.find(a => a[0] === k)[1], v = +(F.atributos?.[k]) || 0, mod = bnv();
-      let r; if (v >= 1) r = teste(v, mod); else { const ds = [d(20), d(20)], mn = Math.min(...ds); r = { total: mn + mod, nat: mn, nat20: false, detalhe: `[${ds.join(', ')}] pior${mod ? ` ${mod > 0 ? '+' : '-'} ${Math.abs(mod)}` : ''}` }; }
-      popRolagem({ quem: F.nome, titulo: nome, tipo: 'Teste de atributo', expr: v >= 1 ? `${v}d20${mod ? (mod > 0 ? '+' : '') + mod : ''}` : '2d20 (pior)', linhas: [{ det: r.detalhe, total: r.total }], total: r.total, nat20: r.nat20 });
+    // clicar no número do atributo rola o teste puro dele: 1d20 + valor do atributo (+ bônus do campo)
+    $$('[data-rolar-atr]').forEach(b => b.onclick = () => { if (editando) return; const k = b.dataset.rolarAtr, nome = ATR.find(a => a[0] === k)[1], v = +(F.atributos?.[k]) || 0, mod = v + bnv();
+      const r = teste(1, mod);
+      popRolagem({ quem: F.nome, titulo: nome, tipo: 'Teste de atributo', expr: `1d20${mod ? (mod > 0 ? '+' : '') + mod : ''}`, linhas: [{ det: r.detalhe, total: r.total }], total: r.total, nat20: r.nat20 });
       publicarRolagem(F, nome, r); });
     $$('[data-teste]').forEach(b => b.onclick = () => { const n = b.dataset.teste, P = comAtributo(F, dadosPericia(F, n), UI_ARMA['giro|' + id + '|p|' + n]), mod = P.mod + bnv(); const r = teste(P.dados, mod);
       $(`[data-res="${CSS.escape(n)}"]`).innerHTML = UI_ARMA['pres|' + id + '|' + n] = `${P.atr !== dadosPericia(F, n).atr ? `<span class="faint">com ${SIGLA[P.atr]}</span> ` : ''}${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtv())}${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`; publicarRolagem(F, `${n}${P.atr !== dadosPericia(F, n).atr ? ` (${SIGLA[P.atr]})` : ''}`, r); });
