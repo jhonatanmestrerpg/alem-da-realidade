@@ -284,11 +284,11 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 /* ameaças */
 .card-am { display: grid; grid-template-columns: 120px 1fr; background: var(--painel); border: 1px solid var(--linha); text-align: left; padding: 0; color: inherit; min-height: 120px; }
 .card-am:hover { border-color: var(--linha-2); background: var(--painel-2); }
-.card-am .img { background: #f2efe6 center/contain no-repeat; }
+.card-am .img { background: transparent center top/cover no-repeat; } .card-am .img.papel { background-color: #f2efe6; background-size: contain; background-position: center; }
 .card-am .corpo { padding: 12px 14px; display: grid; gap: 6px; align-content: start; min-width: 0; }
 .det-am { display: grid; grid-template-columns: minmax(240px, 360px) 1fr; gap: 24px; }
 @media (max-width: 860px) { .det-am { grid-template-columns: 1fr; } }
-.det-am .img { background: #f2efe6; border: 1px solid var(--linha-2); }
+.det-am .img { background: transparent; border: 1px solid var(--linha-2); } .det-am .img.papel { background: #f2efe6; }
 .det-am .img img { display: block; width: 100%; }
 .relato { display: grid; gap: 14px; }
 .relato h3 { color: var(--ouro); font-size: 17px; }
@@ -323,7 +323,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .hb-acoes .engr { font-size: 18px; color: var(--lua); }
 .menu-pop > div button.del { color: var(--sangue-hi); }
 .am-bg { position: absolute; inset: -24px; background: center/cover no-repeat; filter: blur(16px) saturate(.7) brightness(.4); }
-.am-ft { position: relative; z-index: 2; height: 118px; background: #f2efe6 center/contain no-repeat; display: grid; place-items: center; font: 400 34px var(--f-disp); color: var(--lua-faint); }
+.am-ft { position: relative; z-index: 2; height: 118px; background: transparent center top/cover no-repeat; display: grid; place-items: center; font: 400 34px var(--f-disp); color: var(--lua-faint); }
 .am-ft.ag { background-color: var(--painel-3); background-size: cover; background-position: top center; }
 .am-tx { position: relative; z-index: 2; display: grid; gap: 3px; min-width: 0; padding-right: 8px; }
 .am-tx b { font: 400 23px/1.1 var(--f-disp); color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.7); overflow-wrap: anywhere; }
@@ -355,7 +355,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ini-card { position: relative; display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; gap: 12px; align-items: center; background: var(--painel-2); border: 1px solid var(--linha); padding-right: 12px; min-height: 58px; cursor: pointer; }
 .ini-card:hover { border-color: var(--linha-2); }
 .ini-card .ft { width: 54px; height: 58px; background: var(--painel-3) center top/cover no-repeat; display: grid; place-items: center; font: 700 14px var(--f-mono); color: var(--lua-faint); }
-.ini-card .ft.am { background-color: #f2efe6; background-size: contain; background-position: center; }
+.ini-card .ft.am { background-size: cover; background-position: center top; } .ft.papel, .am-ft.papel { background-color: #f2efe6 !important; background-size: contain !important; background-position: center !important; }
 .ini-card .nm { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ini-card .vs { font: 12px var(--f-mono); display: flex; gap: 10px; flex-wrap: wrap; }
 .vs .p { color: var(--sangue-hi); } .vs .s { color: var(--sanid); }
@@ -520,7 +520,7 @@ html, body { overflow-x: clip; max-width: 100%; }
 .dossie-secoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; } .dossie-secoes h3 { margin-top: 0; } .dossie-secoes p { margin: 0; line-height: 1.55; }
 .galeria-abates { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 .ga-item { display: grid; gap: 4px; text-decoration: none; color: inherit; } .ga-item b { font: 400 15px/1.2 var(--f-disp); }
-.ga-img { position: relative; aspect-ratio: 1; background: #f2efe6 center/contain no-repeat; border: 1px solid var(--linha); } .ga-item.morta .ga-img { filter: grayscale(.6); } .ga-item:not(.morta) .ga-img { opacity: .85; }
+.ga-img { position: relative; aspect-ratio: 1; background: transparent center top/cover no-repeat; } .ga-img.papel { background-color: #f2efe6; background-size: contain; background-position: center; } .ga-img { border: 1px solid var(--linha); } .ga-item.morta .ga-img { filter: grayscale(.6); } .ga-item:not(.morta) .ga-img { opacity: .85; }
 @media (max-width: 720px) { .dossie-topo { grid-template-columns: 1fr; } .polaroid { max-width: 240px; justify-self: center; } }
 .pessoa:has(.vol-linha) { flex-wrap: wrap; }
 .vol-linha { flex-basis: 100%; display: grid; grid-template-columns: auto 1fr 44px; gap: 8px; align-items: center; padding: 2px 0 4px 32px; }
@@ -2508,7 +2508,7 @@ ROTAS.ameacas = async () => {
     $('#ir-dossie').href = !qc ? '#dossie' : qc === 'arthur' ? '#dossie' : '#dossie-' + qc;
     $('#cac-wrap').innerHTML = (arthurVisivel() ? 1 : 0) + Object.keys(CACS).length > 1 ? seletorCacador() : '';
     $('#f-cac')?.addEventListener('click', e => { const b = e.target.closest('[data-cac]'); if (!b) return; CAC_SEL = b.dataset.cac; desenhar(); });
-    $('#lista-am').innerHTML = fil.map(c => `<a class="card-am ${eliminada(c) ? 'morta' : ''}" href="#ameaca-${esc(c.id)}" data-modal-am="${esc(c.id)}" style="text-decoration:none">${eliminada(c) ? `<span class="carimbo ${cacPadrao() === 'arthur' ? '' : 'jog'}">Eliminada${abatesDe(c.id) > 1 ? ' ×' + abatesDe(c.id) : abatesDe(c.id) < 0 ? ' ∞' : ''}</span>` : ''}<div class="img" style="${c.imagem ? `background-image:url('${esc(c.imagem)}')` : 'background:var(--painel-3)'}"></div>
+    $('#lista-am').innerHTML = fil.map(c => `<a class="card-am ${eliminada(c) ? 'morta' : ''}" href="#ameaca-${esc(c.id)}" data-modal-am="${esc(c.id)}" style="text-decoration:none">${eliminada(c) ? `<span class="carimbo ${cacPadrao() === 'arthur' ? '' : 'jog'}">Eliminada${abatesDe(c.id) > 1 ? ' ×' + abatesDe(c.id) : abatesDe(c.id) < 0 ? ' ∞' : ''}</span>` : ''}<div class="img ${ehPapel(c.imagem) ? 'papel' : ''}" style="${c.imagem ? `background-image:url('${esc(c.imagem)}')` : 'background:var(--painel-3)'}"></div>
       <div class="corpo"><b style="font: 400 19px/1.15 var(--f-disp)">${esc(c.nome)}</b><div style="display:flex; gap:6px; flex-wrap:wrap">${c.npc ? `<span class="tag" style="color:var(--ouro)">NPC${c.papel ? ' · ' + esc(c.papel) : ''}</span>${c.elemento ? elTag(c.elemento) : ''}<span class="tag">Nv ${c.nivel}</span>` : `${elTag(c.elemento)}<span class="tag">Nv ${c.nivel} · ${esc(nivelAm(c.nivel)[1])}</span>`}${c.homebrew ? '<span class="tag crit">Homebrew</span>' : ''}</div>
       <span class="mono dim" style="font-size:12px">PV ${c.ficha?.pv ?? '?'} · Def ${c.ficha?.intangivel ? `${c.ficha.intangivel.defesa}/${c.ficha.intangivel.defesaContornada} · intangível` : c.ficha?.defesa ?? '?'}</span></div></a>`).join('') || '<div class="vazio">Nenhuma criatura com esses filtros.</div>';
   };
@@ -2541,10 +2541,12 @@ function fichaAmeacaModal(c, opc = {}) {
 // barra de vida no estilo « ‹ valor › »
 const barraCris = (cls, v, m, attr, passos = [10, 1]) => `<div class="bcris ${cls}"><div class="fill" style="width:${Math.max(0, Math.min(100, (v / (m || 1)) * 100))}%"></div><button class="b" ${attr}="${-passos[0]}" aria-label="−${passos[0]}">«</button><button class="b" ${attr}="${-passos[1]}" aria-label="−${passos[1]}">‹</button><span class="v">${v} / ${m}</span><button class="b" ${attr}="${passos[1]}" aria-label="+${passos[1]}">›</button><button class="b" ${attr}="${passos[0]}" aria-label="+${passos[0]}">»</button></div>`;
 // banner temático da ameaça: foto na frente, a própria imagem borrada e a cor do elemento atrás
+// só os desenhos a nanquim do bestiário (fundo transparente e traço escuro) ganham o fundo de papel; foto enviada fica sem moldura branca
+const ehPapel = u => /(^|\/)img\/criaturas\//.test(String(u || ''));
 const corEl = e => e ? `var(--${String(e).toLowerCase().normalize('NFD').replace(/[^a-z]/g, '')}, var(--sangue))` : 'var(--sangue)';
 const bannerAmeaca = (c, extra = '') => { const n = +c.nivel || 1, img = c.imagem || '';
   return `<div class="am-banner" style="--bc:${c.npc && !c.elemento ? 'var(--ouro)' : corEl(c.elemento)}">${img ? `<div class="am-bgw"><div class="am-bg" style="background-image:url('${esc(img)}')"></div></div>` : ''}
-    <div class="am-ft" style="${img ? `background-image:url('${esc(img)}')` : ''}">${img ? '' : esc(iniciais(c.nome))}</div>
+    <div class="am-ft ${ehPapel(img) ? 'papel' : ''}" style="${img ? `background-image:url('${esc(img)}')` : ''}">${img ? '' : esc(iniciais(c.nome))}</div>
     <div class="am-tx">${c.fase === 2 ? '<span class="am-fase">Segunda fase</span>' : ''}<b>${esc(c.nome)}</b><span>Nível ${n}${c.npc ? '' : ' · ' + esc(nivelAm(n)[1])}${c.tipoCriatura || c.tamanho ? ` · ${esc([c.tipoCriatura, c.tamanho].filter(Boolean).join(' - '))}` : ''}</span><span class="am-el">${c.npc ? `NPC${c.papel ? ' · ' + esc(c.papel) : ''}${c.elemento ? ' · ' + esc(c.elemento) : ''}` : esc(c.elemento || 'Sem elemento')}${(c.elementosSec || []).length ? ' · ' + c.elementosSec.map(esc).join(', ') : ''}${c.ficha?.intangivel ? ' · Intangível' : ''}</span></div>${extra}</div>`; };
 const defesasAm = f => { const im = [...(f.imunidades || []), ...(f.imunidadesExtra ? [f.imunidadesExtra] : [])], rs = Object.entries(f.resist || {}).filter(([, v]) => +v), vu = f.vulner || [];
   return im.length || rs.length || vu.length ? `<div class="defesas-am">${im.length ? `<div><span class="rotulo">Imune</span> ${im.map(esc).join(', ')}</div>` : ''}${rs.length ? `<div><span class="rotulo">Resistências</span> ${rs.map(([t, v]) => `${esc(t)} ${esc(v)}`).join(' · ')}</div>` : ''}${vu.length ? `<div><span class="rotulo">Vulnerável</span> ${vu.map(esc).join(', ')}</div>` : ''}</div>` : ''; };
@@ -2583,7 +2585,7 @@ function montarAmeaca(alvo, c, opc = {}, est = {}, fechar = null) {
         ${pres && !c.npc ? `<div class="pres-box"><span class="rotulo">Presença perturbadora</span><span class="mono">DT ${presDT} · ${esc(presDano)} mental · Vontade reduz à metade</span></div>` : ''}
         <div class="sec-f"><div class="abas" style="border:none">${[['acoes', 'Ações'], ['poderes', 'Poderes']].map(([k, l]) => `<button class="${sub === k ? 'aqui' : ''}" data-sub="${k}">${l}</button>`).join('')}</div>${ed ? `<button class="btn mini sec" data-acao-nova>${sub === 'acoes' ? 'Nova ação' : 'Novo poder'}</button>` : ''}</div>
         ${lista.map((a, i) => cardAcaoAm(a, i, c.nome, ed)).join('') || `<div class="vazio">${sub === 'acoes' ? 'Sem ações.' : 'Sem poderes.'}</div>`}`; }
-      if (aba === 'descricao') corpo = `${c.imagem ? `<img src="${esc(c.imagem)}" alt="${esc(c.nome)}" style="background:#f2efe6; max-height:320px; object-fit:contain; width:100%">` : ''}
+      if (aba === 'descricao') corpo = `${c.imagem ? `<img src="${esc(c.imagem)}" alt="${esc(c.nome)}" style="${ehPapel(c.imagem) ? 'background:#f2efe6;' : ''} max-height:420px; object-fit:contain; width:100%">` : ''}
         ${c.anotacoes ? `<p class="nota-arthur">“${esc(c.anotacoes)}”</p>` : ''}<p class="dim">${fmtTx(c.descricao || '')}</p>
         ${c.ponto_fraco ? `<h3>Ponto fraco</h3><p class="dim">${nl(c.ponto_fraco)}</p>` : ''}${c.forma_de_abate ? `<h3>Forma de abate</h3><p class="dim">${nl(c.forma_de_abate)}</p>` : ''}
         ${c.npc || c.id == null ? '' : `<a href="#ameaca-${esc(c.id)}" data-fechar-ir>Abrir o relato completo</a>`}`;
@@ -2669,7 +2671,7 @@ ROTAS.ameaca = async id => {
 
     <div class="cab-pagina"><div style="display:grid; gap:8px"><div style="display:flex; gap:8px; flex-wrap:wrap">${elTag(c.elemento)}<span class="tag">Nível ${c.nivel} · ${esc(nivelAm(c.nivel)[1])}</span>${c.homebrew ? '<span class="tag crit">Homebrew</span>' : ''}</div><h1>${esc(c.nome)}</h1>${c.origem ? `<p class="dim">${esc(c.origem)}</p>` : ''}</div></div>
     <div class="det-am">
-      <div style="display:grid; gap:16px; align-content:start">${c.imagem ? `<div class="img"><img src="${esc(c.imagem)}" alt="${esc(c.nome)}"></div>` : ''}${blocoFicha(c, 'res-am')}</div>
+      <div style="display:grid; gap:16px; align-content:start">${c.imagem ? `<div class="img ${ehPapel(c.imagem) ? 'papel' : ''}"><img src="${esc(c.imagem)}" alt="${esc(c.nome)}"></div>` : ''}${blocoFicha(c, 'res-am')}</div>
       <div class="relato">
 ${c.homebrew ? '' : `<div class="registro-am"><span class="rotulo">Registro nº ${String(c.id).padStart(3, '0')}</span>
       <dl class="ficha-reg"><dt>Grau</dt><dd>${grausHtml(+c.nivel)} ${esc(nv[1])}${nv[3] ? ` <span class="faint">· ícone ${esc(nv[3])}</span>` : ''}</dd><dt>Elemento</dt><dd>${elTag(c.elemento)} <span class="faint">${esc(SIS.capitulos?.[capDe(c)] || '')}</span></dd><dt>Origem</dt><dd>${esc(c.origem || 'Desconhecida')}</dd></dl>
@@ -2818,7 +2820,7 @@ ROTAS.dossie = async arg => {
       </div>
       ${secoes.length ? `<div class="dossie-secoes">${secoes.map(([tt, v]) => `<section class="caixa"><h3>${tt}</h3><p>${nl(v)}</p></section>`).join('')}</div>` : (!c && q === ME ? '<p class="dim">Preencha Aparência, Personalidade, Histórico e Objetivo na aba Descrição da ficha para o dossiê ficar completo.</p>' : '')}
       <div class="cab-pagina" style="margin-top:8px"><h2>Histórico de abates</h2><div class="filtros" id="f-dos">${[['mortas', 'Eliminadas'], ['abertas', 'Em aberto'], ['todas', 'Todas']].map(([k, l]) => `<button class="chip ${filtroDos === k ? 'aqui' : ''}" data-fd="${k}">${l}</button>`).join('')}</div></div>
-      <div class="galeria-abates">${G.map(x => `<a class="ga-item ${eliminada(x, q) ? 'morta' : ''}" href="#ameaca-${esc(x.id)}"><div class="ga-img" style="${x.imagem ? `background-image:url('${esc(x.imagem)}')` : ''}">${eliminada(x, q) ? `<span class="carimbo ${c ? '' : 'jog'}">${abatesDe(x.id, q) < 0 ? '∞' : '×' + abatesDe(x.id, q)}</span>` : ''}</div><b>${esc(x.nome)}</b><span class="faint" style="font-size:12px">${esc(capDe(x) === 'Servos' ? 'Sem elemento' : capDe(x))} · ${esc(nivelAm(x.nivel)[1])}</span></a>`).join('') || `<div class="vazio">${filtroDos === 'mortas' ? 'Nenhum abate registrado ainda.' : 'Nada aqui.'}</div>`}</div>`;
+      <div class="galeria-abates">${G.map(x => `<a class="ga-item ${eliminada(x, q) ? 'morta' : ''}" href="#ameaca-${esc(x.id)}"><div class="ga-img ${ehPapel(x.imagem) ? 'papel' : ''}" style="${x.imagem ? `background-image:url('${esc(x.imagem)}')` : ''}">${eliminada(x, q) ? `<span class="carimbo ${c ? '' : 'jog'}">${abatesDe(x.id, q) < 0 ? '∞' : '×' + abatesDe(x.id, q)}</span>` : ''}</div><b>${esc(x.nome)}</b><span class="faint" style="font-size:12px">${esc(capDe(x) === 'Servos' ? 'Sem elemento' : capDe(x))} · ${esc(nivelAm(x.nivel)[1])}</span></a>`).join('') || `<div class="vazio">${filtroDos === 'mortas' ? 'Nenhum abate registrado ainda.' : 'Nada aqui.'}</div>`}</div>`;
     $$('[data-fd]').forEach(b => b.onclick = () => { filtroDos = b.dataset.fd; desenhar(); });
     $('#criar-ficha-arthur')?.addEventListener('click', criarFichaArthur);
     $('#f-cac')?.addEventListener('click', e => { const b = e.target.closest('[data-cac]'); if (!b) return; CAC_SEL = b.dataset.cac; location.hash = CAC_SEL === 'arthur' ? 'dossie' : 'dossie-' + CAC_SEL; });
@@ -3039,7 +3041,7 @@ document.addEventListener('click', e => {
 // cartão da ordem de iniciativa (mestre e jogador)
 function cardIni({ i, nome, foto, ameaca, pv, pvM, ps, psM, conds = [], ini, vez, sel, meu, editavel, mostrarPV = true, rotTipo = '', morto = false }) {
   return `<div class="ini-card ${morto ? 'morto' : ''} ${vez ? 'vez' : ''} ${sel ? 'sel' : ''} ${meu ? 'meu' : ''} ${mostrarPV && pv != null && pv <= 0 ? 'caido' : ''}" data-selcb="${i}" role="button" tabindex="0">
-    <div class="ft ${ameaca && foto ? 'am' : ''}" style="${foto ? `background-image:url('${esc(foto)}')` : ''}">${foto ? '' : esc(iniciais(nome))}</div>
+    <div class="ft ${ameaca && foto ? 'am' : ''} ${ehPapel(foto) ? 'papel' : ''}" style="${foto ? `background-image:url('${esc(foto)}')` : ''}">${foto ? '' : esc(iniciais(nome))}</div>
     <div style="min-width:0"><div class="nm">${esc(nome)}</div><div class="vs">${mostrarPV && pv != null ? `<span class="p">${pv} / ${pvM}</span>` : ''}${ps != null ? `<span class="s">${ps} / ${psM}</span>` : ''}${rotTipo ? `<span class="faint">${esc(rotTipo)}</span>` : ''}</div>${conds.length ? `<div class="conds">${conds.map(c => `<span class="cond-chip">${esc(c)}</span>`).join('')}</div>` : ''}</div>
     <div class="n">${editavel ? `<input type="number" aria-label="Iniciativa de ${esc(nome)}" data-ini="${i}" value="${esc(ini ?? '')}">` : esc(ini ?? '')}</div></div>`;
 }
