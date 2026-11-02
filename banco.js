@@ -95,8 +95,9 @@ window.criarBanco = function criarBanco(sb) {
       },
       onSnapshot(next, falha) {
         // só avisa a tela quando o documento mudou de verdade (evita redesenhar à toa a cada varredura)
-        let vivo = true, seq = 0, ultimo;
-        const rodar = async () => { const n = ++seq; try { const s = await ref.get(); if (!vivo || n !== seq) return; const k = JSON.stringify(s.exists ? s.data() : null); if (k === ultimo) return; ultimo = k; next(s); } catch (e) { if (vivo) falha?.(e); } };
+        let vivo = true, seq = 0, ultimo, falhas = 0;
+        // "não existe" pode ser leitura feita antes da sessão voltar (ou durante a troca do token): confere de novo antes de sumir com o documento
+        const rodar = async () => { const n = ++seq; try { let s = await ref.get(); if (!s.exists && vivo && n === seq) { await new Promise(ok => setTimeout(ok, 1500)); if (!vivo || n !== seq) return; s = await ref.get(); } if (!vivo || n !== seq) return; const k = JSON.stringify(s.exists ? s.data() : null); falhas = 0; if (k === ultimo) return; ultimo = k; next(s); } catch (e) { if (!vivo) return; if (++falhas <= 3) { setTimeout(() => vivo && rodar(), 1500 * falhas); return; } falhas = 0; falha?.(e); } };
         rodar();
         const sair = registrar('d:' + path, rodar);
         return () => { vivo = false; sair(); };
@@ -132,8 +133,8 @@ window.criarBanco = function criarBanco(sb) {
         return { docs, size: docs.length, empty: !docs.length, docChanges: () => [], metadata: { fromCache: false, hasPendingWrites: false } };
       },
       onSnapshot(next, falha) {
-        let vivo = true, seq = 0, ultimo;
-        const rodar = async () => { const n = ++seq; try { const s = await q.get(); if (!vivo || n !== seq) return; const k = JSON.stringify(s.docs.map(d => [d.id, d.data()])); if (k === ultimo) return; ultimo = k; next(s); } catch (e) { if (vivo) falha?.(e); } };
+        let vivo = true, seq = 0, ultimo, falhas = 0;
+        const rodar = async () => { const n = ++seq; try { let s = await q.get(); if (s.empty && ultimo && ultimo !== '[]' && vivo && n === seq) { await new Promise(ok => setTimeout(ok, 1500)); if (!vivo || n !== seq) return; s = await q.get(); } if (!vivo || n !== seq) return; const k = JSON.stringify(s.docs.map(d => [d.id, d.data()])); falhas = 0; if (k === ultimo) return; ultimo = k; next(s); } catch (e) { if (!vivo) return; if (++falhas <= 3) { setTimeout(() => vivo && rodar(), 1500 * falhas); return; } falhas = 0; falha?.(e); } };
         rodar();
         const sair = registrar('c:' + col, rodar);
         return () => { vivo = false; sair(); };
