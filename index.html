@@ -790,6 +790,8 @@ async function carregarBase() {
   SIS = s; CRI = c; RIT = r; FEIT = f; CACADOR = k.cacador; ABATES = { ...k.abates };
 }
 // classes do livro + classes e subclasses criadas no homebrew das campanhas carregadas
+// nível 0 = mundano: sem classe, só perícias e uma passiva
+const nivelDe = x => x?.nivel === 0 || x?.nivel === '0' ? 0 : (+x?.nivel || 1);
 const classe = n => { const b = SIS.classes.find(c => c.nome === n) || (typeof todasClassesCamp === 'function' ? todasClassesCamp().find(c => c.nome === n) : null); if (!b) return undefined;
   const ex = typeof todasSubExtras === 'function' ? todasSubExtras().filter(x => x.classe === n) : []; return ex.length ? { ...b, subclasses: [...(b.subclasses || []), ...ex.filter(x => !(b.subclasses || []).some(y => y.nome === x.nome))] } : b; };
 const subclasse = (c, s) => classe(c)?.subclasses?.find(x => x.nome === s);
@@ -807,15 +809,17 @@ const nivelAm = n => SIS.niveisAmeaca.find(x => x[0] === +n) || [n, '?', ''];
 function pontosAtributo(nivel) { let p = 12; if (nivel >= 4) p += 2; if (nivel >= 8) p += 3; if (nivel >= 12) p += 5; return p; }
 // Pontos de perícia: a base da classe (+ Int) na criação e de novo a cada patente alcançada (Veterano no 5, Alto Escalão no 9)
 const patentesAlcancadas = nivel => SIS.patentes.filter(p => nivel >= p.de).length;
-function pontosPericiaTotal(cls, intel, nivel) { const C = classe(cls); return ((C?.pericias || 0) + (intel || 0)) * patentesAlcancadas(nivel); }
-function pontosPericia(f) { const total = pontosPericiaTotal(f.classe, f.atributos?.inteligencia, +f.nivel || 1); const gastos = (f.pericias || []).reduce((a, p) => a + (+p.pontos || 0), 0); return { total, gastos, livres: total - gastos }; }
+const PERICIAS_MUNDANO = 3;
+function pontosPericiaTotal(cls, intel, nivel) { if (+nivel === 0) return PERICIAS_MUNDANO + (intel || 0); const C = classe(cls); return ((C?.pericias || 0) + (intel || 0)) * patentesAlcancadas(nivel); }
+function pontosPericia(f) { const total = pontosPericiaTotal(f.classe, f.atributos?.inteligencia, nivelDe(f)); const gastos = (f.pericias || []).reduce((a, p) => a + (+p.pontos || 0), 0); return { total, gastos, livres: total - gastos }; }
 // Corrige a ficha depois de trocar classe, subclasse, nível ou patente: devolve só os campos que mudaram e o que foi ajustado.
 function corrigirFicha(f) {
   const out = {}, av = [];
-  const nivel = Math.min(12, Math.max(1, +f.nivel || 1)); if (nivel !== +f.nivel) { out.nivel = nivel; av.push(`Nível ajustado para ${nivel}.`); }
-  const C = classe(f.classe) || SIS.classes[0];
-  if (C.nome !== f.classe) { out.classe = C.nome; av.push(`Classe definida como ${C.nome}.`); }
-  if (!C.subclasses.some(x => x.nome === f.subclasse)) { out.subclasse = C.subclasses[0]?.nome || ''; av.push(`Subclasse trocada para ${out.subclasse}, porque ${f.subclasse || 'a anterior'} não é de ${C.nome}.`); }
+  const nivel = Math.min(12, Math.max(0, nivelDe(f))); if (nivel !== +f.nivel) { out.nivel = nivel; av.push(`Nível ajustado para ${nivel}.`); }
+  const C = nivel === 0 ? { nome: '', subclasses: [{ nome: '' }] } : classe(f.classe) || SIS.classes[0];
+  if (nivel === 0 && (f.classe || f.subclasse)) { out.classe = ''; out.subclasse = ''; av.push('Nível 0 é mundano: o agente fica sem classe.'); }
+  else if (C.nome !== f.classe) { out.classe = C.nome; av.push(`Classe definida como ${C.nome}. Troque no seletor de classe se quiser outra.`); }
+  if (nivel > 0 && !C.subclasses.some(x => x.nome === f.subclasse)) { out.subclasse = C.subclasses[0]?.nome || ''; av.push(`Subclasse trocada para ${out.subclasse}, porque ${f.subclasse || 'a anterior'} não é de ${C.nome}.`); }
   const pat = patente(nivel);
   // atributos: limite da patente e total de pontos do nível
   const A = { ...(f.atributos || {}) }; let mexeu = false;
@@ -830,7 +834,8 @@ function corrigirFicha(f) {
   if (gastos > totP) { av.push(`Perícias cortadas de ${gastos} para ${totP} pontos.`); while (gastos > totP) { const x = P.filter(y => y.pontos > 0).sort((a, b) => b.pontos - a.pontos)[0]; if (!x) break; x.pontos--; gastos--; } mexeuP = true; }
   if (mexeuP) out.pericias = P.filter(x => x.pontos > 0);
   // passivas pelo nível (2, 6, 9 e 11)
-  const qp = qtdPassivas(nivel); if ((f.passivas || []).length > qp) { out.passivas = f.passivas.slice(0, qp); { const fora = f.passivas.slice(qp).map(x => x.nome); av.push(`Passivas: o nível ${nivel} dá ${qp}; ${fora.join(', ')} ${fora.length > 1 ? 'saíram' : 'saiu'}.`); } }
+  const mund = (f.passivas || []).filter(x => x.origem === 'Nível 0'), normais = (f.passivas || []).filter(x => x.origem !== 'Nível 0');
+  const qp = qtdPassivas(nivel); if (normais.length > qp) { out.passivas = [...mund, ...normais.slice(0, qp)]; { const fora = normais.slice(qp).map(x => x.nome); av.push(`Passivas: o nível ${nivel} dá ${qp}; ${fora.join(', ')} ${fora.length > 1 ? 'saíram' : 'saiu'}.`); } }
   // vida, sanidade e stamina não passam do novo máximo
   const K = calc({ ...f, ...out });
   if (f.atual) { const a = { ...f.atual }; let m2 = false; for (const k of ['pv', 'ps', 'pst']) if ((a[k] ?? 0) > K.max[k]) { a[k] = K.max[k]; m2 = true; } if (m2) { out.atual = a; av.push('PV, PS e PST ajustados ao novo máximo.'); } }
@@ -985,17 +990,17 @@ const vetorAtivo = f => vetorLiberado(f) && !!f.vetorVestido;
 const fotoEf = f => (vetorAtivo(f) && f.vetor.foto) || f?.foto || '';
 function calc(f) {
   const C = classe(f.classe) || { pv: 0, ps: 0, pst: 0 };
-  const A = f.atributos || {}, N = +f.nivel || 1;
+  const A = f.atributos || {}, N = nivelDe(f);
   const VB = vetorAtivo(f) ? 5 * N : 0;
   const pt = n => (f.pericias || []).find(p => p.nome === n)?.pontos || 0;
   const vig = pt('Vigor'), vtd = pt('Vontade');
-  const max = {
+  const max = N === 0 ? { pv: 8 + (A.constituicao || 0) + vig * 5, ps: 5 + (A.inteligencia || 0) + vtd * 5, pst: 5 + (A.constituicao || 0) + vig * 2 } : {
     pv:  8 + (C.pv + (A.constituicao || 0)) * N + vig * 5,
     ps:  5 + (C.ps + (A.inteligencia || 0)) * N + vtd * 5,
     pst: 5 + (C.pst + (A.constituicao || 0)) * N + vig * 2,
   };
   if (VB) { max.pv += VB; max.ps += VB; max.pst += VB; }
-  const form = {
+  const form = N === 0 ? { pv: `8 + ${A.constituicao || 0} CON${vig ? ` + ${vig * 5} Vigor` : ''} (mundano)`, ps: `5 + ${A.inteligencia || 0} INT${vtd ? ` + ${vtd * 5} Vontade` : ''} (mundano)`, pst: `5 + ${A.constituicao || 0} CON${vig ? ` + ${vig * 2} Vigor` : ''} (mundano)` } : {
     pv: `8 + (${C.pv} + ${A.constituicao || 0}) × ${N}${vig ? ` + ${vig * 5} Vigor` : ''}`,
     ps: `5 + (${C.ps} + ${A.inteligencia || 0}) × ${N}${vtd ? ` + ${vtd * 5} Vontade` : ''}`,
     pst: `5 + (${C.pst} + ${A.constituicao || 0}) × ${N}${vig ? ` + ${vig * 2} Vigor` : ''}`,
@@ -1046,7 +1051,7 @@ function dadosPericia(f, nome) {
   const pontos = p?.pontos || 0;
   // Vetor vestido: +1 em toda perícia, mesmo passando do limite; passou do limite, ganha +1 dado
   const vb = vetorAtivo(f) ? 1 : 0;
-  const alem = vb && pontos + 1 > patente(+f.nivel || 1).limite ? 1 : 0;
+  const alem = vb && pontos + 1 > patente(nivelDe(f)).limite ? 1 : 0;
   const bm = typeof bonusMec === 'function' ? bonusMec(f).pericias : 0;
   return { pontos, vt, vb, alem, atr, dados: Math.max(1, pontos + vt + vb + alem + bm), mod: f.atributos?.[atr] || 0 };
 }
@@ -1301,7 +1306,7 @@ function telaMorto(f, { ehMestre, aoVer, aoReviver }) {
     <div class="tm-retrato"><div class="tm-img" style="${foto ? `background-image:url('${esc(foto)}')` : ''}">${foto ? '' : esc(iniciais(f.nome))}</div><span class="tm-x"></span></div>
     <span class="rotulo tm-rot">${M.tipo === 'ps' ? 'Perdido para a loucura' : 'Tombou em serviço'}</span>
     <h1 class="tm-nome">${esc(f.nome)}</h1>
-    <p class="tm-sub">${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''} · Nível ${+f.nivel || 1}</p>
+    <p class="tm-sub">${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''} · Nível ${nivelDe(f)}</p>
     <div class="tm-datas"><span>${M.tipo === 'ps' ? 'Enlouqueceu' : 'Morto'} em ${dataBR(M.em)}</span>${M.causa ? `<span>${esc(M.causa)}</span>` : ''}</div>
     ${M.palavras ? `<blockquote class="tm-palavras">“${esc(M.palavras)}”</blockquote>` : ''}
     <div class="tm-acoes"><button class="btn sec" id="tm-ver">Ver a ficha</button>${ehMestre ? '<button class="btn ouro" id="tm-reviver">Reviver</button>' : ''}<a class="btn sec" href="#agentes" style="text-decoration:none">Voltar</a></div></section>`;
@@ -1311,7 +1316,7 @@ function cardAgente(f, extra = '', dono = '') {
   return `<article class="card-ag ${f.morto ? 'morto' : ''}">${f.morto ? '<span class="carimbo">Morto</span>' : ''}
     <div class="foto" style="${fotoEf(f) ? `background-image:url('${esc(fotoEf(f))}')` : ''}">${fotoEf(f) ? '' : esc(iniciais(f.nome))}</div>
     <div class="corpo"><div class="nm">${esc(f.nome || 'Sem nome')}</div>
-      <div class="dim" style="font-weight:600">${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''} · Nv ${+f.nivel || 1}</div>
+      <div class="dim" style="font-weight:600">${nivelDe(f) === 0 ? 'Mundano' : `${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''}`} · Nv ${nivelDe(f)}</div>
       ${dono ? `<div class="dono">Jogador: <b>${esc(dono)}</b></div>` : ''}<div class="faint" style="font-size:12px">Registrado em ${dataBR(f.criado)}</div>
       <div class="acoes">${extra}<a class="btn mini" href="#agente-${esc(f.id)}" style="text-decoration:none">Acessar ficha</a></div></div>
   </article>`;
@@ -1337,8 +1342,8 @@ ROTAS.novo = async (campId = '') => {
     const totalA = pontosAtributo(R.nivel), usados = Object.values(R.atributos).reduce((a, b) => a + b, 0);
     let corpo = '';
     if (R.passo === 0) {
-      corpo = `<p>Todos os atributos começam em 0. Você distribui <b>${totalA} pontos</b> entre eles${R.nivel >= 4 ? ' (12 iniciais mais os aumentos de atributo do seu nível)' : ''}. Como ${esc(pat.nome)}, nenhum atributo passa de <b>${pat.limite}</b>.</p>
-      <div class="grade-campos"><div class="campo"><label class="rotulo" for="nv">Nível inicial (combine com o mestre)</label><select id="nv">${Array.from({ length: 12 }, (_, i) => `<option ${R.nivel === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div>
+      corpo = `${R.nivel === 0 ? '<div class="aviso"><b>Nível 0, mundano.</b> Uma pessoa comum: sem classe, sem Vontade. Distribui os atributos base, escolhe as perícias e uma passiva. A classe chega quando subir para o nível 1.</div>' : ''}<p>Todos os atributos começam em 0. Você distribui <b>${totalA} pontos</b> entre eles${R.nivel >= 4 ? ' (12 iniciais mais os aumentos de atributo do seu nível)' : ''}. Como ${esc(pat.nome)}, nenhum atributo passa de <b>${pat.limite}</b>.</p>
+      <div class="grade-campos"><div class="campo"><label class="rotulo" for="nv">Nível inicial (combine com o mestre)</label><select id="nv">${Array.from({ length: 13 }, (_, i) => `<option value="${i}" ${R.nivel === i ? 'selected' : ''}>${i === 0 ? '0 · Mundano' : i}</option>`).join('')}</select></div>
       <div class="campo"><span class="rotulo">Pontos restantes</span><div class="mono" style="font-size:26px; color:${usados > totalA ? 'var(--sangue-hi)' : 'var(--ouro)'}">${totalA - usados}</div></div></div>
       <div class="roda-attr">${ATR.map(([k, n, s]) => `<div class="attr-box"><span class="rotulo">${n}</span><div class="v">${R.atributos[k]}</div><div class="ctrl"><button class="vbtn" data-a="${k}" data-d="-1" aria-label="Diminuir ${n}">−</button><button class="vbtn" data-a="${k}" data-d="1" aria-label="Aumentar ${n}">+</button></div><span class="faint" style="font-size:12px">${s}</span></div>`).join('')}</div>`;
     } else if (R.passo === 1) {
@@ -1358,7 +1363,14 @@ ROTAS.novo = async (campId = '') => {
       const C = classe(R.classe); const tot = pontosPericiaTotal(R.classe, R.atributos.inteligencia, R.nivel); const nPat = patentesAlcancadas(R.nivel);
       const gastos = Object.values(R.pericias).reduce((a, b) => a + b, 0);
       const vt = periciasVontade(R.vontade, R.vontadeEscolha);
-      corpo = `<p>Você tem <b>${tot} pontos</b> de perícia (${C?.pericias || 0} da classe + ${R.atributos.inteligencia} de Inteligência${nPat > 1 ? `, vezes ${nPat} por ter alcançado ${esc(pat.nome)}` : ''}). Cada ponto é um d20 no teste, fica o maior e soma o atributo. Limite por perícia: <b>${pat.limite}</b>.</p>
+      corpo = R.nivel === 0 ? `<p>Mundano: <b>${tot} pontos</b> de perícia (${PERICIAS_MUNDANO} + ${R.atributos.inteligencia} de Inteligência). Cada ponto é um d20 no teste. Limite por perícia: <b>${pat.limite}</b>.</p>
+      <h2 style="margin:0">Passiva do mundano (${R.passivas.length}/1)</h2><p class="dim" style="margin:0">Uma passiva que não é de classe. Ela continua com o agente quando ele ganhar a classe.</p>
+      <div class="lista">${R.passivas.map((p, i) => `<div class="item"><div class="cab"><span class="nm">${esc(p.nome)}</span><button class="btn-x" data-rp="${i}" aria-label="Remover">×</button></div><p class="dim" style="font-size:13.5px">${esc(p.texto)}</p></div>`).join('')}</div>${R.passivas.length < 1 ? '<button class="btn sec" id="add-pas" style="justify-self:start">Escolher passiva</button>' : ''}
+      <div class="campo"><span class="rotulo">Pontos restantes</span><div class="mono" style="font-size:26px; color:${gastos > tot ? 'var(--sangue-hi)' : 'var(--ouro)'}">${tot - gastos}</div></div>
+      <div class="grade-per">${SIS.pericias.map(p => { const v = R.pericias[p.nome] || 0;
+        return `<div class="per ${v ? '' : 'zero'}"><div class="topo-p"><b>${esc(p.nome)}</b><span class="faint mono" style="font-size:11px">${SIGLA[p.atributo]}</span></div>
+        <div class="topo-p"><div class="pips">${Array.from({ length: pat.limite }, (_, k) => `<span class="pip ${k < v ? 'on' : ''}"></span>`).join('')}</div>
+        <div style="display:flex; gap:4px"><button class="vbtn" data-pr="${esc(p.nome)}" data-d="-1" aria-label="Menos ${esc(p.nome)}">−</button><button class="vbtn" data-pr="${esc(p.nome)}" data-d="1" aria-label="Mais ${esc(p.nome)}">+</button></div></div></div>`; }).join('')}</div>` : `<p>Você tem <b>${tot} pontos</b> de perícia (${C?.pericias || 0} da classe + ${R.atributos.inteligencia} de Inteligência${nPat > 1 ? `, vezes ${nPat} por ter alcançado ${esc(pat.nome)}` : ''}). Cada ponto é um d20 no teste, fica o maior e soma o atributo. Limite por perícia: <b>${pat.limite}</b>.</p>
       <div class="campo"><span class="rotulo">Pontos restantes</span><div class="mono" style="font-size:26px; color:${gastos > tot ? 'var(--sangue-hi)' : 'var(--ouro)'}">${tot - gastos}</div></div>
       <div class="grade-per">${SIS.pericias.map(p => { const v = R.pericias[p.nome] || 0, b = vt.includes(p.nome) ? 1 : 0;
         return `<div class="per ${v || b ? '' : 'zero'}"><div class="topo-p"><b>${esc(p.nome)}</b><span class="faint mono" style="font-size:11px">${SIGLA[p.atributo]}</span></div>
@@ -1373,9 +1385,9 @@ ROTAS.novo = async (campId = '') => {
       </div>
       ${[['aparencia', 'Aparência', 'Gênero, idade, descrição física…'], ['personalidade', 'Personalidade', 'Traços marcantes, opiniões, ideais…'], ['historico', 'Histórico', 'Infância, família, primeiro contato com o paranormal…'], ['objetivo', 'Objetivo', 'Por que faz parte da Delta Green? Por que luta contra o Caos?']].map(([k, l, ph]) => `<div class="campo"><label class="rotulo" for="t-${k}">${l}</label><textarea id="t-${k}" data-t="${k}" placeholder="${ph}">${esc(R[k])}</textarea></div>`).join('')}`;
     }
-    const pode = [usados <= totalA, !!R.vontade, !!(R.classe && R.subclasse), true, !!R.nome.trim()];
+    const pode = [usados <= totalA, !!R.vontade, !!(R.classe && R.subclasse), R.nivel === 0 ? R.passivas.length === 1 : true, !!R.nome.trim()];
     app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">${campId ? `Novo agente · ${esc(campNome)}` : 'Novo agente'}</span><h1>${esc(PASSOS[R.passo])}</h1></div><button class="btn sec mini" id="zerar">Recomeçar</button></div>
-      <div class="passos">${PASSOS.map((p, i) => `${i ? '<i></i>' : ''}<span class="${i === R.passo ? 'aqui' : i < R.passo ? 'feito' : ''}">${p}</span>`).join('')}</div>
+      <div class="passos">${PASSOS.map((p, i) => [i, p]).filter(([i]) => R.nivel !== 0 || (i !== 1 && i !== 2)).map(([i, p], k) => `${k ? '<i></i>' : ''}<span class="${i === R.passo ? 'aqui' : i < R.passo ? 'feito' : ''}">${R.nivel === 0 && i === 3 ? 'Perícias e passiva' : p}</span>`).join('')}</div>
       <section style="display:grid; gap:16px">${corpo}</section>
       <div style="display:flex; justify-content:space-between; gap:10px">
         <button class="btn sec" id="voltar" ${R.passo ? '' : 'disabled'}>Voltar</button>
@@ -1385,9 +1397,9 @@ ROTAS.novo = async (campId = '') => {
   }
   function ligar() {
     $('#zerar').onclick = () => { try { localStorage.removeItem(CH); } catch (e) {} ROTAS.novo(campId); };
-    $('#voltar').onclick = () => { R.passo--; render(); };
-    $('#avancar')?.addEventListener('click', () => { R.passo++; render(); });
-    $('#nv')?.addEventListener('change', e => { R.nivel = +e.target.value; const lim = patente(R.nivel).limite; for (const k in R.atributos) R.atributos[k] = Math.min(R.atributos[k], lim); R.passivas = R.passivas.slice(0, qtdPassivas(R.nivel)); render(); });
+    $('#voltar').onclick = () => { R.passo--; if (R.nivel === 0 && (R.passo === 1 || R.passo === 2)) R.passo = 0; render(); };
+    $('#avancar')?.addEventListener('click', () => { R.passo++; if (R.nivel === 0 && (R.passo === 1 || R.passo === 2)) R.passo = 3; render(); });
+    $('#nv')?.addEventListener('change', e => { const era0 = R.nivel === 0; R.nivel = +e.target.value; const lim = patente(R.nivel).limite; for (const k in R.atributos) R.atributos[k] = Math.min(R.atributos[k], lim); if (era0 !== (R.nivel === 0)) { R.passivas = []; R.pericias = {}; } R.passivas = R.passivas.slice(0, R.nivel === 0 ? 1 : qtdPassivas(R.nivel)); render(); });
     $$('[data-a]').forEach(b => b.onclick = () => { const k = b.dataset.a, lim = patente(R.nivel).limite; const usados = Object.values(R.atributos).reduce((a, x) => a + x, 0);
       const nv = R.atributos[k] + +b.dataset.d; if (nv < 0 || nv > lim) return; if (+b.dataset.d > 0 && usados >= pontosAtributo(R.nivel)) return; R.atributos[k] = nv; render(); });
     $$('[data-vt]').forEach(b => b.onclick = () => { R.vontade = b.dataset.vt; R.vontadeEscolha = {}; render(); });
@@ -1396,7 +1408,7 @@ ROTAS.novo = async (campId = '') => {
     $$('[data-sc]').forEach(b => b.onclick = () => { R.subclasse = b.dataset.sc; render(); });
     $$('[data-rp]').forEach(b => b.onclick = () => { R.passivas.splice(+b.dataset.rp, 1); render(); });
     $('#add-pas')?.addEventListener('click', () => seletor('Habilidades passivas', SIS.passivas.filter(p => !R.passivas.some(x => x.nome === p.nome)),
-      p => `<b>${esc(p.nome)}</b><p>${esc(p.texto)}</p>`, p => { if (R.passivas.length < qtdPassivas(R.nivel)) { R.passivas.push(p); render(); $('#camada').innerHTML = ''; } }));
+      p => `<b>${esc(p.nome)}</b><p>${esc(p.texto)}</p>`, p => { if (R.passivas.length < (R.nivel === 0 ? 1 : qtdPassivas(R.nivel))) { R.passivas.push(R.nivel === 0 ? { ...p, origem: 'Nível 0' } : p); render(); $('#camada').innerHTML = ''; } }));
     $$('[data-pr]').forEach(b => b.onclick = () => { const tot = pontosPericiaTotal(R.classe, R.atributos.inteligencia, R.nivel);
       const gastos = Object.values(R.pericias).reduce((a, x) => a + x, 0); const n = b.dataset.pr, v = (R.pericias[n] || 0) + +b.dataset.d;
       if (v < 0 || v > patente(R.nivel).limite) return; if (+b.dataset.d > 0 && gastos >= tot) return; R.pericias[n] = v; if (!v) delete R.pericias[n]; render(); });
@@ -1405,6 +1417,7 @@ ROTAS.novo = async (campId = '') => {
     $('#foto-arq')?.addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; const u = await enviarImagem(f); if (u) { R.foto = u; render(); } });
     $('#finalizar')?.addEventListener('click', async e => {
       e.target.disabled = true; e.target.textContent = 'Registrando…';
+      if (R.nivel === 0) { R.vontade = ''; R.vontadeEscolha = {}; R.classe = ''; R.subclasse = ''; }
       const vt = periciasVontade(R.vontade, R.vontadeEscolha);
       const nomes = new Set([...Object.keys(R.pericias), ...vt]);
       const ficha = { dono: ME, criado: Date.now(), nome: R.nome.trim(), jogador: R.jogador, idade: R.idade, vontade: R.vontade, vontadeEscolha: R.vontadeEscolha || {}, vetor: R.vetor, classe: R.classe, subclasse: R.subclasse, nivel: R.nivel,
@@ -1564,7 +1577,7 @@ ROTAS.agente = async id => {
       <div style="display:grid; gap:8px; min-width:0">
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center"><span class="el" style="color:var(--sangue-hi)">Dossiê de agente</span><span class="el" style="color:var(--ouro)">${esc(K.pat.nome)}</span>${F.vetor ? `<span class="el el-x">Vetor: ${esc(F.vetor)}</span>` : ''}</div>
         ${VA ? `<h1 class="nome-vetor">${esc(F.vetor.nome || 'Vetor')}</h1><div class="dim" style="margin-top:-4px">${esc(F.nome)}, vestindo o vetor</div>` : `<h1>${esc(F.nome)}</h1>`}
-        <div class="dim">${esc(F.classe)} · ${esc(F.subclasse)} · Nível ${+F.nivel || 1}${F.vontade ? ` · Vontade de ${esc(F.vontade)}` : ''}</div>
+        <div class="dim">${nivelDe(F) === 0 ? 'Mundano' : `${esc(F.classe)} · ${esc(F.subclasse)}`} · Nível ${nivelDe(F)}${F.vontade ? ` · Vontade de ${esc(F.vontade)}` : ''}</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px">
           ${ehMestre ? (F.morto ? '<button class="btn ouro" id="reviver">Reviver</button>' : '<button class="btn sec" id="matar" title="Só o mestre declara a morte">Declarar morte</button>') : ''}${podeEditar ? `<button class="btn ${editando ? '' : 'sec'}" id="editar">${editando ? 'Concluir edição' : 'Editar ficha'}</button>${editando ? '<button class="btn sec" id="corrigir" title="Ajusta atributos, perícias, passivas e vitais às regras do nível e da patente">Corrigir ficha</button>' : ''}${editando && (F.dono === ME || DONO) ? '<button class="btn sec perigo" id="apagar-ag">Apagar agente</button>' : ''}` : ''}
           ${VL ? (podeEditar ? `<button class="btn btn-vetor ${VA ? 'ativo' : ''}" id="vestir">${VA ? 'Tirar o vetor' : 'Vestir vetor'}</button>` : '')
@@ -1599,10 +1612,10 @@ ROTAS.agente = async id => {
           <div class="campo"><label class="rotulo" for="e-nome">Nome</label><input type="text" id="e-nome" data-campo="nome" value="${esc(F.nome)}"></div>
           <div class="campo"><label class="rotulo" for="e-jog">Jogador</label><input type="text" id="e-jog" data-campo="jogador" value="${esc(F.jogador)}"></div>
           <div class="campo"><label class="rotulo" for="e-idade">Idade</label><input type="text" id="e-idade" data-campo="idade" value="${esc(F.idade)}"></div>
-          <div class="campo"><label class="rotulo" for="e-classe">Classe</label><select id="e-classe">${classesPara(F).map(c => `<option ${c.nome === F.classe ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')}</select></div>
+          <div class="campo"><label class="rotulo" for="e-classe">Classe</label><select id="e-classe" ${nivelDe(F) === 0 ? 'disabled title="Nível 0 é mundano: suba para o nível 1 para escolher a classe"' : ''}>${nivelDe(F) === 0 ? '<option>Mundano (sem classe)</option>' : ''}${classesPara(F).map(c => `<option ${c.nome === F.classe ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')}</select></div>
           <div class="campo"><label class="rotulo" for="e-sub">Subclasse</label><select id="e-sub">${(classe(F.classe)?.subclasses || []).map(x => `<option ${x.nome === F.subclasse ? 'selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></div>
-          <div class="campo"><label class="rotulo" for="e-pat">Patente</label><div style="display:flex; gap:6px"><select id="e-pat" style="flex:1">${SIS.patentes.map(p => `<option value="${p.de}" ${patente(+F.nivel || 1).nome === p.nome ? 'selected' : ''}>${esc(p.nome)} (nível ${p.de} a ${p.ate})</option>`).join('')}</select><button class="vbtn" id="pat-desce" title="Descer de patente" aria-label="Descer de patente">▼</button><button class="vbtn" id="pat-sobe" title="Subir de patente" aria-label="Subir de patente">▲</button></div></div>
-          <div class="campo"><label class="rotulo" for="e-nivel">Nível</label><select id="e-nivel">${Array.from({ length: 12 }, (_, i) => `<option ${+F.nivel === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div>
+          <div class="campo"><label class="rotulo" for="e-pat">Patente</label><div style="display:flex; gap:6px"><select id="e-pat" style="flex:1">${SIS.patentes.map(p => `<option value="${p.de}" ${patente(nivelDe(F)).nome === p.nome ? 'selected' : ''}>${esc(p.nome)} (nível ${p.de} a ${p.ate})</option>`).join('')}</select><button class="vbtn" id="pat-desce" title="Descer de patente" aria-label="Descer de patente">▼</button><button class="vbtn" id="pat-sobe" title="Subir de patente" aria-label="Subir de patente">▲</button></div></div>
+          <div class="campo"><label class="rotulo" for="e-nivel">Nível</label><select id="e-nivel">${Array.from({ length: 13 }, (_, i) => `<option value="${i}" ${nivelDe(F) === i ? 'selected' : ''}>${i === 0 ? '0 · Mundano' : i}</option>`).join('')}</select></div>
           <div class="campo"><label class="rotulo" for="e-vetor">Vetor</label><input type="text" id="e-vetor" data-campo="vetor" value="${esc(F.vetor)}"></div>
           <div class="campo"><label class="rotulo" for="e-vont">Vontade</label><select id="e-vont">${SIS.vontades.map(v => `<option ${v.nome === F.vontade ? 'selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></div>
           <div class="campo"><label class="rotulo">Cor do cartão de rolagem</label><div class="cores-cartao">${[0, 1, 2, 3].map(k => { const c = F.estiloRolagem?.cores?.[k]; return `<label class="cor-slot ${c ? 'on' : ''}" title="Cor ${k + 1}"><input type="color" data-cor-card="${k}" value="${esc(c || ['#c8a35a', '#b4333b', '#6c4fa3', '#3d8f6f'][k])}"></label>${c && k ? `<button class="btn-x" data-cor-rm="${k}" aria-label="Tirar cor ${k + 1}">×</button>` : ''}`; }).join('')}
@@ -1631,7 +1644,7 @@ ROTAS.agente = async id => {
     const barra = `<div class="caixa barra-teste"><div class="campo"><label class="rotulo" for="dt">DT do teste</label><input type="number" id="dt" value="${window._dt ?? 20}"></div><div class="campo"><label class="rotulo" for="bonus">Bônus extra</label><input type="number" id="bonus" value="${window._bonus ?? 0}"></div><span class="dim" style="font-size:13px; margin-left:auto">${esc(K.pat.nome)}: limite <b class="mono" style="color:var(--ouro)">${K.pat.limite}</b> por perícia</span></div>`;
     if (aba === 'pericias') {
       const nomes = mostrarTodas || editando || vetorAtivo(F) ? SIS.pericias.map(p => p.nome) : [...new Set([...(F.pericias || []).filter(p => p.pontos > 0).map(p => p.nome), ...periciasVontade(F.vontade, F.vontadeEscolha)])];
-      const PP = pontosPericia(F), nPat = patentesAlcancadas(+F.nivel || 1);
+      const PP = pontosPericia(F), nPat = patentesAlcancadas(nivelDe(F));
       const avisoPts = PP.livres > 0 ? `<div class="aviso aviso-pts"><b>${PP.livres} ponto(s) de perícia para distribuir.</b> ${nPat > 1 ? `Você alcançou ${esc(K.pat.nome)} e ganhou de novo os pontos da classe. ` : ''}${podeEditar ? (editando ? 'Use o + nas perícias.' : '<button class="btn mini" id="dist-pts">Distribuir agora</button>') : ''}</div>`
         : PP.livres < 0 ? `<div class="aviso" style="border-color:var(--sangue)">Esta ficha usa ${-PP.livres} ponto(s) de perícia a mais do que o permitido.</div>` : '';
       const contPts = `<span class="dim" style="font-size:13px">Pontos de perícia: <b class="mono" style="color:var(--ouro)">${PP.gastos}/${PP.total}</b> · ${(classe(F.classe)?.pericias || 0)} da classe + ${F.atributos?.inteligencia || 0} Int${nPat > 1 ? ` × ${nPat} patentes` : ''}</span>`;
@@ -1748,7 +1761,7 @@ ROTAS.agente = async id => {
     $('#reviver')?.addEventListener('click', () => reviver());
     $('#vestir')?.addEventListener('click', async () => {
       if (!vetorLiberado(F)) return;
-      const vestir = !F.vetorVestido, b = 5 * (+F.nivel || 1);
+      const vestir = !F.vetorVestido, b = 5 * (nivelDe(F));
       const a = { ...(F.atual || calc(F).max) };
       F.vetorVestido = vestir;
       const M = calc(F).max;
@@ -1782,11 +1795,18 @@ ROTAS.agente = async id => {
       if (msgs.length) abrirModal(titulo, `<p class="dim">A ficha foi corrigida automaticamente:</p><ul class="lista-ajuste">${msgs.map(m => `<li>${esc(m)}</li>`).join('')}</ul><button class="btn" data-fechar-ok>Certo</button>`, (m, fechar) => m.querySelector('[data-fechar-ok]').onclick = fechar);
       else toast('Ficha atualizada.');
     };
-    $('#e-nivel')?.addEventListener('change', e => aplicarMudanca({ nivel: +e.target.value }, `Nível ${e.target.value}`));
+    $('#e-nivel')?.addEventListener('change', e => { const n = +e.target.value, de0 = nivelDe(F) === 0 && n > 0;
+      if (!de0) return aplicarMudanca({ nivel: n }, `Nível ${n}`);
+      // saindo do mundano: escolhe a classe e a subclasse antes
+      const cls = classesPara(F); abrirModal('Subir para o nível ' + n, `<p>Saindo do mundano. Escolha a classe e a subclasse do agente.</p><div class="grade-campos"><div class="campo"><label class="rotulo" for="sn-c">Classe</label><select id="sn-c">${cls.map(c => `<option>${esc(c.nome)}</option>`).join('')}</select></div><div class="campo"><label class="rotulo" for="sn-s">Subclasse</label><select id="sn-s"></select></div></div><p class="faint" id="sn-d" style="font-size:13px"></p><button class="btn" id="sn-ok">Subir</button>`, (m, fechar) => {
+        const sc = () => { const C = classe(m.querySelector('#sn-c').value); m.querySelector('#sn-s').innerHTML = (C?.subclasses || []).map(x => `<option>${esc(x.nome)}</option>`).join(''); m.querySelector('#sn-d').textContent = C ? `${C.descricao || ''} PV ${C.pv} · PST ${C.pst} · PS ${C.ps} · Perícias ${C.pericias}` : ''; };
+        m.querySelector('#sn-c').onchange = sc; sc();
+        m.querySelector('#sn-ok').onclick = () => { aplicarMudanca({ nivel: n, classe: m.querySelector('#sn-c').value, subclasse: m.querySelector('#sn-s').value }, `Nível ${n}: agora ${m.querySelector('#sn-c').value}`); fechar(); }; });
+      e.target.value = 0; });
     $('#e-classe')?.addEventListener('change', e => { const C = classe(e.target.value); aplicarMudanca({ classe: C.nome, subclasse: C.subclasses[0]?.nome || '' }, `Agora ${C.nome}`); });
     $('#e-sub')?.addEventListener('change', e => aplicarMudanca({ subclasse: e.target.value }, `Subclasse ${e.target.value}`));
-    $('#e-pat')?.addEventListener('change', e => { const p = SIS.patentes.find(x => x.de === +e.target.value), n = +F.nivel || 1; aplicarMudanca({ nivel: n >= p.de && n <= p.ate ? n : p.de }, p.nome); });
-    const pularPatente = d => { const i = SIS.patentes.findIndex(p => p.nome === patente(+F.nivel || 1).nome) + d; const p = SIS.patentes[i]; if (!p) return toast(d > 0 ? 'Já está na patente mais alta.' : 'Já está na primeira patente.'); aplicarMudanca({ nivel: p.de }, `${d > 0 ? 'Subiu' : 'Desceu'} para ${p.nome}`); };
+    $('#e-pat')?.addEventListener('change', e => { const p = SIS.patentes.find(x => x.de === +e.target.value), n = nivelDe(F); aplicarMudanca({ nivel: n >= p.de && n <= p.ate ? n : p.de }, p.nome); });
+    const pularPatente = d => { const i = SIS.patentes.findIndex(p => p.nome === patente(nivelDe(F)).nome) + d; const p = SIS.patentes[i]; if (!p) return toast(d > 0 ? 'Já está na patente mais alta.' : 'Já está na primeira patente.'); aplicarMudanca({ nivel: p.de }, `${d > 0 ? 'Subiu' : 'Desceu'} para ${p.nome}`); };
     $('#pat-sobe')?.addEventListener('click', () => pularPatente(1));
     $('#pat-desce')?.addEventListener('click', () => pularPatente(-1));
     // condições
@@ -1888,7 +1908,7 @@ ROTAS.agente = async id => {
     $$('[data-bon-q]').forEach(b => b.onclick = e => { e.preventDefault(); const bo = F.bonusAtaque[+b.dataset.bonQ]; bo.qtd = Math.max(1, Math.min(50, (+bo.qtd || 1) + +b.dataset.d)); salvar({ bonusAtaque: F.bonusAtaque }); render(); });
     $$('[data-bon]').forEach(c => c.onchange = () => { F.bonusAtaque[+c.dataset.bon].ligado = c.checked; salvar({ bonusAtaque: F.bonusAtaque }); render(); });
     const formBonus = (j, pre) => { const b0 = j == null ? { nome: pre || '' } : F.bonusAtaque[j];
-      const hab = [...(subclasse(F.classe, F.subclasse)?.habilidades || []).filter(h => h.nivel <= (+F.nivel || 1)), ...(F.passivas || []), ...(F.habilidades || []), ...(F.rituais || []).map(r => ({ nome: r.nome, texto: `Ritual (${r.elemento || ''}). ${r.efeito || ''} Custo: ${r.custo || ''}` })), ...(F.feiticos || []).map(r => ({ nome: r.nome, texto: `Feitiço. ${r.efeito || ''}` }))];
+      const hab = [...(subclasse(F.classe, F.subclasse)?.habilidades || []).filter(h => h.nivel <= (nivelDe(F))), ...(F.passivas || []), ...(F.habilidades || []), ...(F.rituais || []).map(r => ({ nome: r.nome, texto: `Ritual (${r.elemento || ''}). ${r.efeito || ''} Custo: ${r.custo || ''}` })), ...(F.feiticos || []).map(r => ({ nome: r.nome, texto: `Feitiço. ${r.efeito || ''}` }))];
       abrirModal(j == null ? 'Novo bônus de ataque' : 'Editar bônus', `<div class="campo"><label class="rotulo" for="bo-de">Vem da habilidade</label><select id="bo-de"><option value="">Escolha ou escreva o nome abaixo</option>${hab.map(h => `<option ${h.nome === b0.nome ? 'selected' : ''}>${esc(h.nome)}</option>`).join('')}</select><p class="faint" id="bo-txt" style="font-size:12.5px; margin:4px 0 0"></p></div>
         <div class="grade-campos"><div class="campo"><label class="rotulo" for="bo-n">Nome</label><input type="text" id="bo-n" value="${esc(b0.nome || '')}"></div>
         <div class="campo"><label class="rotulo" for="bo-a">Bônus no acerto</label><input type="number" id="bo-a" value="${esc(b0.acerto || '')}" placeholder="0"></div>
@@ -2757,7 +2777,7 @@ ROTAS.dossie = async arg => {
     const G = [...CRI].sort((a, b) => ordem.indexOf(capDe(a)) - ordem.indexOf(capDe(b)) || a.nivel - b.nivel || a.nome.localeCompare(b.nome, 'pt'))
       .filter(x => filtroDos === 'todas' || (filtroDos === 'mortas' ? eliminada(x, q) : !eliminada(x, q)));
     const nome = c ? c.nome : F.nome, foto = c ? c.foto : fotoEf(F);
-    const sub = c ? [c.ocupacao, c.idade ? c.idade + ' anos' : '', c.genero] : [`${F.classe} · ${F.subclasse}`, `Nível ${+F.nivel || 1}`, patente(+F.nivel || 1).nome, F.idade ? F.idade + ' anos' : '', F.jogador ? 'jogado por ' + F.jogador : ''];
+    const sub = c ? [c.ocupacao, c.idade ? c.idade + ' anos' : '', c.genero] : [`${F.classe} · ${F.subclasse}`, `Nível ${nivelDe(F)}`, patente(nivelDe(F)).nome, F.idade ? F.idade + ' anos' : '', F.jogador ? 'jogado por ' + F.jogador : ''];
     const secoes = c ? SECOES_DOSSIE.filter(([, k]) => c[k]).map(([tt, k]) => [tt, c[k]]) : [['Aparência', F.aparencia], ['Personalidade', F.personalidade], ['Histórico', F.historico], ['Objetivo', F.objetivo]].filter(x => x[1]);
     app.innerHTML = `<a href="#ameacas" class="dim" style="font-size:14px">← Ameaças</a>
       ${(arthurVisivel() ? 1 : 0) + Object.keys(CACS).length > 1 ? seletorCacador() : ''}
@@ -3021,7 +3041,7 @@ const mecsDe = f => regrasDe(f).mecanicas.filter(m => mecVale(m, f));
 const mecEstado = (f, m, c) => f.mec?.[m.id]?.[c.id];
 // bônus de mecânica (componentes de bônus e estados ligados)
 function bonusMec(f) {
-  const out = { pv: 0, ps: 0, pst: 0, pericias: 0, rd: 0, nomes: [] }, N = +f.nivel || 1;
+  const out = { pv: 0, ps: 0, pst: 0, pericias: 0, rd: 0, nomes: [] }, N = nivelDe(f);
   for (const m of mecsDe(f)) for (const c of m.comps || []) {
     const vale = c.tipo === 'bonus' || (c.tipo === 'estado' && mecEstado(f, m, c)); if (!vale || !c.bonus) continue; const b = c.bonus, k = b.porNivel ? N : 1;
     out.pv += (+b.pv || 0) * k; out.ps += (+b.ps || 0) * k; out.pst += (+b.pst || 0) * k; out.pericias += +b.pericias || 0; out.rd += +b.rd || 0; out.nomes.push(c.tipo === 'estado' ? `${m.nome}: ${c.nome}` : m.nome);
@@ -3034,7 +3054,7 @@ function exprMec(expr, f, m) {
   for (const c of m?.comps || []) if (c.tipo === 'recurso' || c.tipo === 'contador') mapa[String(c.nome || '').toUpperCase().replace(/[^A-Z0-9]/g, '')] = +mecEstado(f, m, c) || 0;
   return String(expr || '').replace(/\b([A-Z][A-Z0-9]+)\b/g, (x, k) => k in mapa ? mapa[k] : x);
 }
-const maxRecurso = (c, f) => Math.max(0, (+c.base || 0) + (+c.porNivel || 0) * (+f.nivel || 1) + (c.atributo ? (f.atributos?.[c.atributo] || 0) * (+c.mult || 1) : 0));
+const maxRecurso = (c, f) => Math.max(0, (+c.base || 0) + (+c.porNivel || 0) * (nivelDe(f)) + (c.atributo ? (f.atributos?.[c.atributo] || 0) * (+c.mult || 1) : 0));
 const TIPOS_COMP = [
   ['recurso', 'Recurso', 'Uma barra com máximo (pontos de fé, munição, fome…). O jogador gasta e recupera.'],
   ['contador', 'Contador', 'Marcas de 0 até um limite (corrupção, ameaça, sangue). Cada marco pode disparar um efeito.'],
@@ -3059,7 +3079,7 @@ const custoTxt = (c, m) => { const k = c.custo || {}; const rec = k.recurso && +
 const bonusTxt = b => b ? [b.pv ? `+${b.pv} PV` : '', b.ps ? `+${b.ps} PS` : '', b.pst ? `+${b.pst} PST` : ''].filter(Boolean).join(', ') + (b.porNivel && (b.pv || b.ps || b.pst) ? ' por nível' : '') + [b.pericias ? ` · +${b.pericias} em perícias` : '', b.rd ? ` · RD +${b.rd}` : ''].join('') : '';
 // desenha a mecânica como ela aparece na ficha (usado também na prévia do editor)
 function htmlMecanica(m, f, { pode = false, mestre = false, previa = false } = {}) {
-  const lib = mecVale(m, f), N = +f.nivel || 1;
+  const lib = mecVale(m, f), N = nivelDe(f);
   const comps = (m.comps || []).map(c => {
     const v = mecEstado(f, m, c), d = `data-mec="${esc(m.id)}" data-comp="${esc(c.id)}"`;
     if (c.tipo === 'recurso') { const mx = maxRecurso(c, f), at = Math.min(mx, v ?? mx);
@@ -3394,7 +3414,7 @@ ROTAS.escudo = async id => {
         if (ab === 'combate') cx = `<div class="per-l">${armas.map((it, k) => { const E2 = armaEf(it); return `<div style="grid-template-columns:1fr auto auto"><span><b>${esc(it.nome)}</b><br><span class="mono faint" style="font-size:12px">Dano ${esc(E2.dano)} · Crítico ${E2.margem}/×${E2.mult}</span></span><button class="btn mini sec" data-cbatq="${k}">Acerto</button><button class="btn mini ouro" data-cbdano="${k}">Dano</button></div>`; }).join('') || '<p class="faint">Nenhuma arma no inventário.</p>'}</div>`;
         if (ab === 'condicoes') cx = blocoCond;
         det = `<div class="am-banner" style="--bc:${f.alinhamento ? corEl(elDe(f.alinhamento.nome)) : 'var(--violeta)'}">${I0.foto ? `<div class="am-bgw"><div class="am-bg" style="background-image:url('${esc(I0.foto)}')"></div></div>` : ''}<div class="am-ft ag" style="${I0.foto ? `background-image:url('${esc(I0.foto)}')` : ''}">${I0.foto ? '' : esc(iniciais(f.nome))}</div>
-            <div class="am-tx"><b>${esc(f.nome)}</b><span>${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''}</span><span class="am-el">Nv ${+f.nivel || 1} · ${esc(patente(+f.nivel || 1).nome || '')}</span></div><a class="btn mini sec am-acao" href="#agente-${esc(f.id)}" style="text-decoration:none">Ficha</a></div>
+            <div class="am-tx"><b>${esc(f.nome)}</b><span>${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''}</span><span class="am-el">Nv ${nivelDe(f)} · ${esc(patente(nivelDe(f)).nome || '')}</span></div><a class="btn mini sec am-acao" href="#agente-${esc(f.id)}" style="text-decoration:none">Ficha</a></div>
           ${['pv', 'ps', 'pst'].map(k => barraCris(k, a[k], K.max[k], 'data-cbv-' + k, [5, 1]).replace('<span class="v">', `<span class="v clicavel" data-cbaj="${k}" role="button" tabindex="0" title="Digitar valor ou mudar o máximo">`)).join('')}
           <div class="abas abas-mini">${[['atributos', 'Atributos'], ['combate', 'Combate'], ['condicoes', `Condições${I0.conds.length ? ' ' + I0.conds.length : ''}`]].map(([k, l]) => `<button class="${ab === k ? 'aqui' : ''}" data-dab="${k}">${l}</button>`).join('')}</div>
           <div style="display:grid; gap:10px">${cx}</div><div class="res" id="cb-res"></div>
@@ -3533,7 +3553,7 @@ ROTAS.escudo = async id => {
           if (vetorLiberado(f)) await db.doc('fichas/' + fid).update({ vetor: copiar(v) }); toast('Vetor salvo.'); } catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); } }); });
       $$('[data-vt-dar]').forEach(b => b.onclick = async () => { const fid = b.dataset.vtDar; try { await db.doc('fichas/' + fid).update({ vetor: copiar(VETORES[fid]), vetorVestido: false }); toast('Chave entregue. O jogador já pode vestir.'); } catch (e) { toast('Não deu para entregar: ' + (e.message || e.code)); } });
       $$('[data-vt-tirar]').forEach(b => b.onclick = async () => { const fid = b.dataset.vtTirar; const f = st.fichas[fid];
-        const semV = { ...f, vetorVestido: false }; const M = calc(semV).max; const a = { ...(f.atual || M) }; for (const k of ['pv', 'ps', 'pst']) a[k] = Math.max(1, Math.min(M[k], a[k] - (f.vetorVestido ? 5 * (+f.nivel || 1) : 0)));
+        const semV = { ...f, vetorVestido: false }; const M = calc(semV).max; const a = { ...(f.atual || M) }; for (const k of ['pv', 'ps', 'pst']) a[k] = Math.max(1, Math.min(M[k], a[k] - (f.vetorVestido ? 5 * (nivelDe(f)) : 0)));
         try { await db.doc('fichas/' + fid).update({ vetor: { liberado: false }, vetorVestido: false, atual: a }); toast('Chave recolhida.'); } catch (e) { toast('Não deu para recolher: ' + (e.message || e.code)); } });
     }
     if (aba === 'anotacoes') {
