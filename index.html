@@ -2477,7 +2477,31 @@ async function registrarAbate(id, delta, q = cacPadrao()) {
   } catch (e) { toast('Não deu para salvar o abate.'); }
   window.dispatchEvent(new Event('abates'));
 }
-const seletorCacador = () => `<div class="filtros" id="f-cac"><span class="rotulo" style="align-self:center">Caçador</span>${[...(arthurVisivel() ? [['arthur', CACADOR?.nome || 'Arthur']] : []), ...Object.entries(CACS).map(([u, d]) => [u, d.nome + (u === ME ? ' (você)' : '')])].map(([k, l]) => `<button class="chip ${cacPadrao() === k ? 'aqui' : ''}" data-cac="${esc(k)}">${esc(l)}</button>`).join('')}</div>`;
+// filtro de caçadores: todos, só os seus, ou os da campanha que você mestra
+let CAC_ESC = (() => { try { return localStorage.getItem('cacEscopo') || 'todos'; } catch (e) { return 'todos'; } })(), CAC_CAMP = null, CAMPS_MESTRE = null;
+const CAMP_FICHAS = {};
+async function carregarCampsMestre() {
+  if (CAMPS_MESTRE || !db) return; CAMPS_MESTRE = [];
+  try { await carregarPart(); } catch (e) {}
+  for (const c of (PART?.campanhas || [])) { try { const d = (await db.doc('campanhas/' + c).get()).data(); if (d?.mestre === ME) CAMPS_MESTRE.push({ id: c, nome: d.nome }); } catch (e) {} }
+  if (!CAC_CAMP && CAMPS_MESTRE[0]) CAC_CAMP = CAMPS_MESTRE[0].id;
+  window.dispatchEvent(new Event('abates'));
+}
+async function carregarFichasCamp(c) { if (!c || CAMP_FICHAS[c] || !db) return; CAMP_FICHAS[c] = new Set(); try { const s2 = await db.collection(`campanhas/${c}/agentes`).get(); CAMP_FICHAS[c] = new Set(s2.docs.map(d => d.id)); } catch (e) {} window.dispatchEvent(new Event('abates')); }
+const cacsVisiveis = () => { const L = Object.entries(CACS);
+  if (CAC_ESC === 'meus') return L.filter(([u]) => u === ME);
+  if (CAC_ESC === 'campanha') { if (!CAMPS_MESTRE) { carregarCampsMestre(); return []; } if (!CAC_CAMP) return []; if (!CAMP_FICHAS[CAC_CAMP]) { carregarFichasCamp(CAC_CAMP); return []; } return L.filter(([, d]) => CAMP_FICHAS[CAC_CAMP].has(d.ficha)); }
+  return L; };
+const seletorCacador = () => { const vis = cacsVisiveis();
+  if (vis.length && !vis.some(([u]) => u === cacPadrao())) { CAC_SEL = vis[0][0]; setTimeout(() => window.dispatchEvent(new Event('abates'))); }
+  const escopos = [['campanha', 'Caçadores da campanha'], ['meus', 'Só os seus caçadores'], ['todos', 'Todos']];
+  return `<div style="display:grid; gap:8px" id="f-cac"><div class="filtros"><span class="rotulo" style="align-self:center">Mostrar</span>${escopos.map(([k, l]) => `<button class="chip ${CAC_ESC === k ? 'aqui' : ''}" data-cesc="${k}">${l}</button>`).join('')}</div>
+    ${CAC_ESC === 'campanha' ? (CAMPS_MESTRE === null ? '<span class="faint">Abrindo suas campanhas…</span>' : !CAMPS_MESTRE.length ? '<span class="faint">Você não mestra nenhuma campanha.</span>' : CAMPS_MESTRE.length > 1 ? `<div class="filtros"><span class="rotulo" style="align-self:center">Campanha</span>${CAMPS_MESTRE.map(c => `<button class="chip ${CAC_CAMP === c.id ? 'aqui' : ''}" data-ccamp="${esc(c.id)}">${esc(c.nome)}</button>`).join('')}</div>` : `<span class="faint">Campanha: ${esc(CAMPS_MESTRE[0].nome)}</span>`) : ''}
+    <div class="filtros"><span class="rotulo" style="align-self:center">Caçador</span>${vis.map(([u, d]) => [u, d.nome + (u === ME ? ' (você)' : '')]).map(([k, l]) => `<button class="chip ${cacPadrao() === k ? 'aqui' : ''}" data-cac="${esc(k)}">${esc(l)}</button>`).join('') || '<span class="faint">Nenhum caçador aqui.</span>'}</div></div>`; };
+document.addEventListener('click', e => { const b = e.target.closest('[data-cesc], [data-ccamp]'); if (!b) return;
+  if (b.dataset.cesc) { CAC_ESC = b.dataset.cesc; try { localStorage.setItem('cacEscopo', CAC_ESC); } catch (x) {} if (CAC_ESC === 'campanha') carregarCampsMestre(); }
+  if (b.dataset.ccamp) { CAC_CAMP = b.dataset.ccamp; carregarFichasCamp(CAC_CAMP); }
+  window.dispatchEvent(new Event('abates')); });
 function abrirEscala() {
   let aba = 'graus';
   abrirModal('Escala de perigo e elementos', '<div id="esc"></div>', m => {
@@ -2517,7 +2541,7 @@ ROTAS.ameacas = async () => {
     $('#best-stats').innerHTML = qc ? `<span><b>${CRI.length}</b> registros</span><span><b>${nEl}</b> eliminadas por ${esc(nomeCac(qc).split(' ')[0])}</span><span><b>${CRI.length - nEl}</b> em aberto</span>`
       : `<span><b>${CRI.length}</b> registros</span><span class="faint">Defina o personagem principal na sua ficha para virar caçador e registrar abates.</span>`;
     $('#ir-dossie').href = !qc ? '#dossie' : qc === 'arthur' ? '#dossie' : '#dossie-' + qc;
-    $('#cac-wrap').innerHTML = (arthurVisivel() ? 1 : 0) + Object.keys(CACS).length > 1 ? seletorCacador() : '';
+    $('#cac-wrap').innerHTML = Object.keys(CACS).length > 1 ? seletorCacador() : '';
     $('#f-cac')?.addEventListener('click', e => { const b = e.target.closest('[data-cac]'); if (!b) return; CAC_SEL = b.dataset.cac; desenhar(); });
     $('#lista-am').innerHTML = fil.map(c => `<a class="card-am ${eliminada(c) ? 'morta' : ''}" href="#ameaca-${esc(c.id)}" data-modal-am="${esc(c.id)}" style="text-decoration:none">${eliminada(c) ? `<span class="carimbo ${cacPadrao() === 'arthur' ? '' : 'jog'}">Eliminada${abatesDe(c.id) > 1 ? ' ×' + abatesDe(c.id) : abatesDe(c.id) < 0 ? ' ∞' : ''}</span>` : ''}<div class="img ${ehPapel(c.imagem) ? 'papel' : ''}" style="${c.imagem ? `background-image:url('${esc(c.imagem)}')` : 'background:var(--painel-3)'}"></div>
       <div class="corpo"><b style="font: 400 19px/1.15 var(--f-disp)">${esc(c.nome)}</b><div style="display:flex; gap:6px; flex-wrap:wrap">${c.npc ? `<span class="tag" style="color:var(--ouro)">NPC${c.papel ? ' · ' + esc(c.papel) : ''}</span>${c.elemento ? elTag(c.elemento) : ''}<span class="tag">Nv ${c.nivel}</span>` : `${elTag(c.elemento)}<span class="tag">Nv ${c.nivel} · ${esc(nivelAm(c.nivel)[1])}</span>`}${c.homebrew ? '<span class="tag crit">Homebrew</span>' : ''}</div>
@@ -2816,7 +2840,7 @@ ROTAS.dossie = async arg => {
     const sub = c ? [c.ocupacao, c.idade ? c.idade + ' anos' : '', c.genero] : [`${F.classe} · ${F.subclasse}`, `Nível ${nivelDe(F)}`, patente(nivelDe(F)).nome, F.idade ? F.idade + ' anos' : '', F.jogador ? 'jogado por ' + F.jogador : ''];
     const secoes = c ? SECOES_DOSSIE.filter(([, k]) => c[k]).map(([tt, k]) => [tt, c[k]]) : [['Aparência', F.aparencia], ['Personalidade', F.personalidade], ['Histórico', F.historico], ['Objetivo', F.objetivo]].filter(x => x[1]);
     app.innerHTML = `<a href="#ameacas" class="dim" style="font-size:14px">← Ameaças</a>
-      ${(arthurVisivel() ? 1 : 0) + Object.keys(CACS).length > 1 ? seletorCacador() : ''}
+      ${Object.keys(CACS).length > 1 ? seletorCacador() : ''}
       <div class="dossie-topo">
         <figure class="polaroid">${foto ? `<img src="${esc(foto)}" alt="Retrato de ${esc(nome)}">` : `<div class="polaroid-ph">${esc(iniciais(nome))}</div>`}<figcaption>${esc(String(nome).split(' ')[0])}</figcaption></figure>
         <div style="display:grid; gap:10px; align-content:start; min-width:0">
