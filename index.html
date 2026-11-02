@@ -162,6 +162,9 @@ input[type=text], input[type=number], input[type=search], select, textarea {
 textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ouro); }
 .campo { display: grid; gap: 5px; min-width: 0; }
+.atr-rolar { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; width: 100%; border-radius: 6px; transition: color .15s, background .15s; }
+.atr-rolar:hover, .atr-rolar:focus-visible { color: var(--ouro); background: color-mix(in srgb, var(--ouro) 10%, transparent); }
+.editando .atr-rolar { cursor: default; }
 .livro-grade { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 16px; margin-top: 16px; align-items: start; }
 @media (max-width: 820px) { .livro-grade { grid-template-columns: 1fr; } }
 .livro-sum { display: grid; gap: 4px; position: sticky; top: 80px; }
@@ -803,7 +806,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261102175050';
+const BUILD = '20261102194128';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1673,7 +1676,7 @@ ROTAS.agente = async id => {
     <section class="principal">
       <div class="caixa penta" style="display:grid; gap:10px">
         <svg viewBox="0 0 300 280" role="img" aria-label="Atributos">${pentagono(A)}</svg>
-        <div class="attr-lista">${ATR.map(([k, n, s]) => `<div><div class="v">${A[k] || 0}</div><div class="rotulo">${s}</div><div class="edit-only" style="display:flex; justify-content:center; gap:3px; margin-top:4px"><button class="vbtn" style="width:24px;height:24px" data-at="${k}" data-d="-1" aria-label="Menos ${n}">−</button><button class="vbtn" style="width:24px;height:24px" data-at="${k}" data-d="1" aria-label="Mais ${n}">+</button></div></div>`).join('')}</div>
+        <div class="attr-lista">${ATR.map(([k, n, s]) => `<div><button class="v atr-rolar" data-rolar-atr="${k}" title="Rolar teste de ${n}" aria-label="Rolar teste de ${n}">${A[k] || 0}</button><div class="rotulo">${s}</div><div class="edit-only" style="display:flex; justify-content:center; gap:3px; margin-top:4px"><button class="vbtn" style="width:24px;height:24px" data-at="${k}" data-d="-1" aria-label="Menos ${n}">−</button><button class="vbtn" style="width:24px;height:24px" data-at="${k}" data-d="1" aria-label="Mais ${n}">+</button></div></div>`).join('')}</div>
         <div class="mini-stats">
           <div><div class="rotulo">Movimento</div><div class="n">${K.mov}m</div></div>
           <div><div class="rotulo">Carga</div><div class="n">${fmtKg(K.carga)}/${fmtKg(K.cc)}</div></div>
@@ -1965,6 +1968,11 @@ ROTAS.agente = async id => {
       if (!p) { p = { nome: n, pontos: 0 }; lista.push(p); } p.atributo = s.value; salvar({ pericias: lista }); render(); });
     // testes
     $$('[data-giro]').forEach(sel => sel.onchange = () => { UI_ARMA['giro|' + sel.dataset.giro] = sel.value; render(); });
+    // clicar no número do atributo rola o teste puro dele: valor = quantidade de d20, fica o melhor; com 0, rola 2d20 e fica o pior
+    $$('[data-rolar-atr]').forEach(b => b.onclick = () => { if (editando) return; const k = b.dataset.rolarAtr, nome = ATR.find(a => a[0] === k)[1], v = +(F.atributos?.[k]) || 0, mod = bnv();
+      let r; if (v >= 1) r = teste(v, mod); else { const ds = [d(20), d(20)], mn = Math.min(...ds); r = { total: mn + mod, nat: mn, nat20: false, detalhe: `[${ds.join(', ')}] pior${mod ? ` ${mod > 0 ? '+' : '-'} ${Math.abs(mod)}` : ''}` }; }
+      popRolagem({ quem: F.nome, titulo: nome, tipo: 'Teste de atributo', expr: v >= 1 ? `${v}d20${mod ? (mod > 0 ? '+' : '') + mod : ''}` : '2d20 (pior)', linhas: [{ det: r.detalhe, total: r.total }], total: r.total, nat20: r.nat20 });
+      publicarRolagem(F, nome, r); });
     $$('[data-teste]').forEach(b => b.onclick = () => { const n = b.dataset.teste, P = comAtributo(F, dadosPericia(F, n), UI_ARMA['giro|' + id + '|p|' + n]), mod = P.mod + bnv(); const r = teste(P.dados, mod);
       $(`[data-res="${CSS.escape(n)}"]`).innerHTML = UI_ARMA['pres|' + id + '|' + n] = `${P.atr !== dadosPericia(F, n).atr ? `<span class="faint">com ${SIGLA[P.atr]}</span> ` : ''}${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtv())}${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`; publicarRolagem(F, `${n}${P.atr !== dadosPericia(F, n).atr ? ` (${SIGLA[P.atr]})` : ''}`, r); });
     const rolarAcerto = i => { const it = F.equipamentos[i], E = armaEf(it), B = somaBonus(F.bonusAtaque); const P = comAtributo(F, dadosPericia(F, it.pericia || 'Armas Brancas'), UI_ARMA['giro|' + id + '|a|' + i]); const r = teste(P.dados, P.mod + bnv() + E.acerto + B.acerto);
