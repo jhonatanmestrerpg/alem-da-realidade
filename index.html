@@ -162,6 +162,14 @@ input[type=text], input[type=number], input[type=search], select, textarea {
 textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ouro); }
 .campo { display: grid; gap: 5px; min-width: 0; }
+.livro-grade { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 16px; margin-top: 16px; align-items: start; }
+@media (max-width: 820px) { .livro-grade { grid-template-columns: 1fr; } }
+.livro-sum { display: grid; gap: 4px; position: sticky; top: 80px; }
+.livro-cap { display: flex; justify-content: space-between; gap: 8px; background: none; border: 0; border-left: 2px solid transparent; color: var(--lua); padding: 7px 10px; text-align: left; cursor: pointer; font: inherit; }
+.livro-cap:hover, .livro-cap.aqui { border-left-color: var(--ouro); background: color-mix(in srgb, var(--ouro) 8%, transparent); }
+.livro-vista iframe { width: 100%; height: min(82vh, 1100px); border: 1px solid var(--linha-2); background: #fff; }
+.livro-aviso { font-size: 12.5px; margin: 6px 0 0; }
+.regen-box { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--fole) 55%, transparent); background: color-mix(in srgb, var(--fole) 8%, transparent); }
 hr.sep-at { border: 0; border-top: 1px dashed var(--linha-2); margin: 8px 0; }
 .zona-img { position: relative; display: grid; place-items: center; min-height: 150px; border: 2px dashed var(--linha-2); background: var(--painel-2); cursor: pointer; overflow: hidden; }
 .zona-img:hover, .zona-img:focus-visible, .zona-img.arrasto { border-color: var(--ouro); }
@@ -754,6 +762,7 @@ button, a, input, select, textarea { touch-action: manipulation; }
       <a href="#grimorio" data-sec="grimorio">Grimório</a>
       <a href="#homebrew" data-sec="homebrew">Homebrew</a>
       <a href="#patente" data-sec="patente">Patente</a>
+      <a href="#livro" data-sec="livro">Livro</a>
     </nav>
     <a class="volta-camp" id="volta-camp" hidden></a>
     <div class="quem" id="quem"></div>
@@ -809,7 +818,8 @@ function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTi
 const UI_ARMA = {};
 let SIS = null, CRI = [], RIT = [], LORE = null, FEIT = [], CACADOR = null, ABATES = {};
 async function carregarBase() {
-  const [s, c, r, f, k] = await Promise.all(['dados/sistema.json', 'dados/criaturas.json', 'dados/rituais.json', 'dados/feiticos.json', 'dados/cacador.json'].map(u => fetch(u).then(x => x.json())));
+  let [s, c, r, f, k] = await Promise.all(['dados/sistema.json', 'dados/criaturas.json', 'dados/rituais.json', 'dados/feiticos.json', 'dados/cacador.json'].map(u => fetch(u).then(x => x.json())));
+  c = c.map(x => x.ficha ? { ...x, ficha: fichaCompat(x.ficha) } : x); // habilidades e poderes novos, com ataques e traços derivados para as telas antigas
   SIS = s; CRI = c; RIT = r; FEIT = f; CACADOR = k.cacador; ABATES = { ...k.abates };
   BASE_ORIG = { CRI: [...c], RIT: [...r], FEIT: [...f], passivas: [...s.passivas], itens: [...s.itens] };
 }
@@ -2360,7 +2370,7 @@ ROTAS.homebrew = async () => {
   render();
 };
 /* ---------- ficha de ameaça / NPC: tipos, formulário completo, ações e poderes ---------- */
-const DANOS = ['Balístico', 'Corte', 'Impacto', 'Perfuração', 'Fogo', 'Frio', 'Eletricidade', 'Químico', 'Mental', 'Paranormal'];
+const DANOS = ['Balístico', 'Corte', 'Impacto', 'Perfuração', 'Fogo', 'Frio', 'Eletricidade', 'Químico', 'Mental', 'Paranormal', 'Podridão'];
 const TAMANHOS = ['Minúsculo', 'Pequeno', 'Médio', 'Grande', 'Enorme', 'Colossal'];
 const ACOES_T = ['PADRÃO', 'MOVIMENTO', 'COMPLETA', 'LIVRE', 'REAÇÃO', 'PASSIVA'];
 const fmtTx = s => nl(s).replace(/\*\*(.+?)\*\*/g, '<b class="dest">$1</b>');
@@ -2461,6 +2471,7 @@ function formAmeaca(x, salvarFn) {
         <div class="campo"><label class="rotulo">Elementos secundários</label>${chips(S.elementosSec, 'elementosSec', ELEMS.filter(e => e !== S.elemento))}</div>
         <h3 class="fa-h">Vida e defesa</h3>
         <div class="grade-mini">${[['pv', 'PV máximo'], ['defesa', 'Defesa'], ['rd', 'RD'], ['movimento', 'Deslocamento (m)'], ['dt', 'DT dos efeitos']].map(([k, l]) => `<div class="campo"><label class="rotulo">${l}</label><input type="number" data-p="ficha.${k}" value="${esc(F[k] ?? '')}" ${k === 'dt' ? `placeholder="${12 + 2 * nv}"` : ''}></div>`).join('')}</div>
+        <div class="campo" style="max-width:280px"><label class="rotulo">Regeneração por turno</label><input type="text" data-p="ficha.regeneracao" value="${esc(F.regeneracao || '')}" placeholder="Ex.: 3d8+4 (vazio = não regenera)"></div>
         <div class="grade-mini">${ATR.map(([k, n]) => `<div class="campo"><label class="rotulo">${n}</label><input type="number" data-p="ficha.atributos.${k}" value="${esc(F.atributos[k] ?? 0)}"></div>`).join('')}</div>
         <div class="sec-f"><h3 class="fa-h">Deslocamento alternativo</h3><button class="btn mini" data-add="movAlt">Adicionar</button></div>
         ${F.movAlt.map((d, i) => `<div class="linha-ex"><input type="text" data-p="ficha.movAlt.${i}.tipo" value="${esc(d.tipo)}" placeholder="Voo, natação, escalada…"><input type="number" data-p="ficha.movAlt.${i}.m" value="${esc(d.m)}" placeholder="metros" style="max-width:110px"><button class="btn-x" data-rm="movAlt|${i}" aria-label="Tirar">×</button></div>`).join('')}
@@ -2716,6 +2727,7 @@ function montarAmeaca(alvo, c, opc = {}, est = {}, fechar = null) {
       if (aba === 'status') corpo = `<div class="attr-linha">${ATR.map(([k, , s]) => `<span><b>${f.atributos?.[k] ?? 0}</b>${s}</span>`).join('')}</div>
         ${blocoIntangivel(f, contornado, true)}
         <div class="mini-stats">${[[f.intangivel ? (contornado ? 'Defesa (contornada)' : 'Defesa (intangível)') : 'Defesa', defEf(f, contornado)], ['RD', f.rd], ['Deslocamento', (f.movimento ?? '?') + 'm'], ['DT dos efeitos', dt]].map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="n">${esc(v)}</div></div>`).join('')}</div>
+        ${f.regeneracao ? `<div class="regen-box"><span class="rotulo">Regeneração</span><span class="mono">${esc(f.regeneracao)} PV no início de cada turno</span><button class="btn ouro mini" data-am-dano="${esc(f.regeneracao)}" data-nome="Regeneração" data-quem="${esc(c.nome)}">Rolar</button></div>` : ''}
         ${(f.movAlt || []).length ? `<p class="dim" style="margin:0"><span class="rotulo">Deslocamento alternativo</span> ${f.movAlt.map(d => `${esc(d.tipo)} ${esc(d.m)}m`).join(' · ')}</p>` : ''}
         ${defesasAm(f)}
         <h3>Perícias</h3><div class="lista" style="gap:4px">${periciasAmeaca(c).map(([nm, q, md]) => `<div class="item" style="padding:7px 12px; grid-template-columns:1fr auto auto; display:grid; align-items:center; gap:12px"><span class="rotulo" style="color:var(--lua)">${nm}</span><span class="mono">${q}d20+${md}</span><button class="btn mini ouro" data-pt="${nm}|${q}|${md}">Rolar</button></div>`).join('')}</div>
@@ -2724,8 +2736,8 @@ function montarAmeaca(alvo, c, opc = {}, est = {}, fechar = null) {
       if (aba === 'combate') { const lista = sub === 'acoes' ? acoesDe(f) : poderesDe(f, pres);
         corpo = `${f.intangivel ? `<div class="intang ${contornado ? 'cont' : ''}" style="padding:8px 12px"><b>${contornado ? 'Meta cumprida' : 'Intangível'}</b> · Defesa <b class="mono">${defEf(f, contornado)}</b> <button class="btn mini sec" data-contorno style="margin-left:8px">${contornado ? 'Voltar a intangível' : 'Meta cumprida'}</button></div>` : ''}
         ${pres && !c.npc ? `<div class="pres-box"><span class="rotulo">Presença perturbadora</span><span class="mono">DT ${presDT} · ${esc(presDano)} mental · Vontade reduz à metade</span></div>` : ''}
-        <div class="sec-f"><div class="abas" style="border:none">${[['acoes', 'Ações'], ['poderes', 'Poderes']].map(([k, l]) => `<button class="${sub === k ? 'aqui' : ''}" data-sub="${k}">${l}</button>`).join('')}</div>${ed ? `<button class="btn mini sec" data-acao-nova>${sub === 'acoes' ? 'Nova ação' : 'Novo poder'}</button>` : ''}</div>
-        ${lista.map((a, i) => cardAcaoAm(a, i, c.nome, ed)).join('') || `<div class="vazio">${sub === 'acoes' ? 'Sem ações.' : 'Sem poderes.'}</div>`}`; }
+        <div class="sec-f"><div class="abas" style="border:none">${[['acoes', 'Habilidades'], ['poderes', 'Poderes']].map(([k, l]) => `<button class="${sub === k ? 'aqui' : ''}" data-sub="${k}">${l}</button>`).join('')}</div>${ed ? `<button class="btn mini sec" data-acao-nova>${sub === 'acoes' ? 'Nova habilidade' : 'Novo poder'}</button>` : ''}</div>
+        ${lista.map((a, i) => cardAcaoAm(a, i, c.nome, ed)).join('') || `<div class="vazio">${sub === 'acoes' ? 'Sem habilidades.' : 'Sem poderes.'}</div>`}`; }
       if (aba === 'descricao') corpo = `${c.imagem ? `<img src="${esc(c.imagem)}" alt="${esc(c.nome)}" style="${ehPapel(c.imagem) ? 'background:#f2efe6;' : ''} max-height:420px; object-fit:contain; width:100%">` : ''}
         ${c.anotacoes ? `<p class="nota-arthur">“${esc(c.anotacoes)}”</p>` : ''}<p class="dim">${fmtTx(c.descricao || '')}</p>
         ${c.ponto_fraco ? `<h3>Ponto fraco</h3><p class="dim">${nl(c.ponto_fraco)}</p>` : ''}${c.forma_de_abate ? `<h3>Forma de abate</h3><p class="dim">${nl(c.forma_de_abate)}</p>` : ''}
@@ -2766,9 +2778,11 @@ function blocoFicha(c, idRes) {
     ${blocoIntangivel(f, false, false)}
     <div class="mini-stats">${[['PV', f.pv], [f.intangivel ? 'Defesa intangível' : 'Defesa', defEf(f, false)], ...(f.intangivel ? [['Meta cumprida', f.intangivel.defesaContornada]] : []), ['RD', f.rd], ['Movimento', (f.movimento ?? '?') + 'm'], ['Testes', f.testes || '']].filter(x => x[1] !== '' && x[1] != null).map(([k, v]) => `<div><div class="rotulo">${k}</div><div class="n">${esc(v)}</div></div>`).join('')}</div>
     <div class="attr-linha">${ATR.map(([k, , s]) => `<span><b>${f.atributos?.[k] ?? 0}</b>${s}</span>`).join('')}</div>
-    <div class="lista">${(f.ataques || []).map((a, i) => `<div class="item"><div class="cab"><span class="nm">${esc(a.nome)}</span><span style="display:flex; gap:6px">${a.teste ? `<button class="btn mini" data-am-teste="${esc(a.teste)}" data-alvo="${idRes}">Acerto ${esc(a.teste)}</button>` : ''}${a.dano ? `<button class="btn ouro mini" data-am-dano="${esc(a.dano)}" data-alvo="${idRes}">Dano ${esc(a.dano)}</button>` : ''}</span></div></div>`).join('')}</div>
+    ${f.regeneracao ? `<div class="regen-box"><span class="rotulo">Regeneração</span><span class="mono">${esc(f.regeneracao)} PV no início de cada turno</span><button class="btn ouro mini" data-am-dano="${esc(f.regeneracao)}" data-nome="Regeneração" data-quem="${esc(c.nome)}" data-alvo="${idRes}">Rolar</button></div>` : ''}
+    ${f.presenca ? `<div><b>${esc(f.presenca.nome)}.</b> <span class="dim">${esc(f.presenca.texto)}</span></div>` : ''}
+    <h3 style="margin:4px 0 0">Habilidades</h3><div class="lista" style="gap:6px">${acoesDe(f).map((a, i) => cardAcaoAm(a, i, c.nome, false)).join('') || '<span class="faint">Sem habilidades.</span>'}</div>
+    <h3 style="margin:4px 0 0">Poderes</h3><div class="lista" style="gap:6px">${poderesDe(f, f.presenca).map((a, i) => cardAcaoAm(a, i + 1, c.nome, false)).join('') || '<span class="faint">Sem poderes.</span>'}</div>
     <div class="res" id="${idRes}"></div>
-    ${(f.tracos || []).map(t => `<div><b>${esc(t.nome)}.</b> <span class="dim">${esc(t.texto)}</span></div>`).join('')}
   </div>`;
 }
 function rolarAtaqueAmeaca(btn, aoRolar) {
@@ -2968,6 +2982,19 @@ ROTAS.dossie = async arg => {
   };
   CAC_SEL = q; desenhar();
   const aoAbate = () => { if (location.hash === (q === 'arthur' ? '#dossie' : '#dossie-' + q)) desenhar(); }; addEventListener('abates', aoAbate); assinar(() => removeEventListener('abates', aoAbate));
+};
+// livro de regras oficial (PDF), com sumário que abre na página certa
+const LIVRO_PDF = 'livro/AdR-RPG.pdf';
+const LIVRO_CAP = [['História Principal', 2], ['Sistema de Jogo', 6], ['Classes e Subclasses', 7], ['Habilidades Passivas', 26], ['Itens Gerais e Inventário', 32], ['Efeitos e Condições', 39], ['Perícias', 40], ['Vontades', 42], ['Bênçãos, Maldições e Melhorias', 43], ['Alinhamentos', 48], ['Considerações Finais', 53]];
+ROTAS.livro = async () => {
+  const pg = +(sessionStorage.getItem('livroPg') || 1) || 1;
+  app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Regras oficiais</span><h1>Livro de Regras</h1><p class="dim" style="margin:0">Além da Realidade RPG · 54 páginas</p></div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap"><a class="btn sec" href="${LIVRO_PDF}" target="_blank" rel="noopener" style="text-decoration:none">Abrir em tela cheia</a><a class="btn" href="${LIVRO_PDF}" download="Alem-da-Realidade-RPG.pdf" style="text-decoration:none">Baixar PDF</a></div></div>
+    <div class="livro-grade"><nav class="caixa livro-sum" aria-label="Sumário"><span class="rotulo">Sumário</span>${LIVRO_CAP.map(([t, p]) => `<button class="livro-cap ${p === pg ? 'aqui' : ''}" data-pg="${p}"><span>${esc(t)}</span><span class="mono faint">p. ${p}</span></button>`).join('')}</nav>
+    <div class="livro-vista"><iframe id="livro-ifr" title="Livro de regras" src="${LIVRO_PDF}#page=${pg}&view=FitH"></iframe>
+    <p class="faint livro-aviso">O celular não mostra o PDF aqui dentro? Use <a href="${LIVRO_PDF}" target="_blank" rel="noopener">Abrir em tela cheia</a>.</p></div></div>`;
+  $$('[data-pg]').forEach(b => b.onclick = () => { const p = +b.dataset.pg; try { sessionStorage.setItem('livroPg', p); } catch (e) {}
+    $$('.livro-cap').forEach(x => x.classList.toggle('aqui', x === b)); const f = $('#livro-ifr'); const nf = f.cloneNode(); nf.src = `${LIVRO_PDF}#page=${p}&view=FitH`; f.replaceWith(nf); });
 };
 ROTAS.patente = async () => {
   app.className = 'pagina estreita';
