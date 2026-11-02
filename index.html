@@ -162,6 +162,9 @@ input[type=text], input[type=number], input[type=search], select, textarea {
 textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ouro); }
 .campo { display: grid; gap: 5px; min-width: 0; }
+.it-abas { margin-bottom: 8px; } .it-lista { gap: 6px; margin-top: 10px; }
+.it-linha { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.btn.mini.it-add { min-width: 40px; min-height: 34px; font-size: 20px; line-height: 1; }
 .inv-item { padding: 0; }
 .inv-sum { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 14px; cursor: pointer; list-style: none; }
 .inv-sum::-webkit-details-marker { display: none; }
@@ -841,7 +844,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261102210027';
+const BUILD = '20261102211839';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1296,14 +1299,17 @@ function abrirModal(titulo, corpoHtml, ligar) {
 document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#camada').innerHTML = ''; });
 
 /* seletor de catálogo com busca */
+// sem grupo informado, filtra pelo que a lista tiver: categoria, elemento, divindade ou classe
+const grupoAuto = x => x?.categoria || x?.elemento || x?.divindade || x?.classe || null;
 function seletor(titulo, itens, render, aoEscolher, extra = '', grupo = null) {
+  grupo = grupo || grupoAuto;
   const grupos = grupo ? [...new Set(itens.map(grupo).filter(Boolean))] : [];
   let gSel = 'Todos';
   abrirModal(titulo, `${extra}${grupos.length > 1 ? `<div class="filtros" id="sel-grupos">${['Todos', ...grupos].map(g => `<button class="chip ${g === 'Todos' ? 'aqui' : ''}" data-g="${esc(g)}">${esc(g)}</button>`).join('')}</div>` : ''}<div class="busca">${ICON_BUSCA}<input type="search" id="sel-busca" placeholder="Buscar"></div><div id="sel-lista"></div>`, (m, fechar) => {
     const lista = m.querySelector('#sel-lista');
     const desenhar = q => {
-      const ql = q.toLowerCase();
-      const fil = itens.map((x, i) => [x, i]).filter(([x]) => (gSel === 'Todos' || grupo(x) === gSel) && (!q || JSON.stringify(x).toLowerCase().includes(ql))).slice(0, 400);
+      const ql = normBusca(q);
+      const fil = itens.map((x, i) => [x, i]).filter(([x]) => (gSel === 'Todos' || grupo(x) === gSel) && (!q || normBusca(JSON.stringify(x)).includes(ql))).slice(0, 400);
       lista.innerHTML = fil.length ? fil.map(([x, i]) => `<div class="opcao"><div>${render(x)}</div><button class="btn mini" data-i="${i}">Adicionar</button></div>`).join('') : '<div class="vazio">Nada encontrado.</div>';
     };
     desenhar('');
@@ -1400,13 +1406,18 @@ ROTAS.agentes = async () => {
   app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Registro de pessoal</span><h1>Agentes</h1></div>
     <div style="display:flex; gap:8px; flex-wrap:wrap">${DONO ? '<button class="btn sec" id="todos">Ver todos os agentes</button>' : ''}<a class="btn" href="#novo-agente" style="text-decoration:none">Novo agente</a></div></div>
     ${db ? '' : semBanco()}
-    <div class="busca">${ICON_BUSCA}<input type="search" id="busca" placeholder="Buscar agente"></div>
+    <div class="filtros" id="f-ag"></div>
+    <div class="busca">${ICON_BUSCA}<input type="search" id="busca" placeholder="Buscar agente, classe ou jogador"></div>
     <div id="lista" class="grade-cards"><div class="vazio">Carregando…</div></div>`;
   if (!db) { $('#lista').innerHTML = '<div class="vazio">Sem acesso ao banco nesta visualização.</div>'; return; }
-  let todos = false, docs = [];
+  let todos = false, docs = [], fAg = 'Todos';
   const desenhar = () => {
-    const q = $('#busca').value.toLowerCase();
-    const fil = docs.filter(f => !q || (f.nome || '').toLowerCase().includes(q));
+    const ops = ['Todos', ...new Set(docs.map(f => nivelDe(f) === 0 ? 'Mundano' : f.classe).filter(Boolean)), ...(docs.some(f => f.morto) ? ['Mortos'] : [])];
+    if (!ops.includes(fAg)) fAg = 'Todos';
+    $('#f-ag').innerHTML = ops.length > 2 ? ops.map(o => `<button class="chip ${o === fAg ? 'aqui' : ''}" data-fag="${esc(o)}">${esc(o)}</button>`).join('') : '';
+    $$('[data-fag]').forEach(b => b.onclick = () => { fAg = b.dataset.fag; desenhar(); });
+    const q = normBusca($('#busca').value);
+    const fil = docs.filter(f => (fAg === 'Todos' || (fAg === 'Mortos' ? f.morto : (nivelDe(f) === 0 ? 'Mundano' : f.classe) === fAg)) && (!q || normBusca([f.nome, f.classe, f.subclasse, f.jogador].join(' ')).includes(q)));
     $('#lista').innerHTML = fil.length ? fil.map(f => cardAgente(f)).join('') : `<div class="vazio">${docs.length ? 'Nenhum agente com esse nome.' : 'Você ainda não registrou agentes.'}</div>`;
   };
   let un = null;
@@ -2189,9 +2200,9 @@ ROTAS.agente = async id => {
     $('#al-trocar')?.addEventListener('click', () => abrirModal('Retirar alinhamento', `<p>O alinhamento some quando a vontade do personagem muda ou outra entidade se interessa por ele. Retirar <b>${esc(F.alinhamento.nome)}</b> de ${esc(F.nome)}?</p><button class="btn" id="rt-ok">Retirar</button>`, (m, fechar) => { m.querySelector('#rt-ok').onclick = async () => { await salvar({ alinhamento: null }); fechar(); }; }));
     $('#al-rit')?.addEventListener('click', () => { const el = elDe(F.alinhamento.nome);
       seletor(`Rituais de ${el}`, RIT.filter(r => r.elemento === el), r => `<b>${esc(r.nome)}</b>${r.antigo ? ' <span class="tag">Antigo</span>' : ''} <span class="tag">${esc(r.custo || '')}</span><p>${esc(r.efeito)}</p>`, r => add('rituais', { nome: r.nome, elemento: r.elemento, alvo: r.alvo, custo: r.custo, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] })); });
-    $('#add-item')?.addEventListener('click', () => seletor('Itens do livro', SIS.itens, it => `<b>${esc(it.nome)}</b> <span class="faint">${esc(it.categoria)}</span> ${it.dano ? `<span class="tag">${esc(it.dano)}${it.mult > 1 ? ' ×' + it.mult : ''}</span>` : ''} ${it.peso ? `<span class="tag">${fmtKg(it.peso)}</span>` : ''}<p>${esc(it.obs || '')}</p>`, it => add('equipamentos', { ...it, qtd: 1 })));
-    $('#add-item-hb')?.addEventListener('click', async () => { const hb = await homebrewVisivel('item'); if (!hb.length) return toast('Nenhum item no homebrew ainda.');
-      seletor('Itens do homebrew', hb, it => `<b>${esc(it.nome)}</b> ${it.dano ? `<span class="tag">${esc(it.dano)}</span>` : ''}<p>${esc(it.obs || '')}</p>`, it => add('equipamentos', { nome: it.nome, dano: it.dano, mult: +it.mult || 1, peso: +it.peso || 0, pericia: it.pericia, obs: it.obs, qtd: 1 })); });
+    const doHb = it => ({ nome: it.nome, dano: it.dano, mult: +it.mult || 1, margem: +it.margem || 20, peso: +it.peso || 0, pericia: it.pericia, tipoDano: it.tipoDano, alcance: it.alcance, rd: +it.rd || 0, alivio: +it.alivio || 0, obs: it.obs, descricao: it.descricao, imagem: it.imagem, categoria: it.categoria, qtd: 1 });
+    $('#add-item')?.addEventListener('click', () => escolherItem('livro', it => add('equipamentos', { ...it, qtd: 1 }), it => add('equipamentos', doHb(it))));
+    $('#add-item-hb')?.addEventListener('click', () => escolherItem('hb', it => add('equipamentos', { ...it, qtd: 1 }), it => add('equipamentos', doHb(it))));
     $('#novo-item')?.addEventListener('click', () => formItem(it => add('equipamentos', it)));
     // descrição
     $$('[data-texto]').forEach(t => t.addEventListener('input', debounce(() => salvar({ [t.dataset.texto]: t.value }), 800)));
@@ -2308,6 +2319,29 @@ function armaEf(it) {
   return { margem, acerto, dano, mult, critExtra, notas };
 }
 const tagsMods = it => { const m = modsDe(it); return [...m.melhorias.map(n => `<span class="tag mod-m" title="Melhoria">${esc(n)}</span>`), ...m.bencaos.map(n => `<span class="tag mod-b" title="Bênção: vale para quem empunha">${esc(n.replace(/^Bênção d[aoe]s? /, ''))}</span>`), ...m.maldicoes.map(n => `<span class="tag mod-x" title="Maldição: vale para o alvo atingido · custa 3 PS por golpe">${esc(n.replace(/^Maldição d[aoe]s? /, ''))}</span>`)].join(''); };
+// janela de adicionar item: livro ou homebrew, filtro por categoria e busca; adicionar não fecha (dá pra pegar vários)
+async function escolherItem(abaIni, addLivro, addHb) {
+  let aba = abaIni, cat = 'Todos', q = '', hb = null;
+  abrirModal('Adicionar itens', `<div class="abas it-abas" role="tablist"><button data-ia="livro">Do livro</button><button data-ia="hb">Homebrew</button></div>
+    <div class="filtros" id="it-cats"></div><div class="busca">${ICON_BUSCA}<input type="search" id="it-q" placeholder="Buscar item" autocomplete="off"></div><div class="lista it-lista" id="it-l"></div>`, async (m) => {
+    const lista = () => aba === 'livro' ? SIS.itens : (hb || []);
+    const desenhar = () => {
+      m.querySelectorAll('[data-ia]').forEach(b => b.classList.toggle('aqui', b.dataset.ia === aba));
+      const cats = ['Todos', ...new Set(lista().map(i => i.categoria || 'Sem categoria'))]; if (!cats.includes(cat)) cat = 'Todos';
+      m.querySelector('#it-cats').innerHTML = cats.map(c => `<button class="chip ${c === cat ? 'aqui' : ''}" data-ic="${esc(c)}">${esc(c)}</button>`).join('');
+      const nq = normBusca(q), fil = lista().filter(i => (cat === 'Todos' || (i.categoria || 'Sem categoria') === cat) && (!nq || normBusca(i.nome + ' ' + (i.obs || '')).includes(nq)));
+      m.querySelector('#it-l').innerHTML = aba === 'hb' && !hb ? '<div class="vazio">Carregando…</div>' : fil.map((it, k) => `<div class="item it-linha">${molduraItem(it, 'moldura-it mini-it')}<div style="min-width:0"><b>${esc(it.nome)}</b> <span class="faint" style="font-size:12.5px">${esc(it.categoria || '')}</span>
+          <div class="inv-resumo">${it.dano ? `<span>Dano: <b>${esc(it.dano)}</b></span><span>Crítico: <b>${(+it.margem || 20) < 20 ? (+it.margem) + '/' : ''}×${fmtMult(+it.mult || 2)}</b></span>` : ''}${it.rd ? `<span>RD: <b>${it.rd}</b></span>` : ''}${it.alivio ? `<span>Alivia: <b>${fmtKg(it.alivio)}</b></span>` : ''}${it.peso ? `<span>Peso: <b>${fmtKg(it.peso)}</b></span>` : ''}</div>
+          ${it.obs ? `<p class="dim" style="font-size:13px; margin:4px 0 0">${esc(it.obs)}</p>` : ''}</div><button class="btn mini it-add" data-ik="${k}" aria-label="Adicionar ${esc(it.nome)}">+</button></div>`).join('') || `<div class="vazio">${aba === 'hb' ? 'Nenhum item no homebrew.' : 'Nenhum item encontrado.'}</div>`;
+      m.querySelectorAll('[data-ic]').forEach(b => b.onclick = () => { cat = b.dataset.ic; desenhar(); });
+      m.querySelectorAll('[data-ik]').forEach(b => b.onclick = () => { const it = fil[+b.dataset.ik]; (aba === 'livro' ? addLivro : addHb)(it); toast(`Adicionado: ${it.nome}`); b.textContent = '✓'; setTimeout(() => { b.textContent = '+'; }, 900); });
+    };
+    m.querySelectorAll('[data-ia]').forEach(b => b.onclick = async () => { aba = b.dataset.ia; cat = 'Todos'; desenhar(); if (aba === 'hb' && !hb) { hb = await homebrewVisivel('item'); desenhar(); } });
+    m.querySelector('#it-q').oninput = e => { q = e.target.value; desenhar(); };
+    desenhar(); if (aba === 'hb') { hb = await homebrewVisivel('item'); desenhar(); }
+    setTimeout(() => m.querySelector('#it-q')?.focus(), 50);
+  });
+}
 function formItem(salvarFn, it = {}) {
   abrirModal(it.nome ? 'Editar item' : 'Novo item', `${campoImagem('fi-img', it.imagem || '', 'Imagem do item')}<div class="grade-campos"><div class="campo"><label class="rotulo" for="fi-n">Nome</label><input type="text" id="fi-n" value="${esc(it.nome)}"></div>
     <div class="campo"><label class="rotulo" for="fi-p">Peso (kg)</label><input type="number" step="0.1" id="fi-p" value="${esc(it.peso ?? 0)}"></div>
