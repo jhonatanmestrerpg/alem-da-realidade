@@ -59,6 +59,8 @@ img { max-width: 100%; }
 .marca b { font: 400 22px/1 var(--f-disp); letter-spacing: .14em; }
 .nav { display: flex; gap: 2px 18px; flex-wrap: wrap; flex: 1; }
 .volta-camp { display: inline-flex; align-items: center; gap: 8px; max-width: 240px; padding: 6px 12px 6px 10px; border: 1px solid var(--linha-2); background: var(--painel-2); color: var(--lua); text-decoration: none; font: 600 13px var(--f-body); border-radius: 999px; }
+.trilho.clicavel { cursor: pointer; } .trilho.clicavel:hover { outline: 1px solid var(--linha-2); }
+.bcris .v.clicavel { cursor: pointer; text-decoration: underline dotted rgba(255,255,255,.5); text-underline-offset: 3px; }
 .volta-camp:hover { border-color: var(--ouro); }
 .volta-camp[hidden] { display: none; }
 .volta-camp svg { flex: none; width: 15px; height: 15px; color: var(--ouro); }
@@ -925,6 +927,8 @@ function calc(f) {
     pst: `5 + (${C.pst} + ${A.constituicao || 0}) × ${N}${vig ? ` + ${vig * 2} Vigor` : ''}`,
   };
   if (VB) for (const k in form) form[k] += ` + ${VB} Vetor`;
+  // ajuste do mestre no máximo (pode ser negativo)
+  for (const k of ['pv', 'ps', 'pst']) { const x = +f.maxExtra?.[k] || 0; if (x) { max[k] = Math.max(1, max[k] + x); form[k] += ` ${x > 0 ? '+' : '−'} ${Math.abs(x)} mestre`; } }
   const eq = f.equipamentos || [];
   const bruto = eq.reduce((s, i) => s + (+i.peso || 0) * (+i.qtd || 1), 0);
   const alivio = eq.reduce((s, i) => s + (+i.alivio || 0), 0);
@@ -937,6 +941,25 @@ function calc(f) {
   const rdForm = [rdItens ? `${rdItens} itens` : '', +f.rdExtra ? `${+f.rdExtra > 0 ? '+' : ''}${+f.rdExtra} ajuste` : ''].filter(Boolean).join(' ') || '0';
   const rdParForm = [temPas('Resistência Arcana') ? '15 Resistência Arcana' : '', +f.rdParExtra ? `${+f.rdParExtra > 0 ? '+' : ''}${+f.rdParExtra} ajuste` : ''].filter(Boolean).join(' ') || '0';
   return { max, form, carga, cc, rd, rdPar, rdForm, rdParForm, mov: 5 + (A.destreza || 0), pat: patente(N), vb: VB };
+}
+const NOMES_VIT = { pv: 'PV · Vida', ps: 'PS · Sanidade', pst: 'PST · Stamina' };
+// ajuste manual: tirar, somar ou definir um valor; o mestre também mexe no máximo
+function ajustarVital(f, k, { mestre = false, aoSalvar }) {
+  const K = calc(f), atual = { ...K.max, ...(f.atual || {}) }, ext = +f.maxExtra?.[k] || 0, base = K.max[k] - ext;
+  abrirModal(`Ajustar ${NOMES_VIT[k]}`, `<p class="dim" style="margin:0">${esc(f.nome)} · agora <b class="mono">${atual[k]} / ${K.max[k]}</b></p>
+    <div class="campo"><label class="rotulo" for="av-n">Quantidade</label><input type="number" id="av-n" min="0" inputmode="numeric" placeholder="Ex.: 23"></div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn" data-av="-">Tirar</button><button class="btn sec" data-av="+">Somar</button><button class="btn sec" data-av="=">Definir como</button></div>
+    ${mestre ? `<div class="caixa" style="display:grid; gap:8px"><span class="rotulo">Máximo (só o mestre)</span><p class="faint" style="margin:0; font-size:13px">Pela ficha: ${base}. Ajuste soma ou tira do máximo calculado e acompanha nível e atributos.</p>
+      <div style="display:flex; gap:8px; align-items:end; flex-wrap:wrap"><div class="campo" style="flex:1; min-width:140px"><label class="rotulo" for="av-m">Ajuste do máximo</label><input type="number" id="av-m" value="${ext || ''}" placeholder="0"></div><div class="campo" style="flex:1; min-width:140px"><label class="rotulo" for="av-mt">ou máximo final</label><input type="number" id="av-mt" placeholder="${K.max[k]}"></div><button class="btn sec" id="av-ok-m">Salvar máximo</button></div></div>` : ''}`, (m, fechar) => {
+    const n = m.querySelector('#av-n'); n.focus();
+    const aplicar = op => { const v = Math.abs(+n.value || 0); if (op !== '=' && !v) return toast('Digite a quantidade.'); const novo = { ...atual };
+      novo[k] = Math.max(0, Math.min(K.max[k], op === '-' ? atual[k] - v : op === '+' ? atual[k] + v : v)); aoSalvar({ atual: novo }); fechar(); };
+    m.querySelectorAll('[data-av]').forEach(b => b.onclick = () => aplicar(b.dataset.av));
+    n.onkeydown = e => { if (e.key === 'Enter') aplicar('-'); };
+    m.querySelector('#av-ok-m')?.addEventListener('click', () => { const mt = m.querySelector('#av-mt').value, x = mt !== '' ? +mt - base : +m.querySelector('#av-m').value || 0;
+      const maxExtra = { ...(f.maxExtra || {}), [k]: x }, novoMax = Math.max(1, base + x), novo = { ...atual, [k]: Math.min(atual[k], novoMax) };
+      aoSalvar({ atual: novo, maxExtra }); fechar(); });
+  });
 }
 function dadosPericia(f, nome) {
   const p = (f.pericias || []).find(x => x.nome === nome);
@@ -1479,7 +1502,7 @@ ROTAS.agente = async id => {
         </div>
         ${['pv', 'ps', 'pst'].map(k => `<div class="vital ${k}"><div class="cab"><span class="nome">${{ pv: 'PV · Vida', ps: 'PS · Sanidade', pst: 'PST · Stamina' }[k]}</span><span class="faint mono" style="font-size:11px">${K.form[k]} = ${K.max[k]}</span></div>
           <div class="ctrl"><button class="vbtn" data-v="${k}" data-d="-5" ${podeEditar ? '' : 'disabled'}>−5</button><button class="vbtn" data-v="${k}" data-d="-1" ${podeEditar ? '' : 'disabled'}>−1</button>
-          <div class="trilho ${F.queda?.[k] != null ? 'caido' : ''}"><div class="cheio" style="width:${Math.min(100, (F.atual[k] / (K.max[k] || 1)) * 100)}%"></div><div class="txt">${F.queda?.[k] != null ? `${ESTADO_ZERO[k]} · ${F.atual[k]} / ${K.max[k]}` : `${F.atual[k]} / ${K.max[k]}`}</div></div>
+          <div class="trilho ${F.queda?.[k] != null ? 'caido' : ''} ${podeEditar || ehMestre ? 'clicavel' : ''}" ${podeEditar || ehMestre ? `data-vaj="${k}" role="button" tabindex="0" title="Clique para digitar um valor"` : ''}><div class="cheio" style="width:${Math.min(100, (F.atual[k] / (K.max[k] || 1)) * 100)}%"></div><div class="txt">${F.queda?.[k] != null ? `${ESTADO_ZERO[k]} · ${F.atual[k]} / ${K.max[k]}` : `${F.atual[k]} / ${K.max[k]}`}</div></div>
           <button class="vbtn" data-v="${k}" data-d="1" ${podeEditar ? '' : 'disabled'}>+1</button><button class="vbtn" data-v="${k}" data-d="5" ${podeEditar ? '' : 'disabled'}>+5</button></div>
           ${F.queda?.[k] != null ? `<div class="queda"><span class="rotulo">Morte</span>${bolinhas(F.queda[k])}<span class="faint" style="font-size:12px">quando as três zerarem, volta com 1</span>${podeEditar || ehMestre ? `<button class="btn mini sec" data-bolinha="${k}">Passar turno ${ESTADO_ZERO[k].toLowerCase()}</button>` : ''}</div>` : ''}</div>`).join('')}
       </div>
@@ -1620,6 +1643,10 @@ ROTAS.agente = async id => {
     });
     $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
     $('#todas')?.addEventListener('click', () => { mostrarTodas = !mostrarTodas; render(); });
+    $$('[data-vaj]').forEach(t => { const go = () => ajustarVital(F, t.dataset.vaj, { mestre: ehMestre, aoSalvar: async ({ atual, maxExtra }) => { const k = t.dataset.vaj, caiu = atual[k] === 0 && F.queda?.[k] == null;
+        F.atual = atual; if (maxExtra) F.maxExtra = maxExtra; ajustarQueda(F); render();
+        try { await ref.update({ atual: F.atual, queda: F.queda || {}, ...(maxExtra ? { maxExtra } : {}) }); } catch (e) { toast('Não deu para salvar os vitais.'); }
+        if (caiu) toast(`${F.nome}: ${ESTADO_ZERO[k]} (${NOME_VITAL[k]} 0), 3 bolinhas de morte.`); } }); t.onclick = go; t.onkeydown = e => { if (e.key === 'Enter') go(); }; });
     $$('[data-v]').forEach(b => b.onclick = () => { const k = b.dataset.v; F.atual[k] = Math.max(0, Math.min(K.max[k], (F.atual[k] ?? K.max[k]) + +b.dataset.d)); const caiu = F.atual[k] === 0 && F.queda?.[k] == null; ajustarQueda(F); pendente = true; render(); salvarVitais(); if (caiu) toast(`${F.nome}: ${ESTADO_ZERO[k]} (${NOME_VITAL[k]} 0), 3 bolinhas de morte.`); });
     $$('[data-bolinha]').forEach(b => b.onclick = async () => { const t = gastarBolinha(F, b.dataset.bolinha); pendente = true; render(); try { await ref.update({ atual: F.atual, queda: F.queda || {} }); } catch (e) {} pendente = false; toast(t); publicarRolagem(F, ESTADO_ZERO[b.dataset.bolinha], { total: '', detalhe: esc(t) }); });
     // edição
@@ -2367,7 +2394,7 @@ function montarAmeaca(alvo, c, opc = {}, est = {}, fechar = null) {
         ${c.ponto_fraco ? `<h3>Ponto fraco</h3><p class="dim">${nl(c.ponto_fraco)}</p>` : ''}${c.forma_de_abate ? `<h3>Forma de abate</h3><p class="dim">${nl(c.forma_de_abate)}</p>` : ''}
         ${c.npc || c.id == null ? '' : `<a href="#ameaca-${esc(c.id)}" data-fechar-ir>Abrir o relato completo</a>`}`;
       alvo.innerHTML = `${opc.banner ? opc.banner() : bannerAmeaca(c)}
-        ${barraCris('pv', pv, pvMax, 'data-hp')}
+        ${barraCris('pv', pv, pvMax, 'data-hp').replace('<span class="v">', '<span class="v clicavel" data-hpaj role="button" tabindex="0" title="Digitar dano, cura ou valor">')}
         <div class="abas abas-mini">${[['status', 'Status'], ['combate', 'Combate'], ['descricao', 'Descrição']].map(([k, l]) => `<button class="${aba === k ? 'aqui' : ''}" data-ab="${k}">${l}</button>`).join('')}</div>
         <div style="display:grid; gap:10px">${corpo}</div><div class="res" id="${resId}"></div>`;
       alvo.querySelectorAll('[data-ab]').forEach(b => b.onclick = () => { aba = b.dataset.ab; desenhar(); });
@@ -2378,6 +2405,10 @@ function montarAmeaca(alvo, c, opc = {}, est = {}, fechar = null) {
       alvo.querySelectorAll('[data-acao-ed]').forEach(b => b.onclick = () => { fixar(); const l = sub, i = +b.dataset.acaoEd; editarAcao(f[l][i], l === 'poderes', a => { f[l][i] = a; salvarF(); }); });
       alvo.querySelectorAll('[data-acao-rm]').forEach(b => b.onclick = () => { fixar(); const l = sub, i = +b.dataset.acaoRm; if (b.dataset.certo) { f[l].splice(i, 1); salvarF(); } else { b.dataset.certo = 1; b.textContent = 'Confirmar remoção'; } });
       alvo.querySelectorAll('[data-contorno]').forEach(b => b.onclick = () => { contornado = !contornado; opc.aoContorno?.(contornado); desenhar(); });
+      alvo.querySelector('[data-hpaj]')?.addEventListener('click', () => abrirModal2(`PV de ${c.nome}`, `<p class="dim" style="margin:0">Agora <b class="mono">${pv} / ${pvMax}</b></p><div class="campo"><label class="rotulo" for="hp-n">Quantidade</label><input type="number" id="hp-n" min="0" placeholder="Ex.: 37"></div><div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn" data-op="-">Tirar</button><button class="btn sec" data-op="+">Somar</button><button class="btn sec" data-op="=">Definir como</button></div>`, (m2, f2) => {
+        const nI = m2.querySelector('#hp-n'); nI.focus();
+        const ap = op => { const v = Math.abs(+nI.value || 0); if (op !== '=' && !v) return toast('Digite a quantidade.'); pv = Math.max(0, Math.min(pvMax, op === '-' ? pv - v : op === '+' ? pv + v : v)); opc.aoPV?.(pv); f2(); desenhar(); };
+        m2.querySelectorAll('[data-op]').forEach(b => b.onclick = () => ap(b.dataset.op)); nI.onkeydown = e => { if (e.key === 'Enter') ap('-'); }; }));
       alvo.querySelectorAll('[data-hp]').forEach(b => b.onclick = () => { pv = Math.max(0, Math.min(pvMax, pv + +b.dataset.hp)); opc.aoPV?.(pv); desenhar(); });
       alvo.querySelectorAll('[data-pt]').forEach(b => b.onclick = () => { const [nm, q, md] = b.dataset.pt.split('|'); const r = teste(+q, +md); out(`${nm}: ${r.detalhe} = <b>${r.total}</b>${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`); popRolagem({ quem: c.nome, titulo: nm, tipo: 'Teste', expr: `${q}d20+${md}`, linhas: [{ det: r.detalhe, total: r.total }], total: r.total, nat20: r.nat20 }); opc.aoRolar?.(nm, r); });
       opc.aoDesenhar?.(alvo);
@@ -2916,13 +2947,13 @@ ROTAS.escudo = async id => {
         if (ab === 'condicoes') cx = blocoCond;
         det = `<div class="am-banner" style="--bc:${f.alinhamento ? corEl(elDe(f.alinhamento.nome)) : 'var(--violeta)'}">${I0.foto ? `<div class="am-bgw"><div class="am-bg" style="background-image:url('${esc(I0.foto)}')"></div></div>` : ''}<div class="am-ft ag" style="${I0.foto ? `background-image:url('${esc(I0.foto)}')` : ''}">${I0.foto ? '' : esc(iniciais(f.nome))}</div>
             <div class="am-tx"><b>${esc(f.nome)}</b><span>${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''}</span><span class="am-el">Nv ${+f.nivel || 1} · ${esc(patente(+f.nivel || 1).nome || '')}</span></div><a class="btn mini sec am-acao" href="#agente-${esc(f.id)}" style="text-decoration:none">Ficha</a></div>
-          ${['pv', 'ps', 'pst'].map(k => barraCris(k, a[k], K.max[k], 'data-cbv-' + k, [5, 1])).join('')}
+          ${['pv', 'ps', 'pst'].map(k => barraCris(k, a[k], K.max[k], 'data-cbv-' + k, [5, 1]).replace('<span class="v">', `<span class="v clicavel" data-cbaj="${k}" role="button" tabindex="0" title="Digitar valor ou mudar o máximo">`)).join('')}
           <div class="abas abas-mini">${[['atributos', 'Atributos'], ['combate', 'Combate'], ['condicoes', `Condições${I0.conds.length ? ' ' + I0.conds.length : ''}`]].map(([k, l]) => `<button class="${ab === k ? 'aqui' : ''}" data-dab="${k}">${l}</button>`).join('')}</div>
           <div style="display:grid; gap:10px">${cx}</div><div class="res" id="cb-res"></div>
           <div class="lin-acoes"><button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`; }
       else if (x0 && (x0.tipo === 'ameaca' || x0.ficha)) det = `<div id="cb-amf"></div>${blocoCond}<div class="lin-acoes"><button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`;
       else if (x0) det = `<div class="am-banner" style="--bc:var(--ouro)"><div class="am-ft ag">${esc(iniciais(x0.nome))}</div><div class="am-tx"><b>${esc(x0.nome)}</b><span class="am-el">NPC</span></div></div>
-          ${barraCris('pv', x0.pv, x0.pvMax, 'data-cbv-pv', [10, 1])}${blocoCond}<div class="lin-acoes"><button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`;
+          ${barraCris('pv', x0.pv, x0.pvMax, 'data-cbv-pv', [10, 1]).replace('<span class="v">', '<span class="v clicavel" data-npcaj role="button" tabindex="0">')}${blocoCond}<div class="lin-acoes"><button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`;
       corpo.innerHTML = `<div style="display:grid; gap:14px">
         <div class="cb-topo"><h2>${c.ativo ? 'Em combate' : 'Combate parado'}</h2>
           <div class="cb-acoes"><div class="menu-pop"><button class="btn sec mini" data-menu>Configurações</button><div hidden><button id="cb-ini">Rolar iniciativa das ameaças e NPCs</button><button id="cb-ord">Ordenar por iniciativa</button><button id="cb-limpar">Limpar lista</button></div></div>
@@ -2941,6 +2972,12 @@ ROTAS.escudo = async id => {
       for (const k of ['pv', 'ps', 'pst']) $$(`[data-cbv-${k}]`).forEach(b => b.onclick = async () => { const dd = +b.getAttribute('data-cbv-' + k);
         if (x0.tipo !== 'agente') { x0.pv = Math.max(0, Math.min(x0.pvMax, x0.pv + dd)); salvarE(); render(); return; }
         const f = I0.f; const a = { ...I0.a }; a[k] = Math.max(0, Math.min(I0.K.max[k], a[k] + dd)); f.atual = a; ajustarQueda(f); render(); try { await db.doc('fichas/' + f.id).update({ atual: a, queda: f.queda || {} }); } catch (e) { toast('Não deu para alterar a ficha.'); } });
+      $('[data-npcaj]')?.addEventListener('click', () => abrirModal2(`PV de ${x0.nome}`, `<div class="campo"><label class="rotulo" for="hp-n">Quantidade</label><input type="number" id="hp-n" min="0"></div><div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn" data-op="-">Tirar</button><button class="btn sec" data-op="+">Somar</button><button class="btn sec" data-op="=">Definir como</button></div>`, (m2, f2) => {
+        const nI = m2.querySelector('#hp-n'); nI.focus(); const ap = op => { const v = Math.abs(+nI.value || 0); x0.pv = Math.max(0, Math.min(x0.pvMax, op === '-' ? x0.pv - v : op === '+' ? x0.pv + v : v)); salvarE(); f2(); render(); };
+        m2.querySelectorAll('[data-op]').forEach(b => b.onclick = () => ap(b.dataset.op)); nI.onkeydown = e => { if (e.key === 'Enter') ap('-'); }; }));
+      $$('[data-cbaj]').forEach(sp => sp.onclick = () => { const f = I0.f, k = sp.dataset.cbaj; ajustarVital(f, k, { mestre: true, aoSalvar: async ({ atual, maxExtra }) => {
+        f.atual = atual; if (maxExtra) f.maxExtra = maxExtra; ajustarQueda(f); render();
+        try { await db.doc('fichas/' + f.id).update({ atual, queda: f.queda || {}, ...(maxExtra ? { maxExtra } : {}) }); } catch (e) { toast('Não deu para alterar a ficha.'); } } }); });
       const outCb = (tit, tipo, expr, r) => { const o = $('#cb-res'); if (o) o.innerHTML = `${esc(tit)}: ${r.detalhe} = <b>${r.total}</b>`; popRolagem({ quem: I0.f.nome, titulo: tit, tipo, expr, linhas: [{ det: r.detalhe, total: r.total }], total: r.total, nat20: r.nat20, dano: tipo === 'Dano' }); rolarMestre(`${I0.f.nome}: ${tit}`, r, true); };
       $$('[data-cbper]').forEach(b => b.onclick = () => { const n = b.dataset.cbper, P = dadosPericia(I0.f, n); outCb(n, 'Teste', `${P.dados}d20+${P.mod}`, teste(P.dados, P.mod)); });
       $$('[data-cbatq]').forEach(b => b.onclick = () => { const it = (I0.f.equipamentos || []).filter(q => q.dano)[+b.dataset.cbatq], E2 = armaEf(it), P = dadosPericia(I0.f, it.pericia || tipoArma(it)); outCb(it.nome, 'Acerto', `${P.dados}d20+${P.mod + E2.acerto}`, teste(P.dados, P.mod + E2.acerto)); });
