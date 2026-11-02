@@ -120,6 +120,7 @@ img { max-width: 100%; }
 .adm-graf { background: var(--painel); border: 1px solid var(--linha); padding: 14px; display: grid; gap: 10px; }
 .colunas { display: grid; grid-template-columns: repeat(14, 1fr); gap: 6px; align-items: end; height: 140px; } .col { display: grid; grid-template-rows: 1fr auto; height: 100%; gap: 4px; } .col i { align-self: end; display: block; background: linear-gradient(180deg, var(--sangue-hi), var(--sangue)); border-radius: 2px 2px 0 0; min-height: 0; } .col span { font: 10px var(--f-mono); color: var(--lua-faint); text-align: center; }
 .barras { display: grid; gap: 6px; } .barra-l { display: grid; grid-template-columns: minmax(110px, 200px) 1fr auto; gap: 10px; align-items: center; font-size: 13px; } .bl-t { height: 10px; background: var(--painel-3); } .bl-t i { display: block; height: 100%; background: var(--violeta); } .bl-v { font-size: 12px; }
+.tag.canon { color: var(--ouro); border-color: var(--ouro); }
 .volta-camp:hover { border-color: var(--ouro); }
 .volta-camp[hidden] { display: none; }
 .volta-camp svg { flex: none; width: 15px; height: 15px; color: var(--ouro); }
@@ -799,6 +800,7 @@ let SIS = null, CRI = [], RIT = [], LORE = null, FEIT = [], CACADOR = null, ABAT
 async function carregarBase() {
   const [s, c, r, f, k] = await Promise.all(['dados/sistema.json', 'dados/criaturas.json', 'dados/rituais.json', 'dados/feiticos.json', 'dados/cacador.json'].map(u => fetch(u).then(x => x.json())));
   SIS = s; CRI = c; RIT = r; FEIT = f; CACADOR = k.cacador; ABATES = { ...k.abates };
+  BASE_ORIG = { CRI: [...c], RIT: [...r], FEIT: [...f], passivas: [...s.passivas], itens: [...s.itens] };
 }
 // classes do livro + classes e subclasses criadas no homebrew das campanhas carregadas
 // nível 0 = mundano: sem classe, só perícias e uma passiva
@@ -2209,12 +2211,28 @@ function formItem(salvarFn, it = {}) {
 /* =================================================================
    HOMEBREW
    ================================================================= */
-async function homebrewVisivel(tipo) {
+// canonizado pelo administrador: deixa de ser homebrew e entra junto com o conteúdo original do sistema
+let BASE_ORIG = null, CANON = [];
+async function carregarCanon() {
+  if (!db || !BASE_ORIG) return;
+  try { CANON = (await db.collection('homebrew').where('canonico', '==', true).get()).docs.map(d => ({ id: d.id, ...d.data() })); } catch (e) { CANON = []; }
+  const de = t => CANON.filter(x => x.tipo === t), limpo = x => { const { autor, compartilhado, canonico, canonizadoEm, canonizadoPor, criado, tipo, ...resto } = x; return resto; };
+  CRI = [...BASE_ORIG.CRI, ...CANON.filter(x => x.tipo === 'ameaca' || x.tipo === 'npc').map(x => ({ ...x, id: 'hb' + x.id, homebrew: false, canon: true, npc: x.tipo === 'npc' }))];
+  RIT = [...BASE_ORIG.RIT, ...de('ritual').map(x => ({ ...limpo(x), canon: true }))];
+  FEIT = [...BASE_ORIG.FEIT, ...de('feitico').map(x => ({ ...limpo(x), canon: true }))];
+  SIS.passivas = [...BASE_ORIG.passivas, ...de('habilidade').map(x => ({ nome: x.nome, texto: x.texto || '', canon: true }))];
+  SIS.itens = [...BASE_ORIG.itens, ...de('item').map(x => ({ ...limpo(x), categoria: x.categoria || 'Gerais', canon: true }))];
+}
+async function canonizar(x, sim) {
+  try { await db.doc('homebrew/' + x.id).update({ canonico: !!sim, canonizadoEm: sim ? Date.now() : null, canonizadoPor: sim ? ME : null }); x.canonico = !!sim; await carregarCanon();
+    toast(sim ? `${x.nome} agora é conteúdo original.` : `${x.nome} voltou a ser homebrew.`); } catch (e) { toast('Não deu: ' + (e.message || e.code)); }
+}
+async function homebrewVisivel(tipo, comCanon = false) {
   if (!db) return [];
   try {
     const [meus, comp] = await Promise.all([db.collection('homebrew').where('autor', '==', ME).get(), db.collection('homebrew').where('compartilhado', '==', true).get()]);
     const m = new Map(); [...meus.docs, ...comp.docs].forEach(x => m.set(x.id, { id: x.id, ...x.data() }));
-    return [...m.values()].filter(x => !tipo || x.tipo === tipo);
+    return [...m.values()].filter(x => (!tipo || x.tipo === tipo) && (comCanon || !x.canonico));
   } catch (e) { return []; }
 }
 const TIPOS_HB = [['ameaca', 'Ameaças'], ['npc', 'NPCs'], ['habilidade', 'Habilidades'], ['ritual', 'Rituais'], ['feitico', 'Feitiços'], ['item', 'Itens']];
@@ -2236,8 +2254,8 @@ ROTAS.homebrew = async () => {
   }
   const cardHB = x => {
     if (x.tipo === 'ameaca' || x.tipo === 'npc') { const meu = x.autor === ME || DONO;
-      return `<div class="hb-am">${bannerAmeaca({ ...x, npc: x.tipo === 'npc' }, `<div class="hb-acoes">${meu ? `<div class="menu-pop"><button class="btn-x engr" data-menu aria-label="Opções de ${esc(x.nome)}">⚙</button><div hidden><button data-comp="${esc(x.id)}">${x.compartilhado ? 'Parar de compartilhar' : 'Compartilhar com a mesa'}</button><button data-ed="${esc(x.id)}">Editar</button><button class="del" data-del="${esc(x.id)}">Apagar</button></div></div>` : '<span></span>'}
-        <span style="display:flex; gap:6px; align-items:center">${x.compartilhado ? '<span class="tag crit">Compartilhado</span>' : ''}<button class="btn mini" data-ver-am="${esc(x.id)}">Ficha</button></span></div>`)}</div>`; }
+      return `<div class="hb-am">${bannerAmeaca({ ...x, npc: x.tipo === 'npc' }, `<div class="hb-acoes">${meu ? `<div class="menu-pop"><button class="btn-x engr" data-menu aria-label="Opções de ${esc(x.nome)}">⚙</button><div hidden>${DONO ? `<button data-canon="${esc(x.id)}">${x.canonico ? 'Voltar a ser homebrew' : 'Canonizar (vira original)'}</button>` : ''}<button data-comp="${esc(x.id)}">${x.compartilhado ? 'Parar de compartilhar' : 'Compartilhar com a mesa'}</button><button data-ed="${esc(x.id)}">Editar</button><button class="del" data-del="${esc(x.id)}">Apagar</button></div></div>` : '<span></span>'}
+        <span style="display:flex; gap:6px; align-items:center">${x.canonico ? '<span class="tag canon">Original</span>' : x.compartilhado ? '<span class="tag crit">Compartilhado</span>' : ''}<button class="btn mini" data-ver-am="${esc(x.id)}">Ficha</button></span></div>`)}</div>`; }
     let corpo = '';
     if (x.tipo === 'ameaca' || x.tipo === 'npc') corpo = `<div style="display:flex; gap:8px; flex-wrap:wrap">${x.tipo === 'npc' ? `<span class="tag">NPC${x.papel ? ' · ' + esc(x.papel) : ''}</span>${x.elemento ? elTag(x.elemento) : ''}` : elTag(x.elemento)}<span class="tag">Nv ${esc(x.nivel)}${x.tipo === 'npc' ? '' : ' · ' + esc(nivelAm(x.nivel)[1])}</span><span class="tag">PV ${esc(x.ficha?.pv)}</span></div><p class="dim" style="font-size:13.5px">${esc((x.descricao || '').slice(0, 220))}</p>`;
     if (x.tipo === 'habilidade') corpo = `<p class="dim" style="font-size:13.5px">${nl(x.texto)}</p>`;
@@ -2247,11 +2265,16 @@ ROTAS.homebrew = async () => {
     const meu = x.autor === ME || DONO;
     return `<div class="item"><div class="cab"><span class="nm">${esc(x.nome)}</span><span style="display:flex; gap:8px; align-items:center">${x.compartilhado ? '<span class="tag crit">Compartilhado</span>' : '<span class="tag">Só você</span>'}
       ${x.tipo === 'ameaca' ? `<a class="btn mini sec" href="#ameaca-hb${esc(x.id)}" style="text-decoration:none">Ficha</a>` : ''}${x.tipo === 'npc' ? `<button class="btn mini sec" data-ver-npc="${esc(x.id)}">Ficha</button>` : ''}
+      ${x.canonico ? '<span class="tag canon">Original</span>' : ''}${DONO ? `<button class="btn mini ${x.canonico ? 'sec' : ''}" data-canon="${esc(x.id)}">${x.canonico ? 'Voltar a homebrew' : 'Canonizar'}</button>` : ''}
       ${meu ? `<button class="btn mini ouro" data-comp="${esc(x.id)}">${x.compartilhado ? 'Parar de compartilhar' : 'Compartilhar'}</button><button class="btn mini sec" data-ed="${esc(x.id)}">Editar</button><button class="btn-x" data-del="${esc(x.id)}" aria-label="Apagar">×</button>` : ''}</span></div>${corpo}</div>`;
   };
   function ligarLista() {
     $$('[data-comp]').forEach(b => b.onclick = async () => { const x = docs.find(d => d.id === b.dataset.comp); try { await db.doc('homebrew/' + x.id).update({ compartilhado: !x.compartilhado }); } catch (e) { toast('Não deu para alterar.'); } });
     $$('[data-ed]').forEach(b => b.onclick = () => editarHB(docs.find(d => d.id === b.dataset.ed)));
+    $$('[data-canon]').forEach(b => b.onclick = () => { const x = docs.find(d => d.id === b.dataset.canon); if (!x) return;
+      if (x.canonico) return canonizar(x, false).then(render);
+      abrirModal('Canonizar', `<p><b>${esc(x.nome)}</b> deixa de ser homebrew e entra no conteúdo original do sistema, para todo mundo: ${x.tipo === 'ameaca' || x.tipo === 'npc' ? 'no bestiário' : x.tipo === 'ritual' ? 'na lista de rituais' : x.tipo === 'feitico' ? 'na lista de feitiços' : x.tipo === 'item' ? 'nos itens do livro' : 'nas habilidades passivas'}, sem a etiqueta de homebrew.</p><p class="faint">Dá para desfazer depois.</p><div style="display:flex; gap:8px"><button class="btn" id="cn-ok">Canonizar</button><button class="btn sec" data-c>Cancelar</button></div>`, (m, fechar) => {
+        m.querySelector('[data-c]').onclick = fechar; m.querySelector('#cn-ok').onclick = async () => { await canonizar(x, true); fechar(); render(); }; }); });
     $$('[data-ver-am]').forEach(b => b.onclick = () => { const x = docs.find(d => d.id === b.dataset.verAm); if (!x) return; const meu = x.autor === ME || DONO;
       fichaAmeacaModal({ ...x, id: 'hb' + x.id, npc: x.tipo === 'npc', ficha: JSON.parse(JSON.stringify(x.ficha || {})) }, { editavel: meu, aoMudarFicha: async f => { try { await db.doc('homebrew/' + x.id).update({ ficha: f }); toast('Ficha salva.'); } catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); } } }); });
     $$('[data-del]').forEach(b => b.onclick = () => { const x = docs.find(d => d.id === b.dataset.del);
@@ -2659,7 +2682,7 @@ function montarAmeaca(alvo, c, opc = {}, est = {}, fechar = null) {
   }
 }
 async function acharAmeaca(id) {
-  if (String(id).startsWith('hb')) { if (!db) return null; const s = await db.doc('homebrew/' + id.slice(2)).get(); return s.exists ? { ...s.data(), id, homebrew: true } : null; }
+  if (String(id).startsWith('hb')) { if (!db) return null; const s = await db.doc('homebrew/' + id.slice(2)).get(); return s.exists ? { ...s.data(), id, homebrew: !s.data().canonico, canon: !!s.data().canonico, npc: s.data().tipo === 'npc' } : null; }
   return CRI.find(c => String(c.id) === String(id)) || null;
 }
 function blocoFicha(c, idRes) {
@@ -3408,7 +3431,7 @@ ROTAS.usuario = async uid => {
     if (aba === 'fichas') corpo = `<div class="grade-cards">${fichas.map(f => cardAgente(f, `<button class="btn mini sec" data-del-ficha="${esc(f.id)}">Apagar</button>`)).join('') || '<div class="vazio">Nenhuma ficha.</div>'}</div>`;
     if (aba === 'campanhas') corpo = `<h2 style="margin:0">Mestra (${camps.length})</h2><div class="lista">${camps.map(c => `<div class="linha-acao"><span><b>${esc(c.nome)}</b>${regras[c.id]?.ativo ? ` <span class="tag">${(regras[c.id].ativo.mecanicas || []).length} mecânicas · ${(regras[c.id].ativo.classes || []).length} classes</span>` : ''}<br><span class="faint" style="font-size:12px">${esc(c.descricao || '').slice(0, 120)}</span></span><span style="display:flex; gap:6px; flex-wrap:wrap"><a class="btn mini sec" href="#campanha-${esc(c.id)}" style="text-decoration:none">Abrir</a>${regras[c.id] ? `<button class="btn mini sec" data-ver-regras="${esc(c.id)}">Mecânicas</button>` : ''}<button class="btn mini sec" data-del-camp="${esc(c.id)}">Excluir</button></span></div>`).join('') || '<span class="faint">Não mestra nenhuma.</span>'}</div>
       <h2 style="margin:0">Joga (${outras.length})</h2><div class="lista">${outras.map(c => `<div class="linha-acao"><span><b>${esc(c.nome)}</b></span><a class="btn mini sec" href="#campanha-${esc(c.id)}" style="text-decoration:none">Abrir</a></div>`).join('') || '<span class="faint">Não participa de outras.</span>'}</div>`;
-    if (aba === 'homebrew') corpo = `<div class="lista">${hb.sort((a, b) => (a.tipo || '').localeCompare(b.tipo || '')).map(x => `<div class="linha-acao"><span><span class="tag">${esc(TIPOS_HB.find(t => t[0] === x.tipo)?.[1] || x.tipo)}</span> <b>${esc(x.nome)}</b> ${x.compartilhado ? '<span class="tag crit">Compartilhado</span>' : '<span class="faint" style="font-size:12px">oculto</span>'}</span><span style="display:flex; gap:6px">${x.tipo === 'ameaca' || x.tipo === 'npc' ? `<button class="btn mini sec" data-ver-hb="${esc(x.id)}">Ficha</button>` : `<button class="btn mini sec" data-txt-hb="${esc(x.id)}">Ver</button>`}<button class="btn mini sec" data-del-hb="${esc(x.id)}">Apagar</button></span></div>`).join('') || '<div class="vazio">Nenhum homebrew.</div>'}</div>`;
+    if (aba === 'homebrew') corpo = `<div class="lista">${hb.sort((a, b) => (a.tipo || '').localeCompare(b.tipo || '')).map(x => `<div class="linha-acao"><span><span class="tag">${esc(TIPOS_HB.find(t => t[0] === x.tipo)?.[1] || x.tipo)}</span> <b>${esc(x.nome)}</b> ${x.canonico ? '<span class="tag canon">Original</span>' : x.compartilhado ? '<span class="tag crit">Compartilhado</span>' : '<span class="faint" style="font-size:12px">oculto</span>'}</span><span style="display:flex; gap:6px">${x.tipo === 'ameaca' || x.tipo === 'npc' ? `<button class="btn mini sec" data-ver-hb="${esc(x.id)}">Ficha</button>` : `<button class="btn mini sec" data-txt-hb="${esc(x.id)}">Ver</button>`}<button class="btn mini ${x.canonico ? 'sec' : ''}" data-canon-u="${esc(x.id)}">${x.canonico ? 'Voltar a homebrew' : 'Canonizar'}</button><button class="btn mini sec" data-del-hb="${esc(x.id)}">Apagar</button></span></div>`).join('') || '<div class="vazio">Nenhum homebrew.</div>'}</div>`;
     app.innerHTML = `<a href="#admin" class="dim" style="font-size:14px">← Painel</a>
       <div class="perfil-topo" style="--pc:${esc(extra?.cor || corDe(uid))}"><div class="perfil-ava" style="${foto ? `background-image:url('${esc(foto)}')` : `background-color:${esc(extra?.cor || corDe(uid))}`}">${foto ? '' : esc(iniciais(nome))}</div>
         <div style="min-width:0"><span class="rotulo">Perfil de usuário</span><h1 style="margin:0">${esc(nome)}</h1>${extra?.frase ? `<p class="dim" style="margin:4px 0 0; font-style:italic">“${esc(extra.frase)}”</p>` : ''}
@@ -3418,6 +3441,7 @@ ROTAS.usuario = async uid => {
     $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
     const confirma = (txt, fn) => abrirModal('Confirmar', `<p>${txt}</p><div style="display:flex; gap:8px"><button class="btn" id="cf-ok">Apagar</button><button class="btn sec" data-c>Cancelar</button></div>`, (m, fechar) => { m.querySelector('[data-c]').onclick = fechar; m.querySelector('#cf-ok').onclick = async () => { try { await fn(); toast('Apagado.'); } catch (e) { toast('Não deu: ' + (e.message || e.code)); } fechar(); render(); }; });
     $$('[data-del-ficha]').forEach(b => b.onclick = () => { const f = fichas.find(x => x.id === b.dataset.delFicha); confirma(`Apagar a ficha <b>${esc(f.nome)}</b> de ${esc(nome)}? Não tem volta.`, async () => { for (const c of f.campanhas || []) { try { await db.doc(`campanhas/${c}/agentes/${f.id}`).delete(); } catch (e) {} } await db.doc('fichas/' + f.id).delete(); fichas.splice(fichas.indexOf(f), 1); }); });
+    $$('[data-canon-u]').forEach(b => b.onclick = async () => { const x = hb.find(y => y.id === b.dataset.canonU); await canonizar(x, !x.canonico); render(); });
     $$('[data-del-hb]').forEach(b => b.onclick = () => { const x = hb.find(y => y.id === b.dataset.delHb); confirma(`Apagar <b>${esc(x.nome)}</b> do homebrew de ${esc(nome)}?`, async () => { await db.doc('homebrew/' + x.id).delete(); hb.splice(hb.indexOf(x), 1); }); });
     $$('[data-del-camp]').forEach(b => b.onclick = () => { const c = camps.find(y => y.id === b.dataset.delCamp); confirma(`Excluir a campanha <b>${esc(c.nome)}</b> de ${esc(nome)}, com combate, chat e homebrew dela?`, async () => { await excluirCampanha(c.id); camps.splice(camps.indexOf(c), 1); }); });
     $$('[data-ver-hb]').forEach(b => b.onclick = () => { const x = hb.find(y => y.id === b.dataset.verHb); fichaAmeacaModal({ ...x, id: 'hb' + x.id, npc: x.tipo === 'npc' }, { editavel: true, aoMudarFicha: async f => { try { await db.doc('homebrew/' + x.id).update({ ficha: f }); toast('Ficha salva.'); } catch (e) {} } }); });
@@ -3666,7 +3690,7 @@ ROTAS.escudo = async id => {
       $('#cb-ag').onclick = () => { fichas.forEach(f => { if (!c.lista.some(x => x.ref === f.id)) c.lista.push({ tipo: 'agente', ref: f.id, nome: f.nome, ini: '' }); }); mudou(); };
       const npcRapido = () => abrirModal('NPC rápido', `<div class="grade-campos"><div class="campo"><label class="rotulo" for="npc-n">Nome</label><input type="text" id="npc-n"></div><div class="campo"><label class="rotulo" for="npc-pv">PV</label><input type="number" id="npc-pv" value="30"></div></div><button class="btn" id="npc-ok">Adicionar</button>`, (m, fechar) => {
         m.querySelector('#npc-ok').onclick = () => { const n = m.querySelector('#npc-n').value.trim(); if (!n) return; const pv = +m.querySelector('#npc-pv').value || 1; c.lista.push({ tipo: 'npc', nome: n, pv, pvMax: pv, ini: '' }); fechar(); mudou(); }; });
-      $('#cb-npc').onclick = async () => { const hb = await homebrewVisivel('npc');
+      $('#cb-npc').onclick = async () => { const hb = await homebrewVisivel('npc', true);
         if (!hb.length) return npcRapido();
         seletor('Adicionar NPC', hb, a => `<b>${esc(a.nome)}</b> <span class="tag">NPC${a.papel ? ' · ' + esc(a.papel) : ''}</span> <span class="tag">Nv ${esc(a.nivel)}</span> <span class="tag">PV ${esc(a.ficha?.pv)}</span>`, a => {
           const n = c.lista.filter(x => x.ref === 'hb' + a.id).length; c.lista.push({ tipo: 'npc', ref: 'hb' + a.id, nome: a.nome + (n ? ` ${n + 1}` : ''), papel: a.papel || '', elemento: a.elemento || '', nivel: a.nivel, imagem: a.imagem || '', descricao: a.descricao || '', pv: a.ficha?.pv || 1, pvMax: a.ficha?.pv || 1, ficha: a.ficha, ini: '' }); salvarE(); publicarCombate(); render(); },
@@ -4122,6 +4146,7 @@ async function carregarSessao(session) {
     DONO = ehAdminConta(session, PERFIL); PERFIS[ME] = PERFIL.nome;
     try { const u = (await db.doc('usuarios/' + ME).get()).data(); if (u) Object.assign(PERFIL, { foto: u.foto || '', frase: u.frase || '', cor: u.cor || '' }); } catch (e) {}
     try { MEU_PRINCIPAL = (await db.doc('cacadores/' + ME).get()).data()?.ficha || null; } catch (e) { MEU_PRINCIPAL = null; }
+    await carregarCanon();
   }
   desenharQuem();
 }
