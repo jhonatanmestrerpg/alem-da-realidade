@@ -351,6 +351,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
   .lateral.esq { left: 0; transform: translateX(-104%); }
   .lateral.dir { right: 0; transform: translateX(104%); }
   .lateral.aberta { transform: none; }
+  .feed.lateral { display: flex; flex-direction: column; } .lateral .chat-lista { flex: 1; max-height: none; } .lateral .feed-lista { flex: 1; }
   .veu-lateral { display: block; position: fixed; inset: 0; z-index: 45; background: rgba(0,0,0,.55); }
   .puxador { display: grid; place-items: center; gap: 6px; position: fixed; z-index: 44; top: 50%; transform: translateY(-50%); width: 30px; padding: 12px 0; background: var(--painel-3); border: 1px solid var(--linha-2); color: var(--lua); cursor: pointer; }
   .puxador.esq { left: 0; border-left: 0; border-radius: 0 10px 10px 0; }
@@ -359,6 +360,22 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
   .puxador.esq span { transform: rotate(180deg); }
   .puxador b { font: 700 14px var(--f-mono); color: var(--sangue-hi); }
 }
+.feed-abas { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--linha); position: sticky; top: 0; z-index: 2; background: var(--painel); }
+.feed-abas button { background: none; border: 0; border-bottom: 2px solid transparent; color: var(--lua-dim); padding: 12px 8px; font: 700 14px var(--f-body); cursor: pointer; display: flex; gap: 6px; justify-content: center; align-items: center; }
+.feed-abas button.aqui { color: var(--lua); border-bottom-color: var(--sangue); }
+.badge { background: var(--sangue); color: #fff; font: 700 11px var(--f-mono); border-radius: 999px; padding: 1px 7px; } .badge[hidden] { display: none; }
+.feed-dados { padding: 10px 12px; border-bottom: 1px solid var(--linha); display: flex; gap: 6px; }
+.chat-lista { display: grid; gap: 10px; align-content: start; padding: 12px; overflow-y: auto; max-height: calc(80vh - 120px); min-height: 220px; }
+.msg { display: grid; grid-template-columns: 34px 1fr; gap: 8px; align-items: start; }
+.msg .rol-av { width: 34px; height: 34px; }
+.msg.meu { grid-template-columns: 1fr; justify-items: end; }
+.msg-b { background: var(--painel-2); border: 1px solid var(--linha); padding: 7px 10px; max-width: 100%; min-width: 0; border-radius: 2px 10px 10px 10px; }
+.msg.meu .msg-b { background: color-mix(in srgb, var(--sangue) 22%, var(--painel-2)); border-color: color-mix(in srgb, var(--sangue) 45%, transparent); border-radius: 10px 2px 10px 10px; }
+.msg-cab { display: flex; gap: 8px; justify-content: space-between; font-size: 11.5px; } .msg-cab b { color: var(--ouro); } .msg-cab span { color: var(--lua-faint); }
+.msg-tx { font-size: 14px; overflow-wrap: anywhere; } .msg-rol { font: 13px var(--f-mono); } .msg-rol svg { width: 14px; height: 14px; vertical-align: -2px; }
+.chat-form { display: flex; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--linha); position: sticky; bottom: 0; background: var(--painel); }
+.chat-form input { min-width: 0; flex: 1; }
+.puxador[data-n]:not([data-n=""])::after { content: attr(data-n); position: absolute; top: -8px; right: -8px; background: var(--sangue); color: #fff; font: 700 10.5px var(--f-mono); border-radius: 999px; padding: 2px 6px; }
 .feed .cab-f { padding: 12px 14px; border-bottom: 1px solid var(--linha); display: flex; justify-content: space-between; align-items: center; }
 .rol { padding: 10px 14px; border-bottom: 1px solid var(--linha); display: grid; grid-template-columns: 38px 1fr; gap: 10px; align-items: start; }
 .rol-tx { display: grid; gap: 3px; min-width: 0; }
@@ -2807,8 +2824,50 @@ function ouvirCampanha(id, aoMudar) {
   assinar(db.doc(`campanhas/${id}/publico/pistas`).onSnapshot(s => { st.pistas = s.exists ? s.data().itens || [] : []; aoMudar(st); }));
   assinar(db.doc(`campanhas/${id}/publico/relatorios`).onSnapshot(s => { st.relatorios = s.exists ? s.data().itens || [] : []; aoMudar(st); }));
   assinar(db.doc(`campanhas/${id}/publico/combate`).onSnapshot(s => { st.combate = s.exists ? s.data() : null; aoMudar(st); }));
+  st.chat = [];
+  assinar(db.collection(`campanhas/${id}/chat`).orderBy('t', 'desc').limit(80).onSnapshot(s => { st.chat = s.docs.map(x => ({ id: x.id, ...x.data() })); aoMudar(st, 'chat'); }));
   return st;
 }
+/* ---------- painel lateral: rolagens e chat da sessão ---------- */
+const FEED_ABA = {};
+const vistoChat = id => { try { return +(localStorage.getItem('chatVisto|' + id) || 0); } catch (e) { return 0; } };
+const marcarVisto = id => { try { localStorage.setItem('chatVisto|' + id, Date.now()); } catch (e) {} };
+const fmtChat = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+function chatLista(st) {
+  const msgs = (st.chat || []).slice().reverse();
+  return msgs.map(m => { const meu = m.uid === ME;
+    return `<div class="msg ${meu ? 'meu' : ''}">${meu ? '' : `<div class="rol-av" style="${m.foto ? `background-image:url('${esc(m.foto)}')` : `background-color:${corDe(m.uid)}; color:#0b0d14`}">${m.foto ? '' : esc(iniciais(m.autor))}</div>`}
+      <div class="msg-b"><div class="msg-cab"><b>${esc(m.autor || 'Alguém')}</b><span>${horaBR(m.t)}</span></div>
+      <div class="msg-tx">${m.rolagem ? `<span class="msg-rol">${DADO_SVG} ${esc(m.rolagem.expr)} → ${esc(m.rolagem.detalhe)} = <b>${esc(m.rolagem.total)}</b></span>` : fmtChat(m.texto || '')}</div></div></div>`; }).join('') || '<div class="vazio" style="font-size:15px">Ninguém falou nada ainda.</div>';
+}
+const novasChat = (st, id) => (st.chat || []).filter(m => m.uid !== ME && m.t > vistoChat(id)).length;
+function montarFeed(el, cfg) {
+  if (!el) return; const { id, st } = cfg, aba = FEED_ABA[id] || 'rol';
+  if (aba === 'chat') marcarVisto(id);
+  const nv = novasChat(st, id);
+  el.innerHTML = `<div class="feed-abas"><button type="button" class="${aba === 'rol' ? 'aqui' : ''}" data-fa="rol">Rolagens <span class="faint" data-nrol>${cfg.nRol()}</span></button><button type="button" class="${aba === 'chat' ? 'aqui' : ''}" data-fa="chat">Chat <span class="badge" data-nchat ${nv && aba !== 'chat' ? '' : 'hidden'}>${nv}</span></button></div>
+    ${aba === 'rol' ? `${cfg.extraRol || ''}<div class="feed-lista">${cfg.listaRol()}</div>` : `<div class="chat-lista">${chatLista(st)}</div><form class="chat-form"><input type="text" class="chat-txt" maxlength="600" placeholder="Mensagem, ou /r 2d6+3 para rolar" autocomplete="off" aria-label="Mensagem"><button class="btn mini">Enviar</button></form>`}`;
+  el.querySelectorAll('[data-fa]').forEach(b => b.onclick = () => { FEED_ABA[id] = b.dataset.fa; montarFeed(el, cfg); if (b.dataset.fa === 'chat') el.querySelector('.chat-txt')?.focus(); });
+  const lista = el.querySelector('.chat-lista'); if (lista) requestAnimationFrame(() => { lista.scrollTop = lista.scrollHeight; });
+  const form = el.querySelector('.chat-form');
+  form?.addEventListener('submit', async e => { e.preventDefault(); const inp = form.querySelector('.chat-txt'), tx = inp.value.trim(); if (!tx) return;
+    const msg = { uid: ME, ...cfg.autor(), t: Date.now() }, mr = /^\/r(?:olar)?\s+(.+)$/i.exec(tx);
+    if (mr) { const rr = rolar(mr[1]); if (!rr) return toast('Não sei rolar isso. Ex.: /r 2d6+3'); msg.rolagem = { expr: mr[1].trim(), detalhe: String(rr.detalhe).replace(/<[^>]+>/g, ''), total: rr.total }; }
+    else msg.texto = tx;
+    inp.value = ''; try { await db.collection(`campanhas/${id}/chat`).add(msg); } catch (er) { toast('Não deu para enviar.'); inp.value = tx; } inp.focus(); });
+  cfg.aoMontar?.(el); marcarPuxador(st, id);
+}
+function atualizarFeed(el, cfg, tipo) {
+  if (!el || !el.querySelector('.feed-abas')) return montarFeed(el, cfg);
+  const { id, st } = cfg, aba = FEED_ABA[id] || 'rol';
+  if (tipo === 'chat') {
+    const lista = el.querySelector('.chat-lista');
+    if (lista) { const noFim = lista.scrollHeight - lista.scrollTop - lista.clientHeight < 60; lista.innerHTML = chatLista(st); if (noFim) lista.scrollTop = lista.scrollHeight; marcarVisto(id); }
+    else { const n = novasChat(st, id), bd = el.querySelector('[data-nchat]'); if (bd) { bd.textContent = n; bd.hidden = !n; } const ult = st.chat?.[0]; if (ult && ult.uid !== ME && Date.now() - ult.t < 8000) toast(`${ult.autor}: ${ult.rolagem ? `rolou ${ult.rolagem.total}` : String(ult.texto || '').slice(0, 80)}`); }
+  } else if (aba === 'rol') { const l = el.querySelector('.feed-lista'); if (l) l.innerHTML = cfg.listaRol(); const n = el.querySelector('[data-nrol]'); if (n) n.textContent = cfg.nRol(); }
+  marcarPuxador(st, id);
+}
+const marcarPuxador = (st, id) => { const p = app.querySelector('.puxador.esq'); if (!p) return; const n = (FEED_ABA[id] || 'rol') === 'chat' && LADO === 'esq' ? 0 : novasChat(st, id); p.dataset.n = n || ''; };
 const rolHtml = r => { const tit = r.titulo || String(r.rotulo || '').replace(/^(Acerto|Dano) · /, '');
   const tipo = r.tipo || (/^Acerto · /.test(r.rotulo || '') ? 'acerto' : /^Dano · /.test(r.rotulo || '') ? 'dano' : '');
   const corpo = tipo === 'ataque'
@@ -2884,7 +2943,8 @@ ROTAS.campanha = async id => {
   await carregarPart();
   let aba = ABA_INICIAL || 'agentes'; ABA_INICIAL = null; if (aba === 'rolagens') aba = 'agentes'; LADO = null;
   const listaRol = () => st.rolagens.map(rolHtml).join('') || '<div class="vazio" style="font-size:15px">Nenhuma rolagem ainda.</div>';
-  const st = ouvirCampanha(id, (s, tipo) => { if (tipo === 'rolagens') { const l = $('#feed-lista'); if (l) { l.innerHTML = listaRol(); const n = $('#feed-n'); if (n) n.textContent = st.rolagens.length; return; } } if (!document.activeElement?.matches?.('#dados-expr')) render(); });
+  let cfgFeed = null;
+  const st = ouvirCampanha(id, (s, tipo) => { if ((tipo === 'rolagens' || tipo === 'chat') && $('#feed-j')) return atualizarFeed($('#feed-j'), cfgFeed, tipo); if (!document.activeElement?.matches?.('#dados-expr, .chat-txt')) render(); });
   async function render() {
     if (st.camp === null) { app.innerHTML = '<div class="vazio">Abrindo a campanha…</div>'; return; }
     if (st.camp === false) { app.innerHTML = '<div class="vazio">Campanha não encontrada.</div>'; return; }
@@ -2911,7 +2971,7 @@ ROTAS.campanha = async id => {
         ${C.capa ? `<img src="${esc(C.capa)}" alt="" style="border:1px solid var(--linha-2); width:100%">` : ''}
         <div style="display:grid; gap:10px"><span class="rotulo">Mestre: ${esc(nomes[C.mestre])}</span><h1>${esc(C.nome)}</h1>${C.descricao ? `<p class="dim" style="font-size:17px; max-width:60ch">${nl(C.descricao)}</p>` : ''}</div>
       </section>
-      <div class="escudo"><aside class="feed" id="feed-j"><div class="cab-f"><b>Resultados</b><span class="faint" style="font-size:12px" id="feed-n">${st.rolagens.length}</span></div>${membro ? `<div style="padding:10px 12px; border-bottom:1px solid var(--linha); display:flex; gap:6px"><input type="text" id="dados-expr" placeholder="Rolar na mesa: 2d6+3" style="min-width:0"><button class="btn mini" id="dados-ok">Rolar</button></div>` : ''}<div id="feed-lista">${listaRol()}</div></aside>
+      <div class="escudo"><aside class="feed" id="feed-j"></aside>
       <div style="display:grid; gap:16px; min-width:0; align-content:start"><div class="abas">${[['agentes', 'Agentes'], ['jogadores', 'Jogadores'], ['combate', st.combate?.ativo ? 'Combate ●' : 'Combate'], ['pistas', 'Pistas'], ['relatorios', 'Relatórios'], ['ligacao', Object.keys(CH.sala === id ? CH.presenca : {}).length ? `Ligação ● ${Object.keys(CH.presenca).length}` : 'Ligação']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>${corpo}</div></div>`;
     $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
     atualizarPersona(st);
@@ -2932,10 +2992,17 @@ ROTAS.campanha = async id => {
       seletor('Adicionar agente', meus, f => `<b>${esc(f.nome)}</b><p>${esc(f.classe)} · ${esc(f.subclasse)} · Nv ${f.nivel}</p>`, async f => {
         try { await db.doc(`campanhas/${id}/agentes/${f.id}`).set({ ficha: f.id, por: ME, t: Date.now() }); await db.doc('fichas/' + f.id).update({ campanhas: [...new Set([...(f.campanhas || []), id])] }); } catch (e) { toast('Não deu para adicionar: ' + (e.message || e.code)); } });
     });
+    const meuAg = fichas.find(f => f.dono === ME && f.id === MEU_PRINCIPAL) || fichas.find(f => f.dono === ME);
+    cfgFeed = { id, st, nRol: () => st.rolagens.length, listaRol,
+      extraRol: membro ? `<div class="feed-dados"><input type="text" id="dados-expr" placeholder="Rolar na mesa: 2d6+3" style="min-width:0"><button class="btn mini" id="dados-ok">Rolar</button></div>` : '',
+      autor: () => mestre ? { autor: 'Mestre', foto: '' } : meuAg ? { autor: meuAg.nome, foto: fotoEf(meuAg) } : { autor: nomes[ME] || 'Jogador', foto: '' },
+      aoMontar: () => {
     $('#dados-ok')?.addEventListener('click', async () => { const ex = $('#dados-expr').value; const r = rolar(ex); if (!r) return toast('Formato inválido. Ex.: 2d6+3');
-      const nomesM = await nomeDe([ME]); try { await db.collection(`campanhas/${id}/rolagens`).add({ uid: ME, autor: nomesM[ME], rotulo: ex, detalhe: r.detalhe, total: r.total, t: Date.now() }); } catch (e) { toast('Não deu para rolar na mesa.'); } $('#dados-expr').value = ''; });
-    $('#dados-expr')?.addEventListener('keydown', e => { if (e.key === 'Enter') $('#dados-ok').click(); });
-    laterais({ esq: $('#feed-j'), rot: { esq: 'Rolagens' } });
+          const nomesM = await nomeDe([ME]); try { await db.collection(`campanhas/${id}/rolagens`).add({ uid: ME, autor: nomesM[ME], rotulo: ex, detalhe: r.detalhe, total: r.total, t: Date.now() }); } catch (e) { toast('Não deu para rolar na mesa.'); } $('#dados-expr').value = ''; });
+        $('#dados-expr')?.addEventListener('keydown', e => { if (e.key === 'Enter') $('#dados-ok').click(); });
+      } };
+    montarFeed($('#feed-j'), cfgFeed);
+    laterais({ esq: $('#feed-j'), rot: { esq: 'Mesa' } }); marcarPuxador(st, id);
   }
   render();
 };
@@ -2987,13 +3054,13 @@ ROTAS.escudo = async id => {
   app.className = 'pagina';
   app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Escudo do mestre</span><h1>${esc(camp.data().nome)}</h1></div><div style="display:flex; gap:8px; flex-wrap:wrap"><a class="btn sec" href="#campanha-${esc(id)}" style="text-decoration:none">Ver como jogador</a></div></div>
     <div class="escudo" id="escudo"><aside class="feed" id="feed"></aside><div style="display:grid; gap:16px; min-width:0"><div class="abas" id="abas-e"></div><div id="corpo-e"></div></div></div>`;
-  function desenharFeed() {
-    const todas = [...(st?.rolagens || []), ...(E.ocultas || [])].sort((a, b) => b.t - a.t).slice(0, 40);
-    $('#feed').innerHTML = `<div class="cab-f"><b>Resultados</b><span class="faint" style="font-size:12px">${todas.length}</span></div>${todas.map(rolHtml).join('') || '<div class="vazio" style="font-size:15px">As rolagens dos jogadores aparecem aqui.</div>'}`;
-  }
-  st = ouvirCampanha(id, (s, tipo) => { desenharFeed(); if (tipo === 'rolagens') return; if (!document.activeElement?.closest?.('#corpo-e input, #corpo-e textarea, #corpo-e select')) render(); });
+  const todasRol = () => [...(st?.rolagens || []), ...(E.ocultas || [])].sort((a, b) => b.t - a.t).slice(0, 40);
+  const cfgFeedE = { id, get st() { return st; }, nRol: () => todasRol().length, listaRol: () => todasRol().map(rolHtml).join('') || '<div class="vazio" style="font-size:15px">As rolagens dos jogadores aparecem aqui.</div>', autor: () => ({ autor: 'Mestre', foto: '' }) };
+  function desenharFeed(tipo) { if (!st) return; atualizarFeed($('#feed'), cfgFeedE, tipo); }
+  st = ouvirCampanha(id, (s, tipo) => { desenharFeed(tipo); if (tipo === 'chat') return; if (tipo === 'rolagens') return; if (!document.activeElement?.closest?.('#corpo-e input, #corpo-e textarea, #corpo-e select')) render(); });
+  desenharFeed();
 
-  function render() { renderE(); if (!$('#escudo')) return; laterais({ esq: $('#feed'), dir: aba === 'combate' ? $('#cb-det') : null, rot: { esq: 'Rolagens', dir: 'Ficha' } }); }
+  function render() { renderE(); if (!$('#escudo')) return; laterais({ esq: $('#feed'), dir: aba === 'combate' ? $('#cb-det') : null, rot: { esq: 'Mesa', dir: 'Ficha' } }); marcarPuxador(st, id); }
   function renderE() {
     const ABAS = [['agentes', 'Agentes'], ['combate', 'Combate'], ['investigacao', 'Investigação'], ['relatorios', 'Relatórios'], ['dados', 'Dados'], ['vetores', 'Vetores'], ['anotacoes', 'Anotações'], ['ligacao', 'Ligação']];
     $('#abas-e').innerHTML = ABAS.map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('');
