@@ -162,6 +162,14 @@ input[type=text], input[type=number], input[type=search], select, textarea {
 textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ouro); }
 .campo { display: grid; gap: 5px; min-width: 0; }
+.zona-img { position: relative; display: grid; place-items: center; min-height: 150px; border: 2px dashed var(--linha-2); background: var(--painel-2); cursor: pointer; overflow: hidden; }
+.zona-img:hover, .zona-img:focus-visible, .zona-img.arrasto { border-color: var(--ouro); }
+.zona-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.zona-img img[hidden], .zona-img .zi-st[hidden], .zi-rm[hidden] { display: none; }
+.zona-img .zi-txt { display: grid; gap: 2px; text-align: center; font-size: 13px; color: var(--dim, #aaa); padding: 12px; }
+.zona-img.tem .zi-txt { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,.62); color: #fff; padding: 6px; }
+.zona-img.tem .zi-txt span { display: none; }
+.zona-img .zi-st { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.55); color: #fff; font-weight: 700; }
 .busca { position: relative; }
 .busca input { padding-left: 34px; }
 .busca svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--lua-faint); }
@@ -1134,14 +1142,50 @@ async function nomeDe(ids) {
 let SUBS = [];
 function assinar(un) { SUBS.push(un); return un; }
 function limparSubs() { SUBS.forEach(u => { try { u(); } catch (e) {} }); SUBS = []; }
+// reduz a imagem no navegador (lado maior 1600px, webp) antes de subir; GIF e SVG passam direto
+async function encolherImagem(file, lado = 1600) {
+  if (!/^image\/(jpeg|png|webp|bmp|heic|heif)/i.test(file.type)) return file;
+  try {
+    const bmp = await createImageBitmap(file); const k = Math.min(1, lado / Math.max(bmp.width, bmp.height));
+    if (k === 1 && file.size < 900 * 1024) return file;
+    const cv = document.createElement('canvas'); cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
+    cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
+    const blob = await new Promise(ok => cv.toBlob(ok, 'image/webp', 0.86)); if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.webp', { type: 'image/webp' });
+  } catch (e) { return file; }
+}
 async function enviarImagem(file) {
   if (!sb || !ME) { toast('Entre na sua conta para enviar imagens.'); return null; }
+  file = await encolherImagem(file);
   if (file.size > 8 * 1024 * 1024) { toast('Imagem acima de 8 MB. Reduza e tente de novo.'); return null; }
   const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '');
   const caminho = `${ME}/${Date.now()}-${uid8()}.${ext}`;
   const { error } = await sb.storage.from('imagens').upload(caminho, file, { contentType: file.type, upsert: false });
   if (error) { toast('Não deu para enviar a imagem: ' + error.message); return null; }
   return sb.storage.from('imagens').getPublicUrl(caminho).data.publicUrl;
+}
+// campo de imagem: clicar, arrastar, colar (Ctrl+V) ou link; mostra prévia e segura o salvar até o envio terminar
+const campoImagem = (id, atual, rotulo = 'Capa') => `<div class="campo"><span class="rotulo">${esc(rotulo)}</span>
+  <div class="zona-img ${atual ? 'tem' : ''}" id="${id}" tabindex="0" role="button" aria-label="Escolher ${esc(rotulo.toLowerCase())}">
+    <img alt="" ${atual ? `src="${esc(atual)}"` : 'hidden'}><div class="zi-txt"><b>${atual ? 'Toque para trocar' : 'Toque para escolher'}</b><span>ou arraste, ou cole com Ctrl+V</span></div><div class="zi-st" hidden>Enviando…</div>
+    <input type="file" accept="image/*" hidden></div>
+  <div class="linha-ex"><input type="text" inputmode="url" class="zi-url" placeholder="Ou cole o link de uma imagem" style="flex:1; min-width:0"><button type="button" class="btn mini sec zi-rm" ${atual ? '' : 'hidden'}>Tirar</button></div></div>`;
+function ligarImagem(m, id, atual = '') {
+  const z = m.querySelector('#' + id), img = z.querySelector('img'), inp = z.querySelector('input[type=file]'), st = z.querySelector('.zi-st'), wrap = z.parentElement;
+  const url = wrap.querySelector('.zi-url'), rm = wrap.querySelector('.zi-rm');
+  let valor = atual, pend = null;
+  const mostrar = u => { valor = u; img.hidden = !u; if (u) img.src = u; else img.removeAttribute('src'); z.classList.toggle('tem', !!u); rm.hidden = !u; z.querySelector('.zi-txt b').textContent = u ? 'Toque para trocar' : 'Toque para escolher'; };
+  const enviar = f => { if (!f || !/^image\//.test(f.type)) return toast('Isso não é imagem.');
+    const local = URL.createObjectURL(f); img.src = local; img.hidden = false; z.classList.add('tem', 'enviando'); st.hidden = false;
+    pend = enviarImagem(f).then(u => { if (u) { mostrar(u); toast('Imagem enviada.'); } else mostrar(valor); return u; }).finally(() => { z.classList.remove('enviando'); st.hidden = true; pend = null; URL.revokeObjectURL(local); }); };
+  z.onclick = () => inp.click(); z.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inp.click(); } };
+  inp.onchange = () => { enviar(inp.files[0]); inp.value = ''; };
+  z.ondragover = e => { e.preventDefault(); z.classList.add('arrasto'); }; z.ondragleave = () => z.classList.remove('arrasto');
+  z.ondrop = e => { e.preventDefault(); z.classList.remove('arrasto'); enviar(e.dataTransfer.files[0]); };
+  m.addEventListener('paste', e => { const f = [...(e.clipboardData?.files || [])].find(x => /^image\//.test(x.type)); if (f) { e.preventDefault(); enviar(f); } });
+  url.onchange = () => { const u = url.value.trim(); if (!u) return; if (!/^https?:\/\//i.test(u)) return toast('O link precisa começar com http.'); mostrar(u); url.value = ''; };
+  rm.onclick = () => mostrar('');
+  return { get valor() { return valor; }, pronto: () => pend || Promise.resolve() };
 }
 const semBanco = () => `<div class="aviso">Para criar agentes e campanhas, <a href="#entrar">entre na sua conta</a>. Bestiário, grimório e regras funcionam sem login.</div>`;
 
@@ -2948,9 +2992,10 @@ ROTAS.campanhas = async () => {
   PART.campanhas.forEach(id => assinar(db.doc('campanhas/' + id).onSnapshot(s => { camps[id] = s.exists ? { id, ...s.data() } : null; desenhar(); })));
   $('#nova').onclick = () => abrirModal('Nova campanha', `<div class="campo"><label class="rotulo" for="nc-n">Nome</label><input type="text" id="nc-n" placeholder="Os Filhos do Caos"></div>
     <div class="campo"><label class="rotulo" for="nc-d">Descrição</label><textarea id="nc-d" placeholder="O que os jogadores sabem ao entrar."></textarea></div>
-    <div class="campo"><label class="rotulo" for="nc-c">Capa</label><input type="file" id="nc-c" accept="image/*"></div><button class="btn" id="nc-ok">Criar campanha</button>`, (m, fechar) => {
-    let capa = ''; m.querySelector('#nc-c').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) { capa = u; toast('Capa enviada.'); } };
+    ${campoImagem('nc-c', '')}<button class="btn" id="nc-ok">Criar campanha</button>`, (m, fechar) => {
+    const CI = ligarImagem(m, 'nc-c', '');
     m.querySelector('#nc-ok').onclick = async () => { const nome = m.querySelector('#nc-n').value.trim(); if (!nome) return toast('Dê um nome à campanha.');
+      const bt = m.querySelector('#nc-ok'); bt.disabled = true; bt.textContent = 'Esperando a capa…'; await CI.pronto(); bt.disabled = false; bt.textContent = 'Criar campanha'; const capa = CI.valor;
       try { const ref = await db.collection('campanhas').add({ nome, descricao: m.querySelector('#nc-d').value.trim(), capa, mestre: ME, criado: Date.now() });
         await db.doc(`campanhas/${ref.id}/membros/${ME}`).set({ uid: ME, entrou: Date.now(), papel: 'mestre' });
         PART.campanhas.push(ref.id); await salvarPart(); fechar(); location.hash = 'campanha-' + ref.id; }
@@ -2965,7 +3010,7 @@ ROTAS.campanhas = async () => {
 function editarCampanha(id, C) {
   abrirModal('Editar campanha', `<div class="campo"><label class="rotulo" for="ec-n">Nome</label><input type="text" id="ec-n" value="${esc(C.nome)}"></div>
     <div class="campo"><label class="rotulo" for="ec-d">Descrição</label><textarea id="ec-d">${esc(C.descricao)}</textarea></div>
-    <div class="campo"><label class="rotulo" for="ec-c">Nova capa</label><input type="file" id="ec-c" accept="image/*"></div>
+    ${campoImagem('ec-c', C.capa || '')}
     <button class="btn" id="ec-ok">Salvar</button>
     <details class="zona-perigo"><summary>Excluir campanha</summary><p class="dim" style="margin:8px 0">Apaga a campanha, o combate, o chat, as rolagens, as pistas, os relatórios e o homebrew dela. Os agentes continuam existindo, só saem da campanha. Não tem volta.</p>
       <div class="campo"><label class="rotulo" for="ec-x">Digite o nome da campanha para confirmar</label><input type="text" id="ec-x" placeholder="${esc(C.nome)}" autocomplete="off"></div><button class="btn" id="ec-del" disabled>Excluir para sempre</button></details>`, (m, fechar) => {
@@ -2973,11 +3018,11 @@ function editarCampanha(id, C) {
     cx.oninput = () => { bx.disabled = cx.value.trim() !== String(C.nome).trim(); };
     bx.onclick = async () => { bx.disabled = true; bx.textContent = 'Excluindo…';
       try { await excluirCampanha(id); fechar(); toast('Campanha excluída.'); location.hash = 'campanhas'; } catch (e) { toast('Não deu para excluir: ' + (e.message || e.code)); bx.disabled = false; bx.textContent = 'Excluir para sempre'; } };
-    let capa = C.capa || '';
-    m.querySelector('#ec-c').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) { capa = u; toast('Capa enviada.'); } };
+    const CI = ligarImagem(m, 'ec-c', C.capa || '');
     m.querySelector('#ec-ok').onclick = async () => {
       const nome = m.querySelector('#ec-n').value.trim();
       if (!nome) return toast('Dê um nome à campanha.');
+      const bt = m.querySelector('#ec-ok'); bt.disabled = true; bt.textContent = 'Esperando a capa…'; await CI.pronto(); bt.disabled = false; bt.textContent = 'Salvar'; const capa = CI.valor;
       try { await db.doc('campanhas/' + id).update({ nome, descricao: m.querySelector('#ec-d').value.trim(), capa }); toast('Campanha salva.'); fechar(); }
       catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); }
     };
