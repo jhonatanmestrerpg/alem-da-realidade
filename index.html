@@ -801,15 +801,18 @@ const horaBR = t => t ? new Date(t).toLocaleString('pt-BR', { day: '2-digit', mo
 const uid8 = () => Math.random().toString(36).slice(2, 10);
 function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
-let VERSAO = null;
-async function versaoAtual() { try { const r = await fetch(location.pathname, { method: 'HEAD', cache: 'no-store' }); return r.headers.get('etag') || r.headers.get('last-modified'); } catch (e) { return null; } }
+// cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
+// (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
+const BUILD = '20261102175050';
+async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
-  const v = await versaoAtual(); if (!v) return; if (!VERSAO) { VERSAO = v; return; }
-  if (v === VERSAO || document.querySelector('.aviso-versao')) return;
+  if (BUILD === 'dev') return;
+  const v = await versaoAtual(); if (!v || v === BUILD || document.querySelector('.aviso-versao')) return;
   const d = document.createElement('div'); d.className = 'aviso-versao';
   d.innerHTML = '<span>O site foi atualizado.</span><button class="btn mini">Atualizar agora</button>';
-  d.querySelector('button').onclick = () => location.reload(); document.body.appendChild(d);
+  d.querySelector('button').onclick = () => { location.href = location.pathname + '?v=' + encodeURIComponent(v) + location.hash; }; document.body.appendChild(d);
 }
+if (/[?&]v=/.test(location.search)) history.replaceState(null, '', location.pathname + location.hash);
 checarVersao(); setInterval(checarVersao, 120000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checarVersao(); });
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
