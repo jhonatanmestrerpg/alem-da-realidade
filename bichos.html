@@ -694,7 +694,7 @@ async function abrirRolagem(F, CASO) {
         const alvo = m.querySelector('#r-alvo')?.value; const nomeAlvo = aliados.find(a => a.id === alvo)?.nome || '?';
         const pato = aliados.find(a => a.id === alvo)?.especie === 'pato';
         if (suc && alvo) { pilha -= suc; efeitos.push({ t: e.id === 'cavalo' ? 'deducao' : 'pilha', ficha: alvo, n: suc }); }
-        texto = `Deu cobertura para ${nomeAlvo}: ${suc} dado(s)${e.id === 'cavalo' ? ' direto na Dedução (Garupa, se ainda não usou)' : ''}${pato ? ' · Pato: Se usar Carência, devolva os dados' : ''}`;
+        texto = `Deu cobertura para ${nomeAlvo}: ${suc} dado(s)${e.id === 'cavalo' ? ' direto na Dedução (Pode tirar o cavalinho da chuva, se ainda não usou)' : ''}${pato ? ' · Pato: Se usar Carência, devolva os dados' : ''}`;
       } else if (acao === 'espanto') texto = ok ? 'Passou no Teste de Espanto' : 'Levou um baita susto';
       else texto = m.querySelector('#r-txt')?.value.trim() || 'Teste';
       p.pilha = clamp(pilha, 0, 6); if (acao === 'rastro' && !F.agarrado) p.deducao = ded;
