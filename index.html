@@ -83,6 +83,32 @@ img { max-width: 100%; }
 .fx-fase { animation: fxFase 1.1s ease; }
 @keyframes fxFase { 0% { box-shadow: 0 0 0 0 rgba(227,102,109,.9); filter: brightness(2.2) saturate(0); } 40% { box-shadow: 0 0 60px 10px rgba(227,102,109,.6); } 100% { box-shadow: none; filter: none; } }
 .zona-perigo { border: 1px solid rgba(180,51,59,.4); padding: 10px 12px; } .zona-perigo summary { cursor: pointer; color: var(--sangue-hi); font-weight: 700; }
+/* homebrew da campanha */
+.grade-mec { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.mec-mini { text-align: left; display: grid; gap: 6px; padding: 14px; background: var(--painel); border: 1px solid var(--linha); border-left: 4px solid var(--mc, var(--violeta)); color: var(--lua); cursor: pointer; font: inherit; }
+.mec-mini:hover { border-color: var(--linha-2); } .mec-mini b { font: 400 20px var(--f-disp); }
+.ed-mec { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .9fr); gap: 18px; align-items: start; }
+.ed-painel { display: grid; gap: 12px; background: var(--painel); border: 1px solid var(--linha); padding: 16px; }
+.ed-previa { position: sticky; top: 84px; display: grid; gap: 10px; max-height: calc(100vh - 100px); overflow: auto; }
+.quem-ops, .add-comp { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.mc-op { text-align: left; display: grid; gap: 4px; padding: 10px 12px; background: var(--painel-2); border: 1px solid var(--linha); color: var(--lua); font: inherit; cursor: pointer; }
+.mc-op span { font-size: 12.5px; color: var(--lua-dim); } .mc-op.aqui { border-color: var(--ouro); box-shadow: inset 0 0 0 1px var(--ouro); } .mc-op:disabled { cursor: default; }
+.comp-ed { display: grid; gap: 10px; border: 1px solid var(--linha-2); border-left: 3px solid var(--violeta); padding: 12px; background: var(--painel-2); }
+.comp-nome { width: auto; display: inline-block; max-width: 220px; margin-left: 6px; }
+.grade-mecs { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+.mec-card { display: grid; gap: 10px; background: var(--painel); border: 1px solid var(--linha); border-top: 3px solid var(--mc); padding: 14px; }
+.mec-topo { display: flex; justify-content: space-between; gap: 10px; align-items: start; } .mec-topo h3 { margin: 2px 0 0; color: color-mix(in srgb, var(--mc) 55%, #fff); }
+.mc-comps { display: grid; gap: 10px; } .mc-comp { display: grid; gap: 6px; padding: 10px; background: var(--painel-2); border: 1px solid var(--linha); } .mc-comp p { margin: 0; font-size: 14px; }
+.mc-comp.mc-on { border-color: var(--mc); box-shadow: 0 0 16px color-mix(in srgb, var(--mc) 35%, transparent); }
+.mc-cab { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; } .mc-cab .faint { font-size: 12px; }
+.mc-meta { font-size: 12.5px !important; }
+.bcris.mec { border-color: var(--mc); background: color-mix(in srgb, var(--mc) 15%, #0b0d14); } .bcris.mec .fill { background: linear-gradient(90deg, color-mix(in srgb, var(--mc) 40%, #000), var(--mc)); }
+.mc-caixas { display: flex; flex-wrap: wrap; gap: 5px; } .mc-cx { width: 22px; height: 22px; border: 1px solid var(--linha-2); background: var(--painel-3); cursor: pointer; padding: 0; }
+.mc-cx.on { background: var(--mc); border-color: var(--mc); } .mc-cx.marco { outline: 1px dashed var(--ouro); outline-offset: 2px; } .mc-cx:disabled { cursor: default; }
+.mc-marco { border-left: 2px solid var(--mc); padding-left: 8px; } .mc-det summary { cursor: pointer; font-size: 12.5px; color: var(--lua-dim); } .mc-det div { font-size: 13px; margin-top: 4px; }
+.mc-hab.travada { opacity: .4; } .mc-hab p { margin: 2px 0 0; color: var(--lua-dim); }
+.mc-ops { display: grid; gap: 6px; }
+@media (max-width: 980px) { .ed-mec { grid-template-columns: 1fr; } .ed-previa { position: static; max-height: none; } }
 .volta-camp:hover { border-color: var(--ouro); }
 .volta-camp[hidden] { display: none; }
 .volta-camp svg { flex: none; width: 15px; height: 15px; color: var(--ouro); }
@@ -763,8 +789,10 @@ async function carregarBase() {
   const [s, c, r, f, k] = await Promise.all(['dados/sistema.json', 'dados/criaturas.json', 'dados/rituais.json', 'dados/feiticos.json', 'dados/cacador.json'].map(u => fetch(u).then(x => x.json())));
   SIS = s; CRI = c; RIT = r; FEIT = f; CACADOR = k.cacador; ABATES = { ...k.abates };
 }
-const classe = n => SIS.classes.find(c => c.nome === n);
-const subclasse = (c, s) => classe(c)?.subclasses.find(x => x.nome === s);
+// classes do livro + classes e subclasses criadas no homebrew das campanhas carregadas
+const classe = n => { const b = SIS.classes.find(c => c.nome === n) || (typeof todasClassesCamp === 'function' ? todasClassesCamp().find(c => c.nome === n) : null); if (!b) return undefined;
+  const ex = typeof todasSubExtras === 'function' ? todasSubExtras().filter(x => x.classe === n) : []; return ex.length ? { ...b, subclasses: [...(b.subclasses || []), ...ex.filter(x => !(b.subclasses || []).some(y => y.nome === x.nome))] } : b; };
+const subclasse = (c, s) => classe(c)?.subclasses?.find(x => x.nome === s);
 const patente = n => SIS.patentes.find(p => n >= p.de && n <= p.ate) || SIS.patentes[0];
 const vontade = n => SIS.vontades.find(v => v.nome === n);
 // Perícias que a Vontade dá. "A|B" é escolha do jogador (ex.: Ocultismo ou Bruxaria); sem escolha, vale a primeira.
@@ -973,6 +1001,9 @@ function calc(f) {
     pst: `5 + (${C.pst} + ${A.constituicao || 0}) × ${N}${vig ? ` + ${vig * 2} Vigor` : ''}`,
   };
   if (VB) for (const k in form) form[k] += ` + ${VB} Vetor`;
+  // mecânicas da campanha
+  const BM = typeof bonusMec === 'function' ? bonusMec(f) : null;
+  if (BM) for (const k of ['pv', 'ps', 'pst']) if (BM[k]) { max[k] += BM[k]; form[k] += ` + ${BM[k]} ${BM.nomes.join('/')}`; }
   // ajuste do mestre no máximo (pode ser negativo)
   for (const k of ['pv', 'ps', 'pst']) { const x = +f.maxExtra?.[k] || 0; if (x) { max[k] = Math.max(1, max[k] + x); form[k] += ` ${x > 0 ? '+' : '−'} ${Math.abs(x)} mestre`; } }
   const eq = f.equipamentos || [];
@@ -982,7 +1013,7 @@ function calc(f) {
   const cc = ((A.forca || 0) + (A.constituicao || 0)) * 2;
   const rdItens = eq.reduce((s, i) => s + (+i.rd || 0) * 1, 0);
   const temPas = n => (f.passivas || []).some(p => p.nome === n);
-  const rd = Math.max(0, rdItens + (+f.rdExtra || 0));
+  const rd = Math.max(0, rdItens + (+f.rdExtra || 0) + (BM?.rd || 0));
   const rdPar = Math.max(0, (temPas('Resistência Arcana') ? 15 : 0) + (+f.rdParExtra || 0));
   const rdForm = [rdItens ? `${rdItens} itens` : '', +f.rdExtra ? `${+f.rdExtra > 0 ? '+' : ''}${+f.rdExtra} ajuste` : ''].filter(Boolean).join(' ') || '0';
   const rdParForm = [temPas('Resistência Arcana') ? '15 Resistência Arcana' : '', +f.rdParExtra ? `${+f.rdParExtra > 0 ? '+' : ''}${+f.rdParExtra} ajuste` : ''].filter(Boolean).join(' ') || '0';
@@ -1016,7 +1047,8 @@ function dadosPericia(f, nome) {
   // Vetor vestido: +1 em toda perícia, mesmo passando do limite; passou do limite, ganha +1 dado
   const vb = vetorAtivo(f) ? 1 : 0;
   const alem = vb && pontos + 1 > patente(+f.nivel || 1).limite ? 1 : 0;
-  return { pontos, vt, vb, alem, atr, dados: Math.max(1, pontos + vt + vb + alem), mod: f.atributos?.[atr] || 0 };
+  const bm = typeof bonusMec === 'function' ? bonusMec(f).pericias : 0;
+  return { pontos, vt, vb, alem, atr, dados: Math.max(1, pontos + vt + vb + alem + bm), mod: f.atributos?.[atr] || 0 };
 }
 
 /* ---------- dados (rolagem) ---------- */
@@ -1155,7 +1187,7 @@ async function rotear() {
   if (typeof fecharSala === 'function' && !CH.dentro) { fecharSala(); CH.ctxLig = null; }
   const h = location.hash.slice(1) || 'inicio';
   const [base, ...resto] = h.split('-'); const arg = resto.join('-');
-  const sec = { entrar: 'entrar', agente: 'agentes', 'novo': 'agentes', campanha: 'campanhas', escudo: 'campanhas', ameaca: 'ameacas', dossie: 'ameacas' }[base] || base;
+  const sec = { entrar: 'entrar', agente: 'agentes', 'novo': 'agentes', campanha: 'campanhas', escudo: 'campanhas', regras: 'campanhas', ameaca: 'ameacas', dossie: 'ameacas' }[base] || base;
   $$('#nav a').forEach(a => a.classList.toggle('aqui', a.dataset.sec === sec));
   const fn = ROTAS[base] || ROTAS.inicio;
   app.className = 'pagina';
@@ -1288,9 +1320,11 @@ function cardAgente(f, extra = '', dono = '') {
 /* =================================================================
    CRIAÇÃO DE AGENTE
    ================================================================= */
-ROTAS.novo = async () => {
+ROTAS.novo = async (campId = '') => {
   if (!db) { app.innerHTML = semBanco(); return; }
-  const CH = `adr-rascunho-${ME}`;
+  let campNome = ''; if (campId) { try { const s = await db.doc('campanhas/' + campId).get(); campNome = s.exists ? s.data().nome : ''; } catch (e) {} if (!campNome) campId = ''; else await carregarRegras([campId]); }
+  const CLASSES = campId ? classesPara({ campanhas: [campId] }) : SIS.classes;
+  const CH = `adr-rascunho-${ME}${campId ? '-' + campId : ''}`;
   let R; try { R = JSON.parse(localStorage.getItem(CH) || 'null'); } catch (e) {}
   R = R || { passo: 0, nivel: 1, atributos: { forca: 0, destreza: 0, constituicao: 0, inteligencia: 0, presenca: 0 }, vontade: '', classe: '', subclasse: '', passivas: [], pericias: {}, nome: '', jogador: '', idade: '', vetor: '', aparencia: '', personalidade: '', historico: '', objetivo: '', foto: '' };
   const guardar = () => { try { localStorage.setItem(CH, JSON.stringify(R)); } catch (e) {} };
@@ -1314,7 +1348,7 @@ ROTAS.novo = async () => {
     } else if (R.passo === 2) {
       const C = classe(R.classe);
       corpo = `<p>A classe define PV, PS, PST e pontos de perícia. A subclasse dá habilidades nos níveis 1, 3, 5, 7 e 10.</p>
-      <div class="grade-cards">${SIS.classes.map(c => `<button class="escolha ${R.classe === c.nome ? 'aqui' : ''}" data-cl="${esc(c.nome)}"><h3>${esc(c.nome)}</h3><p class="dim" style="font-size:14px">${esc(c.descricao)}</p><div class="base-cls"><span>PV ${c.pv}</span><span>PST ${c.pst}</span><span>PS ${c.ps}</span><span>Perícias ${c.pericias} + Int</span></div></button>`).join('')}</div>
+      <div class="grade-cards">${CLASSES.map(c => `<button class="escolha ${R.classe === c.nome ? 'aqui' : ''}" data-cl="${esc(c.nome)}"><h3>${esc(c.nome)}</h3><p class="dim" style="font-size:14px">${esc(c.descricao)}</p><div class="base-cls"><span>PV ${c.pv}</span><span>PST ${c.pst}</span><span>PS ${c.ps}</span><span>Perícias ${c.pericias} + Int</span></div></button>`).join('')}</div>
       ${C ? `<h2>Subclasse de ${esc(C.nome)}</h2><div class="grade-cards">${C.subclasses.map(s => `<button class="escolha ${R.subclasse === s.nome ? 'aqui' : ''}" data-sc="${esc(s.nome)}"><h3>${esc(s.nome)}</h3><p class="dim" style="font-size:14px">${esc(s.descricao)}</p>
         <div style="display:grid; gap:4px">${s.habilidades.map(h => `<span style="font-size:13px; ${h.nivel > R.nivel ? 'opacity:.4' : ''}"><span class="tag">Nv ${h.nivel}</span> ${esc(h.nome)}</span>`).join('')}</div></button>`).join('')}</div>` : ''}
       ${qtdPassivas(R.nivel) ? `<h2>Habilidades passivas (${R.passivas.length}/${qtdPassivas(R.nivel)})</h2><p class="dim">Seu nível dá ${qtdPassivas(R.nivel)} passiva(s), nos níveis 2, 6, 9 e 11.</p>
@@ -1340,7 +1374,7 @@ ROTAS.novo = async () => {
       ${[['aparencia', 'Aparência', 'Gênero, idade, descrição física…'], ['personalidade', 'Personalidade', 'Traços marcantes, opiniões, ideais…'], ['historico', 'Histórico', 'Infância, família, primeiro contato com o paranormal…'], ['objetivo', 'Objetivo', 'Por que faz parte da Delta Green? Por que luta contra o Caos?']].map(([k, l, ph]) => `<div class="campo"><label class="rotulo" for="t-${k}">${l}</label><textarea id="t-${k}" data-t="${k}" placeholder="${ph}">${esc(R[k])}</textarea></div>`).join('')}`;
     }
     const pode = [usados <= totalA, !!R.vontade, !!(R.classe && R.subclasse), true, !!R.nome.trim()];
-    app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Novo agente</span><h1>${esc(PASSOS[R.passo])}</h1></div><button class="btn sec mini" id="zerar">Recomeçar</button></div>
+    app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">${campId ? `Novo agente · ${esc(campNome)}` : 'Novo agente'}</span><h1>${esc(PASSOS[R.passo])}</h1></div><button class="btn sec mini" id="zerar">Recomeçar</button></div>
       <div class="passos">${PASSOS.map((p, i) => `${i ? '<i></i>' : ''}<span class="${i === R.passo ? 'aqui' : i < R.passo ? 'feito' : ''}">${p}</span>`).join('')}</div>
       <section style="display:grid; gap:16px">${corpo}</section>
       <div style="display:flex; justify-content:space-between; gap:10px">
@@ -1350,7 +1384,7 @@ ROTAS.novo = async () => {
     ligar();
   }
   function ligar() {
-    $('#zerar').onclick = () => { try { localStorage.removeItem(CH); } catch (e) {} ROTAS.novo(); };
+    $('#zerar').onclick = () => { try { localStorage.removeItem(CH); } catch (e) {} ROTAS.novo(campId); };
     $('#voltar').onclick = () => { R.passo--; render(); };
     $('#avancar')?.addEventListener('click', () => { R.passo++; render(); });
     $('#nv')?.addEventListener('change', e => { R.nivel = +e.target.value; const lim = patente(R.nivel).limite; for (const k in R.atributos) R.atributos[k] = Math.min(R.atributos[k], lim); R.passivas = R.passivas.slice(0, qtdPassivas(R.nivel)); render(); });
@@ -1377,7 +1411,9 @@ ROTAS.novo = async () => {
         atributos: R.atributos, pericias: [...nomes].map(n => ({ nome: n, pontos: R.pericias[n] || 0, atributo: SIS.pericias.find(p => p.nome === n)?.atributo || 'inteligencia' })),
         equipamentos: [], passivas: R.passivas, habilidades: [], rituais: [], aparencia: R.aparencia, personalidade: R.personalidade, historico: R.historico, objetivo: R.objetivo, foto: R.foto, campanhas: [], anotacoes: '' };
       const m = calc(ficha).max; ficha.atual = { ...m };
-      try { const ref = await db.collection('fichas').add(ficha); try { localStorage.removeItem(CH); } catch (x) {} window._abaFicha = 'alinhamento'; location.hash = 'agente-' + ref.id; }
+      if (campId) ficha.campanhas = [campId];
+      try { const ref = await db.collection('fichas').add(ficha); if (campId) { try { await db.doc(`campanhas/${campId}/agentes/${ref.id}`).set({ ficha: ref.id, por: ME, t: Date.now() }); } catch (x) {} }
+        try { localStorage.removeItem(CH); } catch (x) {} window._abaFicha = 'alinhamento'; location.hash = 'agente-' + ref.id; }
       catch (err) { e.target.disabled = false; e.target.textContent = 'Finalizar agente'; toast(err.code === 'quota_exceeded' ? 'O arquivo está cheio. Apague agentes antigos.' : 'Não deu para salvar: ' + (err.message || err.code)); }
     });
   }
@@ -1510,7 +1546,8 @@ ROTAS.agente = async id => {
     const novo = { id: s.id, ...s.data() };
     if (pendente && F) novo.atual = F.atual;
     const primeira = !F; F = novo;
-    if (primeira) await checarPermissao();
+    if (primeira) { await checarPermissao(); await carregarRegras(F.campanhas, () => { if (F) render(); }); }
+    else carregarRegras(F.campanhas, () => { if (F) render(); });
     if (!document.activeElement?.closest?.('#ficha [data-texto]')) render();
   }, e => { app.innerHTML = `<div class="vazio">Não deu para abrir a ficha (${esc(e.code)}).</div>`; }));
 
@@ -1562,7 +1599,7 @@ ROTAS.agente = async id => {
           <div class="campo"><label class="rotulo" for="e-nome">Nome</label><input type="text" id="e-nome" data-campo="nome" value="${esc(F.nome)}"></div>
           <div class="campo"><label class="rotulo" for="e-jog">Jogador</label><input type="text" id="e-jog" data-campo="jogador" value="${esc(F.jogador)}"></div>
           <div class="campo"><label class="rotulo" for="e-idade">Idade</label><input type="text" id="e-idade" data-campo="idade" value="${esc(F.idade)}"></div>
-          <div class="campo"><label class="rotulo" for="e-classe">Classe</label><select id="e-classe">${SIS.classes.map(c => `<option ${c.nome === F.classe ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')}</select></div>
+          <div class="campo"><label class="rotulo" for="e-classe">Classe</label><select id="e-classe">${classesPara(F).map(c => `<option ${c.nome === F.classe ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')}</select></div>
           <div class="campo"><label class="rotulo" for="e-sub">Subclasse</label><select id="e-sub">${(classe(F.classe)?.subclasses || []).map(x => `<option ${x.nome === F.subclasse ? 'selected' : ''}>${esc(x.nome)}</option>`).join('')}</select></div>
           <div class="campo"><label class="rotulo" for="e-pat">Patente</label><div style="display:flex; gap:6px"><select id="e-pat" style="flex:1">${SIS.patentes.map(p => `<option value="${p.de}" ${patente(+F.nivel || 1).nome === p.nome ? 'selected' : ''}>${esc(p.nome)} (nível ${p.de} a ${p.ate})</option>`).join('')}</select><button class="vbtn" id="pat-desce" title="Descer de patente" aria-label="Descer de patente">▼</button><button class="vbtn" id="pat-sobe" title="Subir de patente" aria-label="Subir de patente">▲</button></div></div>
           <div class="campo"><label class="rotulo" for="e-nivel">Nível</label><select id="e-nivel">${Array.from({ length: 12 }, (_, i) => `<option ${+F.nivel === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div>
@@ -1581,13 +1618,16 @@ ROTAS.agente = async id => {
       </div>
     </section>
 
-    <div class="abas" role="tablist">${[['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ...(sabeFeitico(F) ? [['feiticos', 'Feitiços']] : []), ['inventario', 'Inventário'], ['descricao', 'Descrição']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
+    <div class="abas" role="tablist">${[['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ...(sabeFeitico(F) ? [['feiticos', 'Feitiços']] : []), ...(mecsFicha().length ? [['campanha', 'Campanha']] : []), ['inventario', 'Inventário'], ['descricao', 'Descrição']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
     <section id="sec">${secao(K, C, S)}</section>
     </div>`;
     ligarFicha(K);
   }
 
+  // mecânicas visíveis: o jogador vê as que valem para ele; o mestre também vê as trancadas para liberar
+  function mecsFicha() { const todas = regrasDe(F).mecanicas; return todas.filter(m => mecVale(m, F) || (ehMestre && m.quem?.modo === 'liberado')); }
   function secao(K, C, S) {
+    if (aba === 'campanha') { const ms = mecsFicha(); return ms.length ? `<div class="grade-mecs">${ms.map(m => htmlMecanica(m, F, { pode: podeEditar && mecVale(m, F), mestre: ehMestre })).join('')}</div>` : '<div class="vazio">Nenhuma mecânica da campanha para este agente.</div>'; }
     const barra = `<div class="caixa barra-teste"><div class="campo"><label class="rotulo" for="dt">DT do teste</label><input type="number" id="dt" value="${window._dt ?? 20}"></div><div class="campo"><label class="rotulo" for="bonus">Bônus extra</label><input type="number" id="bonus" value="${window._bonus ?? 0}"></div><span class="dim" style="font-size:13px; margin-left:auto">${esc(K.pat.nome)}: limite <b class="mono" style="color:var(--ouro)">${K.pat.limite}</b> por perícia</span></div>`;
     if (aba === 'pericias') {
       const nomes = mostrarTodas || editando || vetorAtivo(F) ? SIS.pericias.map(p => p.nome) : [...new Set([...(F.pericias || []).filter(p => p.pontos > 0).map(p => p.nome), ...periciasVontade(F.vontade, F.vontadeEscolha)])];
@@ -1701,6 +1741,9 @@ ROTAS.agente = async id => {
     $('#dt')?.addEventListener('input', e => window._dt = e.target.value);
     $('#bonus')?.addEventListener('input', e => window._bonus = e.target.value);
     $('#editar')?.addEventListener('click', () => { editando = !editando; render(); });
+    if (aba === 'campanha') ligarMecanicas($('#sec'), F, { salvarMec: async (mec, atual) => { F.mec = mec; if (atual) { F.atual = atual; ajustarQueda(F); } render();
+      try { await ref.update({ mec, ...(atual ? { atual, queda: F.queda || {} } : {}) }); } catch (e) { toast('Não deu para salvar.'); } },
+      publicar: (tit, txt, rr) => publicarRolagem(F, tit, { total: rr?.total ?? '', detalhe: esc(txt) }) });
     $('#matar')?.addEventListener('click', () => declararMorte(F, async morto => { VER_MORTO[F.id] = false; F.morto = morto; render(); try { await ref.update({ morto }); } catch (e) { toast('Não deu para salvar.'); } }));
     $('#reviver')?.addEventListener('click', () => reviver());
     $('#vestir')?.addEventListener('click', async () => {
@@ -2954,10 +2997,238 @@ function cardIni({ i, nome, foto, ameaca, pv, pvM, ps, psM, conds = [], ini, vez
     <div style="min-width:0"><div class="nm">${esc(nome)}</div><div class="vs">${mostrarPV && pv != null ? `<span class="p">${pv} / ${pvM}</span>` : ''}${ps != null ? `<span class="s">${ps} / ${psM}</span>` : ''}${rotTipo ? `<span class="faint">${esc(rotTipo)}</span>` : ''}</div>${conds.length ? `<div class="conds">${conds.map(c => `<span class="cond-chip">${esc(c)}</span>`).join('')}</div>` : ''}</div>
     <div class="n">${editavel ? `<input type="number" aria-label="Iniciativa de ${esc(nome)}" data-ini="${i}" value="${esc(ini ?? '')}">` : esc(ini ?? '')}</div></div>`;
 }
+/* =================================================================
+   HOMEBREW DA CAMPANHA: classes, subclasses e mecânicas próprias
+   ================================================================= */
+// REGRAS[id da campanha] = o que está ATIVO (confirmado pelo mestre)
+const REGRAS = {}, SUBS_REGRAS = {};
+const regrasVazias = () => ({ classes: [], subExtras: [], mecanicas: [] });
+const temRegras = id => { const r = REGRAS[id]; return !!r && !!((r.classes || []).length || (r.subExtras || []).length || (r.mecanicas || []).length); };
+async function carregarRegras(ids, aoMudar) {
+  for (const c of (ids || []).filter(Boolean)) {
+    if (SUBS_REGRAS[c]) continue;
+    try { const s = await db.doc(`campanhas/${c}/publico/regras`).get(); REGRAS[c] = s.exists ? s.data().ativo || regrasVazias() : regrasVazias(); } catch (e) { REGRAS[c] = regrasVazias(); }
+    SUBS_REGRAS[c] = db.doc(`campanhas/${c}/publico/regras`).onSnapshot(s => { const novo = s.exists ? s.data().ativo || regrasVazias() : regrasVazias(); const mudou = JSON.stringify(novo) !== JSON.stringify(REGRAS[c]); REGRAS[c] = novo; if (mudou) aoMudar?.(); });
+  }
+}
+const regrasDe = f => { const out = regrasVazias(); for (const c of f?.campanhas || []) { const r = REGRAS[c]; if (!r) continue; out.classes.push(...(r.classes || []).map(x => ({ ...x, campanha: c }))); out.subExtras.push(...(r.subExtras || [])); out.mecanicas.push(...(r.mecanicas || []).map(m => ({ ...m, campanha: c }))); } return out; };
+const todasClassesCamp = () => Object.values(REGRAS).flatMap(r => r.classes || []);
+const todasSubExtras = () => Object.values(REGRAS).flatMap(r => r.subExtras || []);
+const classesPara = f => { const nomes = new Set(SIS.classes.map(c => c.nome)); return [...SIS.classes.map(c => classe(c.nome)), ...regrasDe(f).classes.filter(c => !nomes.has(c.nome))]; };
+// a mecânica vale para este agente?
+const mecVale = (m, f) => { const q = m.quem || { modo: 'todos' }; if (q.modo === 'classes') return (q.classes || []).includes(f.classe); if (q.modo === 'nivel') return (+f.nivel || 0) >= (+q.nivel || 1); if (q.modo === 'liberado') return !!f.mec?.[m.id]?.lib; return true; };
+const mecsDe = f => regrasDe(f).mecanicas.filter(m => mecVale(m, f));
+const mecEstado = (f, m, c) => f.mec?.[m.id]?.[c.id];
+// bônus de mecânica (componentes de bônus e estados ligados)
+function bonusMec(f) {
+  const out = { pv: 0, ps: 0, pst: 0, pericias: 0, rd: 0, nomes: [] }, N = +f.nivel || 1;
+  for (const m of mecsDe(f)) for (const c of m.comps || []) {
+    const vale = c.tipo === 'bonus' || (c.tipo === 'estado' && mecEstado(f, m, c)); if (!vale || !c.bonus) continue; const b = c.bonus, k = b.porNivel ? N : 1;
+    out.pv += (+b.pv || 0) * k; out.ps += (+b.ps || 0) * k; out.pst += (+b.pst || 0) * k; out.pericias += +b.pericias || 0; out.rd += +b.rd || 0; out.nomes.push(c.tipo === 'estado' ? `${m.nome}: ${c.nome}` : m.nome);
+  }
+  return out;
+}
+// troca NIVEL, FOR, DES, CON, INT, PRE e nomes de recursos pelos valores do agente
+function exprMec(expr, f, m) {
+  const A = f.atributos || {}, mapa = { NIVEL: +f.nivel || 0, FOR: A.forca || 0, DES: A.destreza || 0, CON: A.constituicao || 0, INT: A.inteligencia || 0, PRE: A.presenca || 0 };
+  for (const c of m?.comps || []) if (c.tipo === 'recurso' || c.tipo === 'contador') mapa[String(c.nome || '').toUpperCase().replace(/[^A-Z0-9]/g, '')] = +mecEstado(f, m, c) || 0;
+  return String(expr || '').replace(/\b([A-Z][A-Z0-9]+)\b/g, (x, k) => k in mapa ? mapa[k] : x);
+}
+const maxRecurso = (c, f) => Math.max(0, (+c.base || 0) + (+c.porNivel || 0) * (+f.nivel || 1) + (c.atributo ? (f.atributos?.[c.atributo] || 0) * (+c.mult || 1) : 0));
+const TIPOS_COMP = [
+  ['recurso', 'Recurso', 'Uma barra com máximo (pontos de fé, munição, fome…). O jogador gasta e recupera.'],
+  ['contador', 'Contador', 'Marcas de 0 até um limite (corrupção, ameaça, sangue). Cada marco pode disparar um efeito.'],
+  ['estado', 'Estado', 'Algo que liga e desliga (transe, fúria, forma). Pode custar para ligar e dar bônus enquanto ativo.'],
+  ['bonus', 'Bônus fixo', 'Soma sempre: PV, PS, PST (fixo ou por nível), perícias e RD.'],
+  ['rolagem', 'Rolagem', 'Um botão que rola uma expressão. Aceita NIVEL, FOR, DES, CON, INT, PRE e o nome de recursos.'],
+  ['habilidades', 'Habilidades', 'Habilidades que o agente ganha, cada uma a partir de um nível.'],
+  ['escolha', 'Escolha', 'O jogador escolhe uma entre várias opções (pacto, juramento, estilo).'],
+  ['texto', 'Regra em texto', 'Só uma regra escrita, para ler.'],
+];
+const compNovo = tipo => ({ id: uid8(), tipo, nome: { recurso: 'Pontos', contador: 'Marcas', estado: 'Forma', rolagem: 'Rolar', escolha: 'Escolha', habilidades: 'Habilidades', bonus: 'Bônus', texto: 'Regra' }[tipo],
+  ...(tipo === 'recurso' ? { base: 3, porNivel: 1, atributo: '', mult: 1, recarga: 'Recupera tudo no descanso.' } : {}),
+  ...(tipo === 'contador' ? { max: 6, marcos: [{ valor: 3, texto: '' }, { valor: 6, texto: '' }] } : {}),
+  ...(tipo === 'estado' ? { rotulo: 'Ativar', custo: { pv: 0, ps: 0, pst: 0, recurso: '', qtd: 0 }, duracao: 'Até o fim da cena', bonus: { pv: 0, ps: 0, pst: 0, porNivel: false, pericias: 0, rd: 0 }, texto: '' } : {}),
+  ...(tipo === 'bonus' ? { bonus: { pv: 0, ps: 0, pst: 0, porNivel: true, pericias: 0, rd: 0 }, texto: '' } : {}),
+  ...(tipo === 'rolagem' ? { expr: '1d6+NIVEL', custo: { pv: 0, ps: 0, pst: 0, recurso: '', qtd: 0 }, texto: '' } : {}),
+  ...(tipo === 'habilidades' ? { lista: [{ nivel: 1, nome: '', texto: '' }] } : {}),
+  ...(tipo === 'escolha' ? { opcoes: [{ nome: '', texto: '' }, { nome: '', texto: '' }] } : {}),
+  ...(tipo === 'texto' ? { texto: '' } : {}) });
+const mecNova = () => ({ id: uid8(), nome: 'Nova mecânica', descricao: '', cor: '#b4333b', quem: { modo: 'todos', classes: [], nivel: 1 }, comps: [] });
+const custoTxt = (c, m) => { const k = c.custo || {}; const rec = k.recurso && +k.qtd ? (m.comps || []).find(x => x.id === k.recurso) : null; return [k.pv ? `${k.pv} PV` : '', k.ps ? `${k.ps} PS` : '', k.pst ? `${k.pst} PST` : '', rec ? `${k.qtd} ${rec.nome}` : ''].filter(Boolean).join(' + '); };
+const bonusTxt = b => b ? [b.pv ? `+${b.pv} PV` : '', b.ps ? `+${b.ps} PS` : '', b.pst ? `+${b.pst} PST` : ''].filter(Boolean).join(', ') + (b.porNivel && (b.pv || b.ps || b.pst) ? ' por nível' : '') + [b.pericias ? ` · +${b.pericias} em perícias` : '', b.rd ? ` · RD +${b.rd}` : ''].join('') : '';
+// desenha a mecânica como ela aparece na ficha (usado também na prévia do editor)
+function htmlMecanica(m, f, { pode = false, mestre = false, previa = false } = {}) {
+  const lib = mecVale(m, f), N = +f.nivel || 1;
+  const comps = (m.comps || []).map(c => {
+    const v = mecEstado(f, m, c), d = `data-mec="${esc(m.id)}" data-comp="${esc(c.id)}"`;
+    if (c.tipo === 'recurso') { const mx = maxRecurso(c, f), at = Math.min(mx, v ?? mx);
+      return `<div class="mc-comp"><div class="mc-cab"><b>${esc(c.nome)}</b><span class="faint">${c.recarga ? esc(c.recarga) : ''}</span></div>${barraCris('mec', at, mx, pode ? `${d} data-mrec` : 'data-x', [5, 1])}</div>`; }
+    if (c.tipo === 'contador') { const mx = Math.max(1, +c.max || 1), at = Math.min(mx, +v || 0), marcoAt = (c.marcos || []).filter(x => +x.valor <= at && x.texto).at(-1);
+      return `<div class="mc-comp"><div class="mc-cab"><b>${esc(c.nome)}</b><span class="mono">${at} / ${mx}</span></div><div class="mc-caixas">${Array.from({ length: mx }, (_, i) => { const mk = (c.marcos || []).find(x => +x.valor === i + 1); return `<button type="button" class="mc-cx ${i < at ? 'on' : ''} ${mk ? 'marco' : ''}" ${pode ? `${d} data-mcont="${i + 1}"` : 'disabled'} title="${mk?.texto ? esc(mk.texto) : `${i + 1}`}"></button>`; }).join('')}</div>${marcoAt ? `<p class="mc-marco"><b>${marcoAt.valor}:</b> ${fmtTx(marcoAt.texto)}</p>` : ''}${(c.marcos || []).filter(x => x.texto).length ? `<details class="mc-det"><summary>Marcos</summary>${c.marcos.filter(x => x.texto).map(x => `<div><b class="mono">${x.valor}</b> ${fmtTx(x.texto)}</div>`).join('')}</details>` : ''}</div>`; }
+    if (c.tipo === 'estado') { const ct = custoTxt(c, m), bt = bonusTxt(c.bonus);
+      return `<div class="mc-comp ${v ? 'mc-on' : ''}"><div class="mc-cab"><b>${esc(c.nome)}</b>${v ? '<span class="tag crit">Ativo</span>' : ''}</div>${c.texto ? `<p>${fmtTx(c.texto)}</p>` : ''}<p class="faint mc-meta">${[ct && `Custo: ${ct}`, c.duracao && `Duração: ${esc(c.duracao)}`, bt && `Enquanto ativo: ${bt}`].filter(Boolean).join(' · ')}</p>${pode ? `<button class="btn mini ${v ? 'sec' : ''}" ${d} data-mest>${v ? 'Encerrar' : esc(c.rotulo || 'Ativar')}</button>` : ''}</div>`; }
+    if (c.tipo === 'bonus') return `<div class="mc-comp"><div class="mc-cab"><b>${esc(c.nome || 'Bônus')}</b><span class="mono">${esc(bonusTxt(c.bonus))}</span></div>${c.texto ? `<p>${fmtTx(c.texto)}</p>` : ''}</div>`;
+    if (c.tipo === 'rolagem') { const ct = custoTxt(c, m);
+      return `<div class="mc-comp"><div class="mc-cab"><b>${esc(c.nome)}</b><span class="mono">${esc(c.expr)}${/[A-Z]{3}/.test(c.expr || '') ? ` = ${esc(exprMec(c.expr, f, m))}` : ''}</span></div>${c.texto ? `<p>${fmtTx(c.texto)}</p>` : ''}${pode ? `<button class="btn mini ouro" ${d} data-mrol>Rolar${ct ? ` (${ct})` : ''}</button>` : ''}<div class="res" id="mres-${esc(m.id)}-${esc(c.id)}"></div></div>`; }
+    if (c.tipo === 'habilidades') return `<div class="mc-comp"><div class="mc-cab"><b>${esc(c.nome || 'Habilidades')}</b></div>${(c.lista || []).filter(h => h.nome).map(h => `<div class="mc-hab ${+h.nivel > N ? 'travada' : ''}"><span class="tag">Nv ${esc(h.nivel)}</span> <b>${esc(h.nome)}</b>${h.texto ? `<p>${fmtTx(h.texto)}</p>` : ''}</div>`).join('')}</div>`;
+    if (c.tipo === 'escolha') return `<div class="mc-comp"><div class="mc-cab"><b>${esc(c.nome)}</b>${v != null && c.opcoes?.[v] ? `<span class="tag crit">${esc(c.opcoes[v].nome)}</span>` : ''}</div><div class="mc-ops">${(c.opcoes || []).filter(o => o.nome).map((o, i) => `<button type="button" class="mc-op ${+v === i && v != null ? 'aqui' : ''}" ${pode ? `${d} data-mesc="${i}"` : 'disabled'}><b>${esc(o.nome)}</b>${o.texto ? `<span>${fmtTx(o.texto)}</span>` : ''}</button>`).join('')}</div></div>`;
+    if (c.tipo === 'texto') return `<div class="mc-comp">${c.nome ? `<div class="mc-cab"><b>${esc(c.nome)}</b></div>` : ''}<p>${fmtTx(c.texto || '')}</p></div>`;
+    return '';
+  }).join('');
+  const travada = !lib && (m.quem?.modo === 'liberado');
+  return `<article class="mec-card" style="--mc:${esc(m.cor || '#b4333b')}"><div class="mec-topo"><div><span class="rotulo">Mecânica da campanha</span><h3>${esc(m.nome)}</h3></div>
+    ${mestre && m.quem?.modo === 'liberado' && !previa ? `<button class="btn mini ${lib ? 'sec' : 'ouro'}" data-mlib="${esc(m.id)}">${lib ? 'Tirar acesso' : 'Liberar para este agente'}</button>` : ''}</div>
+    ${m.descricao ? `<p class="dim">${fmtTx(m.descricao)}</p>` : ''}
+    ${travada ? '<div class="aviso">Trancada. O mestre libera quando chegar a hora.</div>' : `<div class="mc-comps">${comps || '<p class="faint">Sem componentes ainda.</p>'}</div>`}</article>`;
+}
+// liga os botões das mecânicas numa ficha; salvarMec recebe o objeto mec novo e os vitais novos (se mudaram)
+function ligarMecanicas(raiz, f, { salvarMec, publicar }) {
+  const mecs = regrasDe(f).mecanicas, acha = el => { const m = mecs.find(x => x.id === el.dataset.mec); return [m, (m?.comps || []).find(c => c.id === el.dataset.comp)]; };
+  const muda = (m, c, v) => { const mec = JSON.parse(JSON.stringify(f.mec || {})); mec[m.id] = { ...(mec[m.id] || {}), [c.id]: v }; return mec; };
+  const pagar = (m, c, mec) => { const k = c.custo || {}, K = calc(f), a = { ...K.max, ...(f.atual || {}) };
+    for (const [x, n] of [['pv', 'PV'], ['ps', 'PS'], ['pst', 'PST']]) if ((+k[x] || 0) > a[x]) { toast(`Sem ${n} suficiente (precisa de ${k[x]}).`); return null; }
+    if (k.recurso && +k.qtd) { const rc = (m.comps || []).find(x => x.id === k.recurso); const at = mec[m.id]?.[rc.id] ?? maxRecurso(rc, f); if (at < +k.qtd) { toast(`Sem ${rc.nome} suficiente (precisa de ${k.qtd}).`); return null; } mec[m.id] = { ...(mec[m.id] || {}), [rc.id]: at - +k.qtd }; }
+    const atual = { ...a, pv: a.pv - (+k.pv || 0), ps: a.ps - (+k.ps || 0), pst: a.pst - (+k.pst || 0) }; return atual; };
+  raiz.querySelectorAll('[data-mrec]').forEach(b => b.onclick = () => { const [m, c] = acha(b); const mx = maxRecurso(c, f), at = Math.min(mx, mecEstado(f, m, c) ?? mx); salvarMec(muda(m, c, Math.max(0, Math.min(mx, at + (+b.getAttribute('data-mrec') || 0))))); });
+  raiz.querySelectorAll('[data-mcont]').forEach(b => b.onclick = () => { const [m, c] = acha(b), n = +b.dataset.mcont, at = +mecEstado(f, m, c) || 0, novo = at === n ? n - 1 : n; salvarMec(muda(m, c, novo));
+    const mk = (c.marcos || []).find(x => +x.valor === novo && x.texto); if (mk && novo > at) { toast(`${c.nome} ${novo}: ${mk.texto}`); publicar?.(`${m.nome} · ${c.nome} ${novo}`, mk.texto); } });
+  raiz.querySelectorAll('[data-mest]').forEach(b => b.onclick = () => { const [m, c] = acha(b), on = !!mecEstado(f, m, c);
+    if (on) return salvarMec(muda(m, c, false)); const mec = muda(m, c, true), atual = pagar(m, c, mec); if (!atual) return; salvarMec(mec, atual); publicar?.(`${m.nome} · ${c.nome}`, `${f.nome} ativou ${c.nome}${custoTxt(c, m) ? ` (−${custoTxt(c, m)})` : ''}.`); });
+  raiz.querySelectorAll('[data-mesc]').forEach(b => b.onclick = () => { const [m, c] = acha(b); salvarMec(muda(m, c, +b.dataset.mesc)); });
+  raiz.querySelectorAll('[data-mrol]').forEach(b => b.onclick = () => { const [m, c] = acha(b), ex = exprMec(c.expr, f, m), r = rolar(ex); if (!r) return toast(`Não sei rolar ${ex}.`);
+    let atual = null, mec = null; if (custoTxt(c, m)) { mec = JSON.parse(JSON.stringify(f.mec || {})); atual = pagar(m, c, mec); if (!atual) return; }
+    const out = raiz.querySelector(`#mres-${CSS.escape(m.id)}-${CSS.escape(c.id)}`); if (out) out.innerHTML = `${esc(c.expr)} → ${esc(ex)} → ${r.detalhe} = <b>${r.total}</b>`;
+    if (mec) salvarMec(mec, atual); publicar?.(`${m.nome} · ${c.nome}`, `${c.expr} → ${r.total}`, r); });
+  raiz.querySelectorAll('[data-mlib]').forEach(b => b.onclick = () => { const id = b.dataset.mlib, mec = JSON.parse(JSON.stringify(f.mec || {})); mec[id] = { ...(mec[id] || {}), lib: !mec[id]?.lib }; salvarMec(mec); });
+}
+
+/* ---------- tela do mestre ---------- */
+ROTAS.regras = async id => {
+  if (!db) { app.innerHTML = semBanco(); return; }
+  const camp = await db.doc('campanhas/' + id).get();
+  if (!camp.exists) { app.innerHTML = '<div class="vazio">Campanha não encontrada.</div>'; return; }
+  if (camp.data().mestre !== ME && !DONO) { app.innerHTML = `<div class="vazio">Só o mestre mexe no homebrew da campanha. <a href="#campanha-${esc(id)}">Voltar</a></div>`; return; }
+  const ref = db.doc(`campanhas/${id}/publico/regras`);
+  let doc = {}; try { const s = await ref.get(); doc = s.exists ? s.data() : {}; } catch (e) {}
+  const R = JSON.parse(JSON.stringify(doc.rascunho || doc.ativo || regrasVazias())); R.classes ||= []; R.subExtras ||= []; R.mecanicas ||= [];
+  let aba = 'mecanicas', editando = null; // { lista, i }
+  const salvarR = debounce(async () => { try { await ref.set({ ...doc, rascunho: R }); doc.rascunho = JSON.parse(JSON.stringify(R)); marcarStatus(); } catch (e) { toast('Não deu para salvar o rascunho.'); } }, 700);
+  const mudou = () => JSON.stringify(R) !== JSON.stringify(doc.ativo || regrasVazias());
+  const marcarStatus = () => { const el = $('#rg-status'); if (el) el.innerHTML = statusHtml(); const b = $('#rg-ok'); if (b) b.disabled = !mudou(); };
+  const statusHtml = () => mudou() ? '<span class="tag crit">Rascunho com mudanças ainda desligadas</span>' : doc.confirmado ? `<span class="tag">Tudo ativo desde ${horaBR(doc.confirmado)}</span>` : '<span class="tag">Nada ativo ainda</span>';
+  const fake = { nome: 'Agente de teste', nivel: 5, classe: '', atributos: { forca: 2, destreza: 2, constituicao: 2, inteligencia: 2, presenca: 2 }, mec: {} };
+  app.className = 'pagina';
+  function render() {
+    let corpo = '';
+    if (editando) corpo = editorHtml();
+    else if (aba === 'mecanicas') corpo = `<div class="sec-f"><p class="dim" style="margin:0; max-width:70ch">Mecânicas são regras próprias da campanha montadas com peças: recurso, contador, estado, bônus, rolagem, habilidades, escolha e texto. Elas aparecem na ficha dos agentes, na aba Campanha.</p><button class="btn" id="rg-nova">Nova mecânica</button></div>
+      <div class="grade-mec">${R.mecanicas.map((m, i) => `<button class="mec-mini" data-ed="mecanicas|${i}" style="--mc:${esc(m.cor)}"><b>${esc(m.nome)}</b><span class="dim">${esc(textoQuem(m.quem))}</span><span class="chips-t">${(m.comps || []).map(c => `<span class="tag">${esc(TIPOS_COMP.find(t => t[0] === c.tipo)?.[1] || c.tipo)}</span>`).join('') || '<span class="faint">sem peças</span>'}</span></button>`).join('') || '<div class="vazio">Nenhuma mecânica ainda.</div>'}</div>`;
+    else if (aba === 'classes') corpo = `<div class="sec-f"><p class="dim" style="margin:0; max-width:70ch">Classes novas aparecem na criação de agente desta campanha e na troca de classe das fichas dela.</p><button class="btn" id="rg-nova">Nova classe</button></div>
+      <div class="grade-mec">${R.classes.map((c, i) => `<button class="mec-mini" data-ed="classes|${i}"><b>${esc(c.nome)}</b><span class="dim">PV ${c.pv} · PST ${c.pst} · PS ${c.ps} · Perícias ${c.pericias}</span><span class="chips-t">${(c.subclasses || []).map(s => `<span class="tag">${esc(s.nome)}</span>`).join('')}</span></button>`).join('') || '<div class="vazio">Nenhuma classe nova.</div>'}</div>`;
+    else if (aba === 'subclasses') corpo = `<div class="sec-f"><p class="dim" style="margin:0; max-width:70ch">Subclasses novas para as classes do sistema (Mercenário, Ocultista…). Entram como opção a mais.</p><button class="btn" id="rg-nova">Nova subclasse</button></div>
+      <div class="grade-mec">${R.subExtras.map((s, i) => `<button class="mec-mini" data-ed="subExtras|${i}"><b>${esc(s.nome)}</b><span class="dim">Subclasse de ${esc(s.classe)}</span><span class="chips-t">${(s.habilidades || []).filter(h => h.nome).map(h => `<span class="tag">Nv ${h.nivel} ${esc(h.nome)}</span>`).join('')}</span></button>`).join('') || '<div class="vazio">Nenhuma subclasse nova.</div>'}</div>`;
+    else corpo = resumoHtml();
+    app.innerHTML = `<a href="#escudo-${esc(id)}" class="dim" style="font-size:14px">← Escudo do mestre</a>
+      <div class="cab-pagina"><div><span class="rotulo">${esc(camp.data().nome)}</span><h1>Homebrew da campanha</h1><div id="rg-status">${statusHtml()}</div></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn sec" id="rg-desc" ${doc.ativo ? '' : 'disabled'}>Descartar mudanças</button><button class="btn" id="rg-ok" ${mudou() ? '' : 'disabled'}>Confirmar e ativar</button></div></div>
+      ${editando ? '' : `<div class="abas">${[['mecanicas', `Mecânicas ${R.mecanicas.length}`], ['classes', `Classes ${R.classes.length}`], ['subclasses', `Subclasses ${R.subExtras.length}`], ['resumo', 'Resumo']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>`}
+      <section id="rg-corpo" style="display:grid; gap:16px">${corpo}</section>`;
+    ligar();
+  }
+  const textoQuem = q => ({ todos: 'Todos os agentes', classes: `Só ${(q?.classes || []).join(', ') || '(nenhuma classe marcada)'}`, nivel: `A partir do nível ${q?.nivel || 1}`, liberado: 'Você libera agente a agente' })[q?.modo || 'todos'];
+  function resumoHtml() {
+    const A = doc.ativo || regrasVazias(), nomes = (l, k = 'nome') => new Set((l || []).map(x => x.id || x[k])), diff = (novo, velho, rot) => { const nv = novo.filter(x => !(velho || []).some(y => (y.id || y.nome) === (x.id || x.nome))), rm = (velho || []).filter(y => !novo.some(x => (x.id || x.nome) === (y.id || y.nome))), alt = novo.filter(x => { const y = (velho || []).find(y2 => (y2.id || y2.nome) === (x.id || x.nome)); return y && JSON.stringify(y) !== JSON.stringify(x); });
+      return `<div class="caixa"><h3 style="margin:0 0 8px">${rot}</h3>${[...nv.map(x => `<div class="ok">+ ${esc(x.nome)} (nova)</div>`), ...alt.map(x => `<div style="color:var(--ouro)">~ ${esc(x.nome)} (alterada)</div>`), ...rm.map(x => `<div class="falha">− ${esc(x.nome)} (sai)</div>`)].join('') || '<span class="faint">Sem mudanças.</span>'}</div>`; };
+    return `<p class="dim">O que muda quando você confirmar. Até lá os jogadores continuam com a versão ativa.</p><div class="grade-mec">${diff(R.mecanicas, A.mecanicas, 'Mecânicas')}${diff(R.classes, A.classes, 'Classes')}${diff(R.subExtras, A.subExtras, 'Subclasses')}</div>
+      <p class="faint" style="font-size:13px">Tirar uma mecânica não apaga o que os agentes marcaram nela: se ela voltar, os valores voltam junto.</p>`;
+  }
+  // ---------- editores ----------
+  const hab = (pre, h, i) => `<div class="linha-ex"><select data-p="${pre}.${i}.nivel" style="max-width:90px">${Array.from({ length: 12 }, (_, k) => `<option value="${k + 1}" ${+h.nivel === k + 1 ? 'selected' : ''}>Nv ${k + 1}</option>`).join('')}</select><input type="text" data-p="${pre}.${i}.nome" value="${esc(h.nome)}" placeholder="Nome da habilidade"><button class="btn-x" data-rmh="${pre}|${i}" aria-label="Tirar">×</button></div><textarea data-p="${pre}.${i}.texto" placeholder="O que ela faz" style="min-height:56px">${esc(h.texto)}</textarea>`;
+  const subEd = (pre, s) => `<div class="ed-atq"><div class="grade-campos"><div class="campo"><label class="rotulo">Nome da subclasse</label><input type="text" data-p="${pre}.nome" value="${esc(s.nome)}"></div><div class="campo"><label class="rotulo">Descrição</label><input type="text" data-p="${pre}.descricao" value="${esc(s.descricao)}"></div></div>
+    <div class="sec-f"><span class="rotulo">Habilidades da subclasse</span><button class="btn mini sec" data-addh="${pre}.habilidades">Adicionar</button></div>${(s.habilidades || []).map((h, i) => hab(pre + '.habilidades', h, i)).join('')}</div>`;
+  function editorHtml() {
+    const { lista, i } = editando, x = R[lista][i];
+    const topo = `<div class="sec-f"><button class="btn sec mini" id="rg-voltar">← Voltar à lista</button><button class="btn-x" id="rg-apagar" style="color:var(--sangue-hi)">Apagar ${lista === 'mecanicas' ? 'mecânica' : lista === 'classes' ? 'classe' : 'subclasse'}</button></div>`;
+    if (lista === 'classes') return `${topo}<div class="ed-painel"><div class="grade-campos"><div class="campo"><label class="rotulo">Nome da classe</label><input type="text" data-p="classes.${i}.nome" value="${esc(x.nome)}"></div><div class="campo"><label class="rotulo">Descrição</label><input type="text" data-p="classes.${i}.descricao" value="${esc(x.descricao)}"></div></div>
+      <p class="faint" style="margin:0; font-size:13px">Por nível, como nas classes do livro: PV = 8 + (PV da classe + CON) × nível. PS = 5 + (PS + INT) × nível. PST = 5 + (PST + CON) × nível. Perícias = (pontos + INT) por patente.</p>
+      <div class="grade-mini">${[['pv', 'PV por nível'], ['pst', 'PST por nível'], ['ps', 'PS por nível'], ['pericias', 'Pontos de perícia']].map(([k, l]) => `<div class="campo"><label class="rotulo">${l}</label><input type="number" data-p="classes.${i}.${k}" value="${esc(x[k])}"></div>`).join('')}</div>
+      <div class="sec-f"><h3 style="margin:0">Subclasses</h3><button class="btn mini" data-addsub>Adicionar subclasse</button></div>${(x.subclasses || []).map((s, j) => `${subEd(`classes.${i}.subclasses.${j}`, s)}<button class="btn-x" data-rmsub="${j}" style="justify-self:end">Tirar ${esc(s.nome || 'subclasse')}</button>`).join('') || '<p class="faint">Uma classe precisa de pelo menos uma subclasse.</p>'}</div>`;
+    if (lista === 'subExtras') return `${topo}<div class="ed-painel"><div class="campo"><label class="rotulo">Classe do sistema</label><select data-p="subExtras.${i}.classe">${SIS.classes.map(c => `<option ${x.classe === c.nome ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')}</select></div>${subEd(`subExtras.${i}`, x)}</div>`;
+    const quem = x.quem || (x.quem = { modo: 'todos', classes: [], nivel: 1 });
+    const compEd = (c, j) => { const pre = `mecanicas.${i}.comps.${j}`, num = (k, l, extra = '') => `<div class="campo"><label class="rotulo">${l}</label><input type="number" data-p="${pre}.${k}" value="${esc(k.split('.').reduce((o, kk) => o?.[kk], c) ?? '')}" ${extra}></div>`;
+      const custoEd = () => `<div class="grade-mini">${num('custo.pv', 'Custo PV', 'min="0"')}${num('custo.ps', 'Custo PS', 'min="0"')}${num('custo.pst', 'Custo PST', 'min="0"')}<div class="campo"><label class="rotulo">Gasta do recurso</label><select data-p="${pre}.custo.recurso"><option value="">Nenhum</option>${x.comps.filter(k => k.tipo === 'recurso').map(k => `<option value="${k.id}" ${c.custo?.recurso === k.id ? 'selected' : ''}>${esc(k.nome)}</option>`).join('')}</select></div>${num('custo.qtd', 'Quanto do recurso', 'min="0"')}</div>`;
+      const bonusEd = () => `<div class="grade-mini">${num('bonus.pv', '+PV')}${num('bonus.ps', '+PS')}${num('bonus.pst', '+PST')}${num('bonus.pericias', '+ em perícias')}${num('bonus.rd', '+RD')}</div><label class="giro" style="gap:8px"><input type="checkbox" data-chk="${pre}.bonus.porNivel" ${c.bonus?.porNivel ? 'checked' : ''}> <span>PV, PS e PST multiplicam pelo nível</span></label>`;
+      let campos = '';
+      if (c.tipo === 'recurso') campos = `<div class="grade-mini">${num('base', 'Base')}${num('porNivel', '+ por nível')}<div class="campo"><label class="rotulo">+ atributo</label><select data-p="${pre}.atributo"><option value="">Nenhum</option>${ATR.map(([k, n]) => `<option value="${k}" ${c.atributo === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>${num('mult', '× atributo')}</div><div class="campo"><label class="rotulo">Como recupera</label><input type="text" data-p="${pre}.recarga" value="${esc(c.recarga)}"></div><p class="faint mc-meta">Máximo no agente de teste (nível 5, atributos 2): <b>${maxRecurso(c, fake)}</b></p>`;
+      if (c.tipo === 'contador') campos = `<div class="grade-mini">${num('max', 'Quantas marcas', 'min="1" max="30"')}</div><div class="sec-f"><span class="rotulo">Marcos (o que acontece ao chegar em um número)</span><button class="btn mini sec" data-addmk="${pre}">Adicionar marco</button></div>${(c.marcos || []).map((mk, k) => `<div class="linha-ex"><input type="number" data-p="${pre}.marcos.${k}.valor" value="${esc(mk.valor)}" style="max-width:80px" aria-label="Marca"><input type="text" data-p="${pre}.marcos.${k}.texto" value="${esc(mk.texto)}" placeholder="Ao chegar aqui…"><button class="btn-x" data-rmmk="${pre}|${k}" aria-label="Tirar">×</button></div>`).join('')}`;
+      if (c.tipo === 'estado') campos = `<div class="grade-campos"><div class="campo"><label class="rotulo">Texto do botão</label><input type="text" data-p="${pre}.rotulo" value="${esc(c.rotulo)}" placeholder="Ativar"></div><div class="campo"><label class="rotulo">Duração</label><input type="text" data-p="${pre}.duracao" value="${esc(c.duracao)}"></div></div><div class="campo"><label class="rotulo">Efeito</label><textarea data-p="${pre}.texto" style="min-height:60px">${esc(c.texto)}</textarea></div><span class="rotulo">Custo para ligar</span>${custoEd()}<span class="rotulo">Bônus enquanto ligado</span>${bonusEd()}`;
+      if (c.tipo === 'bonus') campos = `${bonusEd()}<div class="campo"><label class="rotulo">Explicação (opcional)</label><input type="text" data-p="${pre}.texto" value="${esc(c.texto)}"></div>`;
+      if (c.tipo === 'rolagem') campos = `<div class="campo"><label class="rotulo">Expressão</label><input type="text" data-p="${pre}.expr" value="${esc(c.expr)}" placeholder="2d6+NIVEL"></div><p class="faint mc-meta">No agente de teste: ${esc(exprMec(c.expr, fake, x))}${rolar(exprMec(c.expr, fake, x)) ? '' : ' <span class="falha">não dá para rolar</span>'}</p><div class="campo"><label class="rotulo">Efeito</label><textarea data-p="${pre}.texto" style="min-height:60px">${esc(c.texto)}</textarea></div><span class="rotulo">Custo para rolar</span>${custoEd()}`;
+      if (c.tipo === 'habilidades') campos = `<div class="sec-f"><span class="rotulo">Habilidades</span><button class="btn mini sec" data-addh="${pre}.lista">Adicionar</button></div>${(c.lista || []).map((h, k) => hab(pre + '.lista', h, k)).join('')}`;
+      if (c.tipo === 'escolha') campos = `<div class="sec-f"><span class="rotulo">Opções</span><button class="btn mini sec" data-addop="${pre}">Adicionar opção</button></div>${(c.opcoes || []).map((o, k) => `<div class="linha-ex"><input type="text" data-p="${pre}.opcoes.${k}.nome" value="${esc(o.nome)}" placeholder="Nome da opção"><button class="btn-x" data-rmop="${pre}|${k}" aria-label="Tirar">×</button></div><textarea data-p="${pre}.opcoes.${k}.texto" style="min-height:50px" placeholder="O que ela dá">${esc(o.texto)}</textarea>`).join('')}`;
+      if (c.tipo === 'texto') campos = `<div class="campo"><label class="rotulo">Regra</label><textarea data-p="${pre}.texto" style="min-height:90px">${esc(c.texto)}</textarea></div>`;
+      return `<div class="comp-ed"><div class="sec-f"><span><span class="tag">${esc(TIPOS_COMP.find(t => t[0] === c.tipo)?.[1])}</span> <input type="text" data-p="${pre}.nome" value="${esc(c.nome)}" class="comp-nome" aria-label="Nome da peça"></span><span style="display:flex; gap:4px"><button class="btn-x" data-mv="${j}|-1" aria-label="Subir">↑</button><button class="btn-x" data-mv="${j}|1" aria-label="Descer">↓</button><button class="btn-x" data-rmc="${j}" aria-label="Tirar peça">×</button></span></div>${campos}</div>`; };
+    return `${topo}<div class="ed-mec"><div class="ed-painel">
+        <h3 style="margin:0">Identidade</h3>
+        <div class="grade-campos"><div class="campo"><label class="rotulo">Nome</label><input type="text" data-p="mecanicas.${i}.nome" value="${esc(x.nome)}"></div><div class="campo"><label class="rotulo">Cor</label><input type="color" data-p="mecanicas.${i}.cor" value="${esc(x.cor || '#b4333b')}" style="height:42px; padding:2px"></div></div>
+        <div class="campo"><label class="rotulo">Descrição para os jogadores</label><textarea data-p="mecanicas.${i}.descricao" style="min-height:70px" placeholder="Como funciona, de onde vem, o que custa…">${esc(x.descricao)}</textarea></div>
+        <h3 style="margin:6px 0 0">Quem recebe</h3>
+        <div class="quem-ops">${[['todos', 'Todos os agentes'], ['classes', 'Só algumas classes'], ['nivel', 'A partir de um nível'], ['liberado', 'Você libera agente a agente']].map(([k, l]) => `<button type="button" class="mc-op ${quem.modo === k ? 'aqui' : ''}" data-quem="${k}"><b>${l}</b></button>`).join('')}</div>
+        ${quem.modo === 'classes' ? `<div class="chips-t">${[...SIS.classes.map(c => c.nome), ...R.classes.map(c => c.nome)].map(n => `<button type="button" class="chip ${quem.classes.includes(n) ? 'aqui' : ''}" data-qcl="${esc(n)}">${esc(n)}</button>`).join('')}</div>` : ''}
+        ${quem.modo === 'nivel' ? `<div class="grade-mini"><div class="campo"><label class="rotulo">Nível mínimo</label><input type="number" min="0" max="12" data-p="mecanicas.${i}.quem.nivel" value="${esc(quem.nivel)}"></div></div>` : ''}
+        <h3 style="margin:6px 0 0">Peças</h3>
+        ${x.comps.map(compEd).join('') || '<p class="faint" style="margin:0">Adicione peças abaixo. A ordem aqui é a ordem na ficha.</p>'}
+        <div class="add-comp">${TIPOS_COMP.map(([k, l, d]) => `<button type="button" class="mc-op" data-addc="${k}" title="${esc(d)}"><b>+ ${l}</b><span>${esc(d)}</span></button>`).join('')}</div>
+      </div>
+      <aside class="ed-previa"><span class="rotulo">Prévia na ficha</span><div class="caixa" style="display:grid; gap:6px"><span class="rotulo">Testar com</span><div class="grade-mini"><div class="campo"><label class="rotulo">Nível</label><input type="number" id="pv-n" min="0" max="12" value="${fake.nivel}"></div><div class="campo"><label class="rotulo">Classe</label><select id="pv-c"><option value="">Qualquer</option>${[...SIS.classes.map(c => c.nome), ...R.classes.map(c => c.nome)].map(n => `<option ${fake.classe === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div></div></div>
+        <div id="previa">${htmlPrevia()}</div></aside></div>`;
+  }
+  const htmlPrevia = () => { const x = R.mecanicas[editando.i]; const f2 = { ...fake, campanhas: ['__previa'], mec: { ...fake.mec, [x.id]: { ...(fake.mec[x.id] || {}), lib: true } } }; REGRAS.__previa = { classes: [], subExtras: [], mecanicas: [x] };
+    const h = mecVale({ ...x, quem: x.quem.modo === 'liberado' ? { modo: 'todos' } : x.quem }, f2) ? htmlMecanica(x, f2, { pode: true, previa: true }) : `<div class="aviso">${esc(textoQuem(x.quem))}: o agente de teste não recebe.</div>`; return h; };
+  const ligarPrevia = () => { const el = $('#previa'); if (!el || !editando || editando.lista !== 'mecanicas') return; const x = R.mecanicas[editando.i]; const f2 = { ...fake, campanhas: ['__previa'], mec: { ...fake.mec, [x.id]: { ...(fake.mec[x.id] || {}), lib: true } } };
+    ligarMecanicas(el, f2, { salvarMec: mec => { fake.mec = mec; el.innerHTML = htmlPrevia(); ligarPrevia(); } }); };
+  function ligar() {
+    $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
+    $('#rg-ok').onclick = async () => { doc = { ...doc, ativo: JSON.parse(JSON.stringify(R)), rascunho: JSON.parse(JSON.stringify(R)), confirmado: Date.now(), versao: (+doc.versao || 0) + 1 };
+      try { await ref.set(doc); REGRAS[id] = doc.ativo; toast('Ativado. Os agentes da campanha já recebem.'); render(); } catch (e) { toast('Não deu para ativar: ' + (e.message || e.code)); } };
+    $('#rg-desc').onclick = () => { if (!doc.ativo) return; const novo = JSON.parse(JSON.stringify(doc.ativo)); Object.keys(R).forEach(k => delete R[k]); Object.assign(R, regrasVazias(), novo); editando = null; salvarR(); render(); };
+    $('#rg-nova')?.addEventListener('click', () => { const l = aba === 'mecanicas' ? 'mecanicas' : aba === 'classes' ? 'classes' : 'subExtras';
+      R[l].push(l === 'mecanicas' ? mecNova() : l === 'classes' ? { id: uid8(), nome: 'Nova classe', descricao: '', pv: 14, pst: 9, ps: 9, pericias: 3, subclasses: [{ nome: 'Primeira subclasse', descricao: '', habilidades: [{ nivel: 1, nome: '', texto: '' }] }] } : { id: uid8(), classe: SIS.classes[0].nome, nome: 'Nova subclasse', descricao: '', habilidades: [{ nivel: 1, nome: '', texto: '' }] });
+      editando = { lista: l, i: R[l].length - 1 }; salvarR(); render(); });
+    $$('[data-ed]').forEach(b => b.onclick = () => { const [l, i] = b.dataset.ed.split('|'); editando = { lista: l, i: +i }; render(); });
+    if (!editando) return;
+    const raiz = $('#rg-corpo'), atualizaPrevia = debounce(() => { const el = $('#previa'); if (el) { el.innerHTML = htmlPrevia(); ligarPrevia(); } }, 250);
+    raiz.addEventListener('input', e => { const el = e.target.closest('[data-p]'); if (!el) return; setP(R, el.dataset.p, el.type === 'number' ? (el.value === '' ? '' : +el.value) : el.value); salvarR(); atualizaPrevia(); marcarStatus(); });
+    raiz.querySelectorAll('[data-chk]').forEach(c => c.onchange = () => { setP(R, c.dataset.chk, c.checked); salvarR(); atualizaPrevia(); });
+    const { lista, i } = editando, x = R[lista][i], de = p => p.split('.').reduce((o, k) => o[k], R), redesenha = () => { salvarR(); render(); };
+    $('#rg-voltar').onclick = () => { editando = null; render(); };
+    $('#rg-apagar').onclick = e => { if (!e.target.dataset.certo) { e.target.dataset.certo = 1; e.target.textContent = 'Clique de novo para apagar'; return; } R[lista].splice(i, 1); editando = null; redesenha(); };
+    raiz.querySelectorAll('[data-addh]').forEach(b => b.onclick = () => { (de(b.dataset.addh)).push({ nivel: 1, nome: '', texto: '' }); redesenha(); });
+    raiz.querySelectorAll('[data-rmh]').forEach(b => b.onclick = () => { const [p, k] = b.dataset.rmh.split('|'); de(p).splice(+k, 1); redesenha(); });
+    raiz.querySelector('[data-addsub]')?.addEventListener('click', () => { (x.subclasses ||= []).push({ nome: 'Nova subclasse', descricao: '', habilidades: [{ nivel: 1, nome: '', texto: '' }] }); redesenha(); });
+    raiz.querySelectorAll('[data-rmsub]').forEach(b => b.onclick = () => { x.subclasses.splice(+b.dataset.rmsub, 1); redesenha(); });
+    raiz.querySelectorAll('[data-quem]').forEach(b => b.onclick = () => { x.quem.modo = b.dataset.quem; redesenha(); });
+    raiz.querySelectorAll('[data-qcl]').forEach(b => b.onclick = () => { const l = x.quem.classes, n = b.dataset.qcl, k = l.indexOf(n); k >= 0 ? l.splice(k, 1) : l.push(n); redesenha(); });
+    raiz.querySelectorAll('[data-addc]').forEach(b => b.onclick = () => { x.comps.push(compNovo(b.dataset.addc)); redesenha(); });
+    raiz.querySelectorAll('[data-rmc]').forEach(b => b.onclick = () => { x.comps.splice(+b.dataset.rmc, 1); redesenha(); });
+    raiz.querySelectorAll('[data-mv]').forEach(b => b.onclick = () => { const [j, d] = b.dataset.mv.split('|').map(Number), k = j + d; if (k < 0 || k >= x.comps.length) return; [x.comps[j], x.comps[k]] = [x.comps[k], x.comps[j]]; redesenha(); });
+    raiz.querySelectorAll('[data-addmk]').forEach(b => b.onclick = () => { de(b.dataset.addmk).marcos.push({ valor: (+de(b.dataset.addmk).max || 1), texto: '' }); redesenha(); });
+    raiz.querySelectorAll('[data-rmmk]').forEach(b => b.onclick = () => { const [p, k] = b.dataset.rmmk.split('|'); de(p).marcos.splice(+k, 1); redesenha(); });
+    raiz.querySelectorAll('[data-addop]').forEach(b => b.onclick = () => { de(b.dataset.addop).opcoes.push({ nome: '', texto: '' }); redesenha(); });
+    raiz.querySelectorAll('[data-rmop]').forEach(b => b.onclick = () => { const [p, k] = b.dataset.rmop.split('|'); de(p).opcoes.splice(+k, 1); redesenha(); });
+    $('#pv-n')?.addEventListener('input', e => { e.stopPropagation(); fake.nivel = +e.target.value || 0; atualizaPrevia(); });
+    $('#pv-c')?.addEventListener('change', e => { fake.classe = e.target.value; atualizaPrevia(); });
+    ligarPrevia();
+  }
+  render();
+};
+
 ROTAS.campanha = async id => {
   if (!db) { app.innerHTML = semBanco(); return; }
   await carregarPart();
   let aba = ABA_INICIAL || 'agentes'; ABA_INICIAL = null; if (aba === 'rolagens') aba = 'agentes'; LADO = null;
+  await carregarRegras([id], () => render());
   const listaRol = () => st.rolagens.map(rolHtml).join('') || '<div class="vazio" style="font-size:15px">Nenhuma rolagem ainda.</div>';
   let cfgFeed = null;
   const st = ouvirCampanha(id, (s, tipo) => { if ((tipo === 'rolagens' || tipo === 'chat') && $('#feed-j')) return atualizarFeed($('#feed-j'), cfgFeed, tipo); if (!document.activeElement?.matches?.('#dados-expr, .chat-txt')) render(); });
@@ -2978,17 +3249,21 @@ ROTAS.campanha = async id => {
       : '<div class="vazio">Nenhum combate em andamento.</div>';
     if (aba === 'pistas') corpo = `<div class="lista">${st.pistas.map(p => `<div class="item"><span class="nm">${esc(p.titulo)}</span><p class="dim">${nl(p.texto)}</p>${p.imagem ? `<img src="${esc(p.imagem)}" alt="" style="max-width:420px">` : ''}</div>`).join('') || '<div class="vazio">Nenhuma pista revelada.</div>'}</div>`;
     if (aba === 'relatorios') corpo = `<div class="lista">${st.relatorios.slice().reverse().map(r => `<div class="item"><div class="cab"><span class="nm">${esc(r.titulo)}</span><span class="faint">${dataBR(r.t)}</span></div><p class="dim">${nl(r.texto)}</p></div>`).join('') || '<div class="vazio">Nenhum relatório de missão ainda.</div>'}</div>`;
+    if (aba === 'regras') { const RG = REGRAS[id] || regrasVazias(), exF = { nome: 'Exemplo', nivel: 5, atributos: {}, classe: '', mec: {} };
+      corpo = `<div style="display:grid; gap:16px">${RG.mecanicas.length ? `<h2 style="margin:0">Mecânicas</h2><div class="grade-mecs">${RG.mecanicas.map(m => `<div style="display:grid; gap:6px"><span class="tag" style="justify-self:start">${esc(({ todos: 'Todos os agentes', classes: 'Só ' + (m.quem?.classes || []).join(', '), nivel: 'A partir do nível ' + (m.quem?.nivel || 1), liberado: 'O mestre libera' })[m.quem?.modo || 'todos'])}</span>${htmlMecanica({ ...m, quem: { modo: 'todos' } }, exF)}</div>`).join('')}</div>` : ''}
+        ${RG.classes.length ? `<h2 style="margin:0">Classes da campanha</h2><div class="grade-cards">${RG.classes.map(c => `<div class="caixa"><h3 style="margin:0">${esc(c.nome)}</h3><p class="dim">${esc(c.descricao || '')}</p><div class="base-cls"><span>PV ${c.pv}</span><span>PST ${c.pst}</span><span>PS ${c.ps}</span><span>Perícias ${c.pericias}</span></div>${(c.subclasses || []).map(sc => `<p style="margin:6px 0 0"><b>${esc(sc.nome)}</b> <span class="dim">${esc(sc.descricao || '')}</span></p>`).join('')}</div>`).join('')}</div>` : ''}
+        ${RG.subExtras.length ? `<h2 style="margin:0">Subclasses novas</h2><div class="grade-cards">${RG.subExtras.map(sc => `<div class="caixa"><span class="rotulo">${esc(sc.classe)}</span><h3 style="margin:0">${esc(sc.nome)}</h3><p class="dim">${esc(sc.descricao || '')}</p>${(sc.habilidades || []).filter(h => h.nome).map(h => `<div><span class="tag">Nv ${h.nivel}</span> <b>${esc(h.nome)}</b> <span class="dim">${esc(h.texto)}</span></div>`).join('')}</div>`).join('')}</div>` : ''}</div>`; }
     if (aba === 'ligacao') corpo = membro ? '<div id="ligacao"></div>' : '<div class="vazio">Entre na campanha para usar a ligação.</div>';
     app.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
-        ${mestre ? `<button class="btn sec" id="editar-c">Editar campanha</button><a class="btn ouro" href="#escudo-${esc(id)}" style="text-decoration:none">Escudo do mestre</a>` : ''}
-        ${membro ? '<button class="btn sec" id="add-ag">Adicionar agente</button><button class="btn sec" id="convidar">Convidar jogadores</button>' : '<button class="btn" id="entrar-c">Entrar nesta campanha</button>'}
+        ${mestre ? `<button class="btn sec" id="editar-c">Editar campanha</button><a class="btn sec" href="#regras-${esc(id)}" style="text-decoration:none">Homebrew da campanha</a><a class="btn ouro" href="#escudo-${esc(id)}" style="text-decoration:none">Escudo do mestre</a>` : ''}
+        ${membro ? `<a class="btn" href="#novo-${esc(id)}" style="text-decoration:none">Criar agente da campanha</a>` : ''}${membro ? '<button class="btn sec" id="add-ag">Adicionar agente</button><button class="btn sec" id="convidar">Convidar jogadores</button>' : '<button class="btn" id="entrar-c">Entrar nesta campanha</button>'}
         ${membro && !mestre ? '<button class="btn sec" id="sair">Sair da campanha</button>' : ''}</div>
       <section class="camp-topo ${C.capa ? 'com-capa' : ''}">
         ${C.capa ? `<img src="${esc(C.capa)}" alt="" style="border:1px solid var(--linha-2); width:100%">` : ''}
         <div style="display:grid; gap:10px"><span class="rotulo">Mestre: ${esc(nomes[C.mestre])}</span><h1>${esc(C.nome)}</h1>${C.descricao ? `<p class="dim" style="font-size:17px; max-width:60ch">${nl(C.descricao)}</p>` : ''}</div>
       </section>
       <div class="escudo"><aside class="feed" id="feed-j"></aside>
-      <div style="display:grid; gap:16px; min-width:0; align-content:start"><div class="abas">${[['agentes', 'Agentes'], ['jogadores', 'Jogadores'], ['combate', st.combate?.ativo ? 'Combate ●' : 'Combate'], ['pistas', 'Pistas'], ['relatorios', 'Relatórios'], ['ligacao', Object.keys(CH.sala === id ? CH.presenca : {}).length ? `Ligação ● ${Object.keys(CH.presenca).length}` : 'Ligação']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>${corpo}</div></div>`;
+      <div style="display:grid; gap:16px; min-width:0; align-content:start"><div class="abas">${[['agentes', 'Agentes'], ['jogadores', 'Jogadores'], ['combate', st.combate?.ativo ? 'Combate ●' : 'Combate'], ['pistas', 'Pistas'], ['relatorios', 'Relatórios'], ...(temRegras(id) ? [['regras', 'Regras da casa']] : []), ['ligacao', Object.keys(CH.sala === id ? CH.presenca : {}).length ? `Ligação ● ${Object.keys(CH.presenca).length}` : 'Ligação']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>${corpo}</div></div>`;
     $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
     atualizarPersona(st);
     if (aba === 'ligacao' && membro) montarLigacao(id, C, st);
@@ -3047,7 +3322,7 @@ ROTAS.escudo = async id => {
   const camp = await db.doc('campanhas/' + id).get();
   if (!camp.exists) { app.innerHTML = '<div class="vazio">Campanha não encontrada.</div>'; return; }
   if (camp.data().mestre !== ME) { app.innerHTML = `<div class="vazio">Só o mestre desta campanha abre o escudo. <a href="#campanha-${esc(id)}">Voltar para a campanha</a></div>`; return; }
-  guardarUltima(id, camp.data().nome, true);
+  guardarUltima(id, camp.data().nome, true); await carregarRegras([id]);
   const refE = db.doc(`mestre/${ME}/escudo/${id}`);
   let E = { anotacoes: { geral: '', futuras: '', anteriores: '' }, combate: { rodada: 1, turno: 0, lista: [], ativo: false }, pistas: [], ocultas: [] };
   try { const s = await refE.get(); if (s.exists) E = { ...E, ...s.data() }; } catch (e) {}
@@ -3068,7 +3343,7 @@ ROTAS.escudo = async id => {
   };
   let publico = false;
   app.className = 'pagina';
-  app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Escudo do mestre</span><h1>${esc(camp.data().nome)}</h1></div><div style="display:flex; gap:8px; flex-wrap:wrap"><a class="btn sec" href="#campanha-${esc(id)}" style="text-decoration:none">Ver como jogador</a></div></div>
+  app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Escudo do mestre</span><h1>${esc(camp.data().nome)}</h1></div><div style="display:flex; gap:8px; flex-wrap:wrap"><a class="btn sec" href="#regras-${esc(id)}" style="text-decoration:none">Homebrew da campanha</a><a class="btn sec" href="#campanha-${esc(id)}" style="text-decoration:none">Ver como jogador</a></div></div>
     <div class="escudo" id="escudo"><aside class="feed" id="feed"></aside><div style="display:grid; gap:16px; min-width:0"><div class="abas" id="abas-e"></div><div id="corpo-e"></div></div></div>`;
   const todasRol = () => [...(st?.rolagens || []), ...(E.ocultas || [])].sort((a, b) => b.t - a.t).slice(0, 40);
   const cfgFeedE = { id, get st() { return st; }, nRol: () => todasRol().length, listaRol: () => todasRol().map(rolHtml).join('') || '<div class="vazio" style="font-size:15px">As rolagens dos jogadores aparecem aqui.</div>', autor: () => ({ autor: 'Mestre', foto: '' }) };
