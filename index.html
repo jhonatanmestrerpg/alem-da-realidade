@@ -112,6 +112,14 @@ img { max-width: 100%; }
 .perfil-topo { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; padding: 18px; border: 1px solid var(--linha); background: linear-gradient(110deg, color-mix(in srgb, var(--pc) 30%, transparent), transparent 70%), var(--painel); }
 .perfil-ava { width: 96px; height: 96px; border-radius: 50%; background: var(--painel-3) center/cover no-repeat; border: 2px solid var(--pc); display: grid; place-items: center; font: 700 30px var(--f-mono); color: #0b0d14; flex: none; }
 .rc-aviso { font-size: 13px; line-height: 1.4; color: var(--lua); padding-top: 2px; }
+.adm-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.adm-tiles > div { background: var(--painel); border: 1px solid var(--linha); padding: 12px 14px; display: grid; gap: 2px; } .adm-tiles b { font: 700 22px var(--f-mono); } .adm-tiles span { font-size: 12px; color: var(--lua-dim); }
+.adm-linha { display: grid; grid-template-columns: 40px minmax(0, 1fr) repeat(3, auto); gap: 14px; align-items: center; padding: 10px 14px; background: var(--painel); border: 1px solid var(--linha); color: var(--lua); text-decoration: none; }
+.adm-linha:hover { border-color: var(--linha-2); } .adm-num { display: grid; text-align: right; } .adm-num b { font: 700 14px var(--f-mono); } .adm-num span { font-size: 11px; color: var(--lua-faint); }
+@media (max-width: 700px) { .adm-linha { grid-template-columns: 40px 1fr; } .adm-num { grid-column: 2; text-align: left; display: flex; gap: 6px; align-items: baseline; } }
+.adm-graf { background: var(--painel); border: 1px solid var(--linha); padding: 14px; display: grid; gap: 10px; }
+.colunas { display: grid; grid-template-columns: repeat(14, 1fr); gap: 6px; align-items: end; height: 140px; } .col { display: grid; grid-template-rows: 1fr auto; height: 100%; gap: 4px; } .col i { align-self: end; display: block; background: linear-gradient(180deg, var(--sangue-hi), var(--sangue)); border-radius: 2px 2px 0 0; min-height: 0; } .col span { font: 10px var(--f-mono); color: var(--lua-faint); text-align: center; }
+.barras { display: grid; gap: 6px; } .barra-l { display: grid; grid-template-columns: minmax(110px, 200px) 1fr auto; gap: 10px; align-items: center; font-size: 13px; } .bl-t { height: 10px; background: var(--painel-3); } .bl-t i { display: block; height: 100%; background: var(--violeta); } .bl-v { font-size: 12px; }
 .volta-camp:hover { border-color: var(--ouro); }
 .volta-camp[hidden] { display: none; }
 .volta-camp svg { flex: none; width: 15px; height: 15px; color: var(--ouro); }
@@ -1197,7 +1205,7 @@ async function rotear() {
   if (typeof fecharSala === 'function' && !CH.dentro) { fecharSala(); CH.ctxLig = null; }
   const h = location.hash.slice(1) || 'inicio';
   const [base, ...resto] = h.split('-'); const arg = resto.join('-');
-  const sec = { entrar: 'entrar', agente: 'agentes', 'novo': 'agentes', campanha: 'campanhas', escudo: 'campanhas', regras: 'campanhas', ameaca: 'ameacas', dossie: 'ameacas' }[base] || base;
+  const sec = { entrar: 'entrar', agente: 'agentes', 'novo': 'agentes', campanha: 'campanhas', escudo: 'campanhas', regras: 'campanhas', admin: 'entrar', usuario: 'entrar', ameaca: 'ameacas', dossie: 'ameacas' }[base] || base;
   $$('#nav a').forEach(a => a.classList.toggle('aqui', a.dataset.sec === sec));
   const fn = ROTAS[base] || ROTAS.inicio;
   app.className = 'pagina';
@@ -1206,6 +1214,7 @@ async function rotear() {
   if (CH.dentro) desenharVoz();
   if (db && ME) carregarPart().then(vigiarTurnos);
   desenharVolta();
+  if (ME) rastrearRota();
 }
 /* atalho para a última campanha visitada (fica no topo, some quando você já está nela) */
 function guardarUltima(id, nome, escudo) { try { localStorage.setItem('ultimaCampanha', JSON.stringify({ id, nome, escudo: !!escudo, uid: ME })); } catch (e) {} desenharVolta(); }
@@ -3307,6 +3316,118 @@ ROTAS.regras = async id => {
   render();
 };
 
+/* =================================================================
+   ATIVIDADE (tempo por página) e PAINEL DO ADMINISTRADOR
+   ================================================================= */
+// cada conta registra quanto tempo passa em cada parte do site; só administradores veem
+const NOME_SEC = { inicio: 'Início', agentes: 'Agentes', agente: 'Ficha de agente', novo: 'Criação de agente', campanhas: 'Campanhas', campanha: 'Campanha', escudo: 'Escudo do mestre', regras: 'Homebrew da campanha', ameacas: 'Ameaças', ameaca: 'Ficha de ameaça', dossie: 'Dossiê do caçador', grimorio: 'Grimório', homebrew: 'Homebrew', patente: 'Patente', entrar: 'Conta', admin: 'Painel admin', usuario: 'Perfil de usuário' };
+const RASTRO = { base: null, hash: '', desde: 0, pend: {}, dias: {}, hist: [], ms: 0, vis: {} };
+const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+function fecharTrecho() {
+  if (!RASTRO.base || !RASTRO.desde) return; const ms = Math.min(30 * 60000, Date.now() - RASTRO.desde); RASTRO.desde = document.hidden ? 0 : Date.now(); if (ms < 500) return;
+  RASTRO.pend[RASTRO.base] = (RASTRO.pend[RASTRO.base] || 0) + ms; RASTRO.dias[hojeISO()] = (RASTRO.dias[hojeISO()] || 0) + ms; RASTRO.ms += ms;
+  const h = RASTRO.hist.at(-1); if (h && h.hash === RASTRO.hash) h.ms += ms;
+}
+function rastrearRota() {
+  fecharTrecho(); const hash = location.hash.slice(1) || 'inicio', base = hash.split('-')[0];
+  RASTRO.base = base; RASTRO.hash = hash; RASTRO.desde = document.hidden ? 0 : Date.now();
+  RASTRO.vis[base] = (RASTRO.vis[base] || 0) + 1;
+  setTimeout(() => RASTRO.hist.push({ hash, base, titulo: ($('#app h1')?.textContent || NOME_SEC[base] || base).trim().slice(0, 80), em: Date.now(), ms: 0 }), 900);
+}
+let gravandoRastro = false;
+async function gravarRastro() {
+  fecharTrecho(); if (!db || !ME || gravandoRastro || (!RASTRO.ms && !Object.keys(RASTRO.vis).length)) return; gravandoRastro = true;
+  const pend = RASTRO.pend, dias = RASTRO.dias, hist = RASTRO.hist.map(h => ({ ...h })), ms = RASTRO.ms, vis = RASTRO.vis; RASTRO.pend = {}; RASTRO.dias = {}; RASTRO.vis = {}; RASTRO.ms = 0;
+  RASTRO.hist = RASTRO.hist.length ? [RASTRO.hist.at(-1)] : []; if (RASTRO.hist[0]) RASTRO.hist[0].ms = 0;
+  try { const ref = db.doc('atividade/' + ME), a = (await ref.get()).data() || {};
+    const paginas = { ...(a.paginas || {}) }, visitas = { ...(a.visitas || {}) }, dd = { ...(a.dias || {}) };
+    for (const [k, v] of Object.entries(pend)) paginas[k] = (paginas[k] || 0) + v;
+    for (const [k, v] of Object.entries(vis)) visitas[k] = (visitas[k] || 0) + v;
+    for (const [k, v] of Object.entries(dd)) if (k < new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10)) delete dd[k];
+    for (const [k, v] of Object.entries(dias)) dd[k] = (dd[k] || 0) + v;
+    const historico = [...(a.historico || [])]; for (const h of hist) { const ult = historico.at(-1); if (ult && ult.hash === h.hash && ult.em === h.em) ult.ms = (ult.ms || 0) + h.ms; else historico.push({ hash: h.hash, base: h.base, titulo: h.titulo, em: h.em, ms: h.ms }); }
+    await ref.set({ uid: ME, nome: PERFIL?.nome || '', email: SESSAO?.user?.email || '', ultimoAcesso: Date.now(), primeiroAcesso: a.primeiroAcesso || Date.now(), total: (a.total || 0) + ms, paginas, visitas, dias: dd, historico: historico.slice(-60) });
+  } catch (e) {} gravandoRastro = false;
+}
+setInterval(gravarRastro, 60000);
+document.addEventListener('visibilitychange', () => { if (document.hidden) gravarRastro(); else if (RASTRO.base) RASTRO.desde = Date.now(); });
+addEventListener('pagehide', () => { gravarRastro(); });
+const fmtDur = ms => { const m = Math.round((ms || 0) / 60000); if (m < 1) return '< 1 min'; if (m < 60) return m + ' min'; const h = Math.floor(m / 60); return `${h} h ${String(m % 60).padStart(2, '0')} min`; };
+const atrasDe = t => { if (!t) return 'nunca'; const m = Math.round((Date.now() - t) / 60000); if (m < 2) return 'agora há pouco'; if (m < 60) return `há ${m} min`; const h = Math.round(m / 60); if (h < 24) return `há ${h} h`; return `há ${Math.round(h / 24)} dia${Math.round(h / 24) > 1 ? 's' : ''}`; };
+const barrasHtml = (pares, fmt = fmtDur) => { const mx = Math.max(1, ...pares.map(p => p[1])); return `<div class="barras">${pares.map(([k, v]) => `<div class="barra-l"><span class="bl-k">${esc(k)}</span><span class="bl-t"><i style="width:${Math.max(2, v / mx * 100)}%"></i></span><span class="bl-v mono">${fmt(v)}</span></div>`).join('') || '<span class="faint">Sem dados ainda.</span>'}</div>`; };
+
+ROTAS.admin = async () => {
+  if (!DONO) { app.innerHTML = '<div class="vazio">Só administradores abrem este painel.</div>'; return; }
+  app.innerHTML = '<div class="vazio">Abrindo o painel…</div>';
+  const { data: perfis } = await sb.from('perfis').select('id,nome,papel').limit(500);
+  const atv = {}; try { (await db.collection('atividade').get()).docs.forEach(d => atv[d.id] = d.data()); } catch (e) {}
+  const fichas = {}; try { (await db.collection('fichas').limit(1000).get()).docs.forEach(d => { const o = d.data().dono; fichas[o] = (fichas[o] || 0) + 1; }); } catch (e) {}
+  let ordem = 'acesso', busca = '';
+  const lista = (perfis || []).map(p => ({ ...p, a: atv[p.id] || {} }));
+  const hoje = hojeISO(), ativosHoje = lista.filter(p => p.a.dias?.[hoje]).length, semana = lista.filter(p => (p.a.ultimoAcesso || 0) > Date.now() - 7 * 864e5).length;
+  const desenhar = () => {
+    const L = lista.filter(p => !busca || (p.nome || '').toLowerCase().includes(busca) || (p.a.email || '').toLowerCase().includes(busca) || p.id.includes(busca))
+      .sort((x, y) => ordem === 'acesso' ? (y.a.ultimoAcesso || 0) - (x.a.ultimoAcesso || 0) : ordem === 'tempo' ? (y.a.total || 0) - (x.a.total || 0) : (x.nome || '').localeCompare(y.nome || ''));
+    $('#adm-lista').innerHTML = L.map(p => `<a class="adm-linha" href="#usuario-${esc(p.id)}"><span class="ava" style="background:${corDe(p.id)}">${esc(iniciais(p.nome))}</span><span style="min-width:0"><b>${esc(p.nome || '(sem nome)')}</b> ${p.papel === 'admin' ? '<span class="tag crit">Admin</span>' : ''}<br><span class="faint" style="font-size:12px">${esc(p.a.email || p.id)}</span></span>
+      <span class="adm-num"><b>${atrasDe(p.a.ultimoAcesso)}</b><span>último acesso</span></span><span class="adm-num"><b>${fmtDur(p.a.total)}</b><span>no site</span></span><span class="adm-num"><b>${fichas[p.id] || 0}</b><span>fichas</span></span></a>`).join('') || '<div class="vazio">Ninguém.</div>';
+  };
+  app.className = 'pagina';
+  app.innerHTML = `<div><span class="rotulo">Administração</span><h1>Painel</h1></div>
+    <div class="adm-tiles"><div><b>${lista.length}</b><span>contas</span></div><div><b>${ativosHoje}</b><span>entraram hoje</span></div><div><b>${semana}</b><span>nos últimos 7 dias</span></div><div><b>${Object.values(fichas).reduce((a, b) => a + b, 0)}</b><span>fichas</span></div><div><b>${fmtDur(lista.reduce((t, p) => t + (p.a.total || 0), 0))}</b><span>tempo total</span></div></div>
+    <div class="sec-f"><div class="busca" style="flex:1; min-width:220px">${ICON_BUSCA}<input type="search" id="adm-busca" placeholder="Nome, e-mail ou ID"></div><div class="filtros" id="adm-ord">${[['acesso', 'Último acesso'], ['tempo', 'Mais tempo'], ['nome', 'Nome']].map(([k, l]) => `<button class="chip ${k === ordem ? 'aqui' : ''}" data-ord="${k}">${l}</button>`).join('')}</div></div>
+    <div class="lista" id="adm-lista"></div>
+    <p class="faint" style="font-size:12.5px">O tempo começa a contar a partir de quando a conta abre o site nesta versão. Quem nunca abriu depois disso aparece com "nunca".</p>`;
+  $('#adm-busca').oninput = e => { busca = e.target.value.trim().toLowerCase(); desenhar(); };
+  $$('[data-ord]').forEach(b => b.onclick = () => { ordem = b.dataset.ord; $$('[data-ord]').forEach(x => x.classList.toggle('aqui', x === b)); desenhar(); });
+  desenhar();
+};
+
+ROTAS.usuario = async uid => {
+  if (!DONO) { app.innerHTML = '<div class="vazio">Só administradores abrem perfis de outras contas.</div>'; return; }
+  app.innerHTML = '<div class="vazio">Abrindo o perfil…</div>';
+  const { data: pf } = await sb.from('perfis').select('id,nome,papel').eq('id', uid).maybeSingle();
+  const pega = async p => { try { return (await db.doc(p).get()).data() || null; } catch (e) { return null; } };
+  const lista = async q => { try { return (await q.get()).docs.map(d => ({ id: d.id, ...d.data() })); } catch (e) { return []; } };
+  const [extra, atv, cac, part, fichas, hb, camps] = await Promise.all([pega('usuarios/' + uid), pega('atividade/' + uid), pega('cacadores/' + uid), pega(`data/users/${uid}/participacoes`),
+    lista(db.collection('fichas').where('dono', '==', uid)), lista(db.collection('homebrew').where('autor', '==', uid)), lista(db.collection('campanhas').where('mestre', '==', uid))]);
+  const outras = [];
+  for (const c of (part?.campanhas || []).filter(c => !camps.some(x => x.id === c))) { const d = await pega('campanhas/' + c); if (d) outras.push({ id: c, ...d }); }
+  const regras = {}; for (const c of camps) { const r = await pega(`campanhas/${c.id}/publico/regras`); if (r) regras[c.id] = r; }
+  const A = atv || {}, nome = pf?.nome || A.nome || '(sem nome)', foto = extra?.foto || '';
+  const dias14 = Array.from({ length: 14 }, (_, i) => { const d = new Date(Date.now() - (13 - i) * 864e5); const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; return [`${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`, A.dias?.[k] || 0]; });
+  const mxDia = Math.max(1, ...dias14.map(d => d[1]));
+  const diasAtivos = Object.values(A.dias || {}).filter(v => v > 0).length;
+  const paginas = Object.entries(A.paginas || {}).sort((a, b) => b[1] - a[1]).map(([k, v]) => [`${NOME_SEC[k] || k} (${A.visitas?.[k] || 0}×)`, v]);
+  let aba = 'painel';
+  const render = () => {
+    let corpo = '';
+    if (aba === 'painel') corpo = `<div class="adm-tiles"><div><b>${atrasDe(A.ultimoAcesso)}</b><span>último acesso${A.ultimoAcesso ? ' · ' + horaBR(A.ultimoAcesso) : ''}</span></div><div><b>${fmtDur(A.total)}</b><span>tempo no site</span></div><div><b>${diasAtivos}</b><span>dias com acesso</span></div><div><b>${fmtDur(diasAtivos ? (A.total || 0) / diasAtivos : 0)}</b><span>média por dia ativo</span></div><div><b>${Object.values(A.visitas || {}).reduce((a, b) => a + b, 0)}</b><span>páginas abertas</span></div></div>
+      <div class="adm-graf"><span class="rotulo">Tempo por dia (14 dias)</span><div class="colunas">${dias14.map(([k, v]) => `<div class="col" title="${k}: ${fmtDur(v)}"><i style="height:${v ? Math.max(4, v / mxDia * 100) : 0}%"></i><span>${k.slice(0, 2)}</span></div>`).join('')}</div></div>
+      <div class="adm-graf"><span class="rotulo">Tempo por página</span>${barrasHtml(paginas)}</div>
+      <div class="adm-graf"><span class="rotulo">Últimas páginas abertas</span><div class="lista">${[...(A.historico || [])].reverse().slice(0, 30).map(h => `<div class="linha-acao"><span style="min-width:0"><b>${esc(h.titulo || NOME_SEC[h.base] || h.base)}</b> <span class="faint" style="font-size:12px">${esc(NOME_SEC[h.base] || h.base)}</span><br><span class="mono faint" style="font-size:11.5px">${horaBR(h.em)}</span></span><span class="mono">${fmtDur(h.ms)}</span></div>`).join('') || '<span class="faint">Nada registrado ainda.</span>'}</div></div>`;
+    if (aba === 'fichas') corpo = `<div class="grade-cards">${fichas.map(f => cardAgente(f, `<button class="btn mini sec" data-del-ficha="${esc(f.id)}">Apagar</button>`)).join('') || '<div class="vazio">Nenhuma ficha.</div>'}</div>`;
+    if (aba === 'campanhas') corpo = `<h2 style="margin:0">Mestra (${camps.length})</h2><div class="lista">${camps.map(c => `<div class="linha-acao"><span><b>${esc(c.nome)}</b>${regras[c.id]?.ativo ? ` <span class="tag">${(regras[c.id].ativo.mecanicas || []).length} mecânicas · ${(regras[c.id].ativo.classes || []).length} classes</span>` : ''}<br><span class="faint" style="font-size:12px">${esc(c.descricao || '').slice(0, 120)}</span></span><span style="display:flex; gap:6px; flex-wrap:wrap"><a class="btn mini sec" href="#campanha-${esc(c.id)}" style="text-decoration:none">Abrir</a>${regras[c.id] ? `<button class="btn mini sec" data-ver-regras="${esc(c.id)}">Mecânicas</button>` : ''}<button class="btn mini sec" data-del-camp="${esc(c.id)}">Excluir</button></span></div>`).join('') || '<span class="faint">Não mestra nenhuma.</span>'}</div>
+      <h2 style="margin:0">Joga (${outras.length})</h2><div class="lista">${outras.map(c => `<div class="linha-acao"><span><b>${esc(c.nome)}</b></span><a class="btn mini sec" href="#campanha-${esc(c.id)}" style="text-decoration:none">Abrir</a></div>`).join('') || '<span class="faint">Não participa de outras.</span>'}</div>`;
+    if (aba === 'homebrew') corpo = `<div class="lista">${hb.sort((a, b) => (a.tipo || '').localeCompare(b.tipo || '')).map(x => `<div class="linha-acao"><span><span class="tag">${esc(TIPOS_HB.find(t => t[0] === x.tipo)?.[1] || x.tipo)}</span> <b>${esc(x.nome)}</b> ${x.compartilhado ? '<span class="tag crit">Compartilhado</span>' : '<span class="faint" style="font-size:12px">oculto</span>'}</span><span style="display:flex; gap:6px">${x.tipo === 'ameaca' || x.tipo === 'npc' ? `<button class="btn mini sec" data-ver-hb="${esc(x.id)}">Ficha</button>` : `<button class="btn mini sec" data-txt-hb="${esc(x.id)}">Ver</button>`}<button class="btn mini sec" data-del-hb="${esc(x.id)}">Apagar</button></span></div>`).join('') || '<div class="vazio">Nenhum homebrew.</div>'}</div>`;
+    app.innerHTML = `<a href="#admin" class="dim" style="font-size:14px">← Painel</a>
+      <div class="perfil-topo" style="--pc:${esc(extra?.cor || corDe(uid))}"><div class="perfil-ava" style="${foto ? `background-image:url('${esc(foto)}')` : `background-color:${esc(extra?.cor || corDe(uid))}`}">${foto ? '' : esc(iniciais(nome))}</div>
+        <div style="min-width:0"><span class="rotulo">Perfil de usuário</span><h1 style="margin:0">${esc(nome)}</h1>${extra?.frase ? `<p class="dim" style="margin:4px 0 0; font-style:italic">“${esc(extra.frase)}”</p>` : ''}
+        <p class="mono faint" style="margin:6px 0 0; font-size:12px; overflow-wrap:anywhere">${esc(A.email || '')}${A.email ? ' · ' : ''}${esc(uid)}</p>${pf?.papel === 'admin' ? '<span class="tag crit">Admin</span>' : ''}${cac ? ` <a class="tag" href="#dossie-${esc(uid)}">Caçador: ${esc(cac.nome)}</a>` : ''}</div></div>
+      <div class="abas">${[['painel', 'Atividade'], ['fichas', `Fichas ${fichas.length}`], ['campanhas', `Campanhas ${camps.length + outras.length}`], ['homebrew', `Homebrew ${hb.length}`]].map(([k, l]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${l}</button>`).join('')}</div>
+      <section style="display:grid; gap:16px">${corpo}</section>`;
+    $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
+    const confirma = (txt, fn) => abrirModal('Confirmar', `<p>${txt}</p><div style="display:flex; gap:8px"><button class="btn" id="cf-ok">Apagar</button><button class="btn sec" data-c>Cancelar</button></div>`, (m, fechar) => { m.querySelector('[data-c]').onclick = fechar; m.querySelector('#cf-ok').onclick = async () => { try { await fn(); toast('Apagado.'); } catch (e) { toast('Não deu: ' + (e.message || e.code)); } fechar(); render(); }; });
+    $$('[data-del-ficha]').forEach(b => b.onclick = () => { const f = fichas.find(x => x.id === b.dataset.delFicha); confirma(`Apagar a ficha <b>${esc(f.nome)}</b> de ${esc(nome)}? Não tem volta.`, async () => { for (const c of f.campanhas || []) { try { await db.doc(`campanhas/${c}/agentes/${f.id}`).delete(); } catch (e) {} } await db.doc('fichas/' + f.id).delete(); fichas.splice(fichas.indexOf(f), 1); }); });
+    $$('[data-del-hb]').forEach(b => b.onclick = () => { const x = hb.find(y => y.id === b.dataset.delHb); confirma(`Apagar <b>${esc(x.nome)}</b> do homebrew de ${esc(nome)}?`, async () => { await db.doc('homebrew/' + x.id).delete(); hb.splice(hb.indexOf(x), 1); }); });
+    $$('[data-del-camp]').forEach(b => b.onclick = () => { const c = camps.find(y => y.id === b.dataset.delCamp); confirma(`Excluir a campanha <b>${esc(c.nome)}</b> de ${esc(nome)}, com combate, chat e homebrew dela?`, async () => { await excluirCampanha(c.id); camps.splice(camps.indexOf(c), 1); }); });
+    $$('[data-ver-hb]').forEach(b => b.onclick = () => { const x = hb.find(y => y.id === b.dataset.verHb); fichaAmeacaModal({ ...x, id: 'hb' + x.id, npc: x.tipo === 'npc' }, { editavel: true, aoMudarFicha: async f => { try { await db.doc('homebrew/' + x.id).update({ ficha: f }); toast('Ficha salva.'); } catch (e) {} } }); });
+    $$('[data-txt-hb]').forEach(b => b.onclick = () => { const x = hb.find(y => y.id === b.dataset.txtHb); abrirModal(x.nome, `<span class="tag">${esc(TIPOS_HB.find(t => t[0] === x.tipo)?.[1] || x.tipo)}</span><p>${fmtTx(x.texto || x.efeito || x.obs || x.descricao || '')}</p>${(x.limitacoes || []).length ? `<p class="faint">${x.limitacoes.map(esc).join('<br>')}</p>` : ''}${x.custo ? `<p class="mono">Custo: ${esc(x.custo)}</p>` : ''}`); });
+    $$('[data-ver-regras]').forEach(b => b.onclick = () => { const R = regras[b.dataset.verRegras].ativo || regras[b.dataset.verRegras].rascunho || regrasVazias(), exF = { nome: 'Exemplo', nivel: 5, atributos: {}, mec: {} };
+      abrirModal('Homebrew da campanha', `${R.mecanicas?.length ? `<div class="grade-mecs" style="grid-template-columns:1fr">${R.mecanicas.map(m => htmlMecanica({ ...m, quem: { modo: 'todos' } }, exF)).join('')}</div>` : '<p class="faint">Sem mecânicas.</p>'}${(R.classes || []).map(c => `<div class="caixa"><b>${esc(c.nome)}</b> <span class="faint">PV ${c.pv} · PST ${c.pst} · PS ${c.ps}</span></div>`).join('')}<a class="btn sec" href="#regras-${esc(b.dataset.verRegras)}" style="text-decoration:none; justify-self:start">Abrir o editor</a>`); });
+  };
+  render();
+};
+
 ROTAS.campanha = async id => {
   if (!db) { app.innerHTML = semBanco(); return; }
   await carregarPart();
@@ -3944,9 +4065,10 @@ ROTAS.entrar = async () => {
       <div class="caixa" style="display:grid; gap:8px"><h3 style="margin:0">Conta</h3>
         <div class="linha-acao"><span><span class="rotulo">E-mail</span> ${esc(email || '(sem e-mail)')}</span></div>
         <div class="linha-acao"><span style="min-width:0; overflow-wrap:anywhere"><span class="rotulo">ID</span> <span class="mono" style="font-size:12px">${esc(ME)}</span></span><button class="btn mini sec" id="pf-copiar">Copiar</button></div>
+        <p class="faint" style="margin:0; font-size:13px">O site registra quanto tempo cada conta passa em cada página, para os administradores acompanharem a mesa.</p>
         <p class="faint" style="margin:0; font-size:13px">${DONO ? 'Seu acesso de administrador está preso ao seu ID e ao seu e-mail, não ao nome. Pode trocar o nome e a foto à vontade.' : 'O nome e a foto podem mudar quando quiser; a conta é reconhecida pelo ID e pelo e-mail.'}</p>
         <button class="btn sec" id="sair-conta" style="justify-self:start">Sair da conta</button></div>
-      ${DONO ? `<div class="caixa" style="display:grid; gap:10px"><h3 style="margin:0">Contas da mesa</h3><p class="faint" style="margin:0; font-size:13px">Busque pelo nome para ver o ID de alguém. Administrador é marcado no banco pelo ID, então trocar de nome não tira o acesso.</p>
+      ${DONO ? `<div class="caixa" style="display:grid; gap:10px"><div class="sec-f"><h3 style="margin:0">Contas da mesa</h3><a class="btn mini" href="#admin" style="text-decoration:none">Abrir painel do administrador</a></div><p class="faint" style="margin:0; font-size:13px">Busque pelo nome para ver o ID de alguém. Administrador é marcado no banco pelo ID, então trocar de nome não tira o acesso.</p>
         <div class="busca">${ICON_BUSCA}<input type="search" id="pf-busca" placeholder="Nome, por exemplo: Yonne"></div><div id="pf-contas" class="lista"></div></div>` : ''}`;
     const ligarP = () => {
       $('#pf-foto').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) { foto = u; $('#pf-ava').style.backgroundImage = `url('${u}')`; $('#pf-ava').textContent = ''; toast('Foto enviada. Clique em Salvar perfil.'); } };
@@ -3960,7 +4082,7 @@ ROTAS.entrar = async () => {
       $('#sair-conta').onclick = async () => { await sb.auth.signOut(); location.hash = 'inicio'; location.reload(); };
       const buscar = debounce(async () => { const el = $('#pf-contas'); if (!el) return; const q = $('#pf-busca').value.trim();
         const { data, error } = await sb.from('perfis').select('id,nome,papel').ilike('nome', `%${q}%`).limit(30);
-        el.innerHTML = error ? `<span class="falha">${esc(error.message)}</span>` : (data || []).map(u => `<div class="linha-acao"><span style="min-width:0; overflow-wrap:anywhere"><b>${esc(u.nome || '(sem nome)')}</b> ${u.papel === 'admin' ? '<span class="tag crit">Admin</span>' : ''}<br><span class="mono faint" style="font-size:11.5px">${esc(u.id)}</span></span><button class="btn mini sec" data-cp-id="${esc(u.id)}">Copiar ID</button></div>`).join('') || '<span class="faint">Ninguém com esse nome.</span>';
+        el.innerHTML = error ? `<span class="falha">${esc(error.message)}</span>` : (data || []).map(u => `<div class="linha-acao"><span style="min-width:0; overflow-wrap:anywhere"><b>${esc(u.nome || '(sem nome)')}</b> ${u.papel === 'admin' ? '<span class="tag crit">Admin</span>' : ''}<br><span class="mono faint" style="font-size:11.5px">${esc(u.id)}</span></span><span style="display:flex; gap:6px"><a class="btn mini sec" href="#usuario-${esc(u.id)}" style="text-decoration:none">Ver perfil</a><button class="btn mini sec" data-cp-id="${esc(u.id)}">Copiar ID</button></span></div>`).join('') || '<span class="faint">Ninguém com esse nome.</span>';
         el.querySelectorAll('[data-cp-id]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.cpId); toast('ID copiado.'); } catch (e) { toast(b.dataset.cpId); } }); }, 300);
       $('#pf-busca')?.addEventListener('input', buscar); if ($('#pf-busca')) buscar();
     };
