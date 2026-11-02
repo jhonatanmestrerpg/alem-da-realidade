@@ -111,6 +111,7 @@ img { max-width: 100%; }
 @media (max-width: 980px) { .ed-mec { grid-template-columns: 1fr; } .ed-previa { position: static; max-height: none; } }
 .perfil-topo { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; padding: 18px; border: 1px solid var(--linha); background: linear-gradient(110deg, color-mix(in srgb, var(--pc) 30%, transparent), transparent 70%), var(--painel); }
 .perfil-ava { width: 96px; height: 96px; border-radius: 50%; background: var(--painel-3) center/cover no-repeat; border: 2px solid var(--pc); display: grid; place-items: center; font: 700 30px var(--f-mono); color: #0b0d14; flex: none; }
+.rc-aviso { font-size: 13px; line-height: 1.4; color: var(--lua); padding-top: 2px; }
 .volta-camp:hover { border-color: var(--ouro); }
 .volta-camp[hidden] { display: none; }
 .volta-camp svg { flex: none; width: 15px; height: 15px; color: var(--ouro); }
@@ -896,7 +897,7 @@ function vigiarTurnos() {
     VIG[camp] = db.doc(`campanhas/${camp}/publico/combate`).onSnapshot(async sn => {
       const cb = sn.data(); if (!cb?.ativo) return; const x = (cb.ordem || [])[cb.turno];
       if (x?.tipo !== 'agente' || !x.ref) return;
-      try { const f = (await db.doc('fichas/' + x.ref).get()).data(); if (!f || f.dono !== ME || (!(f.condicoes || []).length && !quedaAtiva(f).length)) return;
+      try { const f = (await db.doc('fichas/' + x.ref).get()).data(); if (!f || f.dono !== ME || f.morto || (!(f.condicoes || []).length && !quedaAtiva(f).length)) return;
         if (f.condVez === `${camp}:${cb.rodada}`) return; popCondicoes(x.ref, camp, cb.rodada); } catch (e) {}
     }, () => {});
   }
@@ -1549,7 +1550,7 @@ ROTAS.agente = async id => {
     publicarRolagem(F, `Usou ${nome}`, { total: totalPub, detalhe: esc(resumo.join(' · ') || 'Habilidade') });
   }
 
-  async function reviver() { const K = calc(F); F.morto = null; F.atual = { ...K.max, ...(F.atual || {}), pv: Math.max(1, F.atual?.pv || 0) }; ajustarQueda(F); render();
+  async function reviver() { const K = calc(F), tp = F.morto?.tipo; F.morto = null; F.atual = { ...K.max, ...(F.atual || {}), pv: Math.max(1, F.atual?.pv || 0) }; if (tp && tp !== 'pv') F.atual[tp] = Math.max(1, F.atual[tp] || 0); ajustarQueda(F); render();
     try { await ref.update({ morto: null, atual: F.atual, queda: F.queda || {} }); toast(`${F.nome} voltou.`); } catch (e) { toast('Não deu para salvar.'); } }
   async function checarPermissao() {
     ehMestre = DONO;
@@ -1631,7 +1632,7 @@ ROTAS.agente = async id => {
           <div class="ctrl"><button class="vbtn" data-v="${k}" data-d="-5" ${podeEditar ? '' : 'disabled'}>−5</button><button class="vbtn" data-v="${k}" data-d="-1" ${podeEditar ? '' : 'disabled'}>−1</button>
           <div class="trilho ${marcas(F, k) != null ? 'caido' : ''} ${podeEditar || ehMestre ? 'clicavel' : ''}" ${podeEditar || ehMestre ? `data-vaj="${k}" role="button" tabindex="0" title="Clique para digitar um valor"` : ''}><div class="cheio" style="width:${Math.min(100, (F.atual[k] / (K.max[k] || 1)) * 100)}%"></div><div class="txt">${marcas(F, k) != null ? `${ESTADO_ZERO[k]} · ${F.atual[k]} / ${K.max[k]}` : `${F.atual[k]} / ${K.max[k]}`}</div></div>
           <button class="vbtn" data-v="${k}" data-d="1" ${podeEditar ? '' : 'disabled'}>+1</button><button class="vbtn" data-v="${k}" data-d="5" ${podeEditar ? '' : 'disabled'}>+5</button></div>
-          ${marcas(F, k) != null ? `<div class="queda"><span class="rotulo">Morte</span>${bolinhas(marcas(F, k))}<span class="faint" style="font-size:12px">3 marcadas: ${k === 'ps' ? 'loucura' : 'morte'} · zerou: volta com 1</span>${podeEditar || ehMestre ? `<button class="btn mini" data-bolinha="${k}">Teste de ${TESTE_QUEDA[k]} · DT ${QUEDA_DT}</button>${ehMestre ? `<button class="btn mini sec" data-bol-m="${k}|0" title="Marcar sem teste">+1</button><button class="btn mini sec" data-bol-m="${k}|1" title="Apagar sem teste">−1</button>` : ''}` : ''}</div>` : ''}</div>`).join('')}
+          ${marcas(F, k) != null ? `<div class="queda"><span class="rotulo">Morte</span>${bolinhas(marcas(F, k))}<span class="faint" style="font-size:12px">3 marcadas: ${k === 'ps' ? 'loucura' : 'morte'} · zerou: volta com 1</span>${(podeEditar || ehMestre) && !F.morto ? `<button class="btn mini" data-bolinha="${k}">Teste de ${TESTE_QUEDA[k]} · DT ${QUEDA_DT}</button>${ehMestre ? `<button class="btn mini sec" data-bol-m="${k}|0" title="Marcar sem teste">+1</button><button class="btn mini sec" data-bol-m="${k}|1" title="Apagar sem teste">−1</button>` : ''}` : ''}</div>` : ''}</div>`).join('')}
       </div>
     </section>
 
@@ -2951,16 +2952,19 @@ function atualizarFeed(el, cfg, tipo) {
   marcarPuxador(st, id);
 }
 const marcarPuxador = (st, id) => { const p = app.querySelector('.puxador.esq'); if (!p) return; const n = (FEED_ABA[id] || 'rol') === 'chat' && LADO === 'esq' ? 0 : novasChat(st, id); p.dataset.n = n || ''; };
+// detalhe de rolagem vem do banco: só deixa passar as marcas que o próprio site gera
+const htmlSeguro = h => String(h ?? '').replace(/<(\/?)([a-z0-9]+)([^>]*)>/gi, (m, f, t, at) => { t = t.toLowerCase(); if (!['span', 'b', 'i', 'br'].includes(t)) return ''; const c = /class="([\w -]*)"/.exec(at); return `<${f}${t}${!f && c ? ` class="${c[1]}"` : ''}>`; });
 const rolHtml = r => { const tit = r.titulo || String(r.rotulo || '').replace(/^(Acerto|Dano) · /, '');
   const tipo = r.tipo || (/^Acerto · /.test(r.rotulo || '') ? 'acerto' : /^Dano · /.test(r.rotulo || '') ? 'dano' : '');
-  const corpo = tipo === 'ataque'
+  const aviso = !tipo && (r.total === '' || r.total == null);
+  const corpo = aviso ? `<div class="rc-aviso">${htmlSeguro(r.detalhe)}</div>` : tipo === 'ataque'
     ? `<div class="rc-par"><div><b class="${r.critico ? 'crit' : ''}">${esc(r.ataque)}</b><span>Ataque</span></div><i aria-hidden="true"></i><div><b>${esc(r.dano)}</b><span>Dano</span></div></div>`
     : `<div class="rc-par um"><div><b class="${r.critico || /crítico/i.test(r.rotulo || '') ? 'crit' : ''}">${esc(r.total)}</b><span>${tipo === 'acerto' ? 'Ataque' : tipo === 'dano' ? 'Dano' : 'Total'}</span></div></div>`;
   return `<div class="rol2 ${r.oculta ? 'oculta' : ''}"><div class="rc-autor">${esc(r.autor)}</div>
     <div class="rc-card ${r.critico || /crítico/i.test(r.rotulo || '') ? 'crit' : ''}" style="${(() => { const e = estiloCartao(r.estilo); return e ? `--rc:${e.borda}; background:${e.fundo}; border-image:linear-gradient(90deg, ${e.borda}, ${e.borda2}) 1` : r.cor ? `--rc:${esc(r.cor)}` : ''; })()}">
       <div class="rc-ico" style="${r.foto ? `background-image:url('${esc(r.foto)}')` : ''}">${r.foto ? '' : DADO_SVG}</div>
       <div class="rc-meio"><div class="rc-tit">${esc(tit)}</div>${corpo}</div></div>
-    ${r.detalhe ? `<details class="rc-det"><summary>dados</summary><span class="mono">${r.detalhe}</span></details>` : ''}
+    ${r.detalhe && !aviso ? `<details class="rc-det"><summary>dados</summary><span class="mono">${htmlSeguro(r.detalhe)}</span></details>` : ''}
     <div class="rc-data">${horaBR(r.t)}${r.oculta ? ' · só o mestre vê' : ''}</div></div>`; };
 function abrirHistorico(camps0, fid) {
   const camps = [...(fid ? ['__ficha'] : []), ...(db ? camps0 || [] : [])]; if (!camps.length) return;
@@ -3455,7 +3459,7 @@ ROTAS.escudo = async id => {
         abrirModal('Segunda fase', `<p class="dim" style="margin:0">${esc(x0.nome)} não tem segunda fase na ficha. Defina agora:</p><div class="grade-campos"><div class="campo"><label class="rotulo" for="sf-n">Nome da fase</label><input type="text" id="sf-n" placeholder="Fúria"></div><div class="campo"><label class="rotulo" for="sf-pv">PV da fase</label><input type="number" id="sf-pv" value="${x0.pvMax}"></div><div class="campo"><label class="rotulo" for="sf-d">Defesa (vazio repete)</label><input type="number" id="sf-d" placeholder="${esc(x0.ficha?.defesa ?? '')}"></div></div><div class="campo"><label class="rotulo" for="sf-t">Texto para a mesa</label><input type="text" id="sf-t" placeholder="Ela ruge e o chão racha."></div><button class="btn" id="sf-ok">Virar a fase</button>`, (m, fechar) => {
           m.querySelector('#sf-ok').onclick = () => { const v = id2 => m.querySelector(id2).value.trim(); virar({ nome: v('#sf-n'), pv: v('#sf-pv'), defesa: v('#sf-d'), texto: v('#sf-t') }); fechar(); }; }); });
       $('[data-cb-matar]')?.addEventListener('click', () => declararMorte(I0.f, async morto => { I0.f.morto = morto; render(); try { await db.doc('fichas/' + I0.f.id).update({ morto }); } catch (e) { toast('Não deu para salvar.'); } }));
-      $('[data-cb-reviver]')?.addEventListener('click', async () => { const f = I0.f, a = { ...I0.a, pv: Math.max(1, I0.a.pv) }; f.morto = null; f.atual = a; ajustarQueda(f); render(); try { await db.doc('fichas/' + f.id).update({ morto: null, atual: a, queda: f.queda || {} }); } catch (e) { toast('Não deu para salvar.'); } });
+      $('[data-cb-reviver]')?.addEventListener('click', async () => { const f = I0.f, a = { ...I0.a, pv: Math.max(1, I0.a.pv) }; if (f.morto?.tipo && f.morto.tipo !== 'pv') a[f.morto.tipo] = Math.max(1, a[f.morto.tipo] || 0); f.morto = null; f.atual = a; ajustarQueda(f); render(); try { await db.doc('fichas/' + f.id).update({ morto: null, atual: a, queda: f.queda || {} }); } catch (e) { toast('Não deu para salvar.'); } });
       $('[data-npcaj]')?.addEventListener('click', () => abrirModal2(`PV de ${x0.nome}`, `<div class="campo"><label class="rotulo" for="hp-n">Quantidade</label><input type="number" id="hp-n" min="0"></div><div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn" data-op="-">Tirar</button><button class="btn sec" data-op="+">Somar</button><button class="btn sec" data-op="=">Definir como</button></div>`, (m2, f2) => {
         const nI = m2.querySelector('#hp-n'); nI.focus(); const ap = op => { const v = Math.abs(+nI.value || 0); x0.pv = Math.max(0, Math.min(x0.pvMax, op === '-' ? x0.pv - v : op === '+' ? x0.pv + v : v)); salvarE(); f2(); render(); };
         m2.querySelectorAll('[data-op]').forEach(b => b.onclick = () => ap(b.dataset.op)); nI.onkeydown = e => { if (e.key === 'Enter') ap('-'); }; }));
