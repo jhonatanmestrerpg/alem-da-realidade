@@ -3,4 +3,6 @@
 window.ADR_CONFIG = {
   url: 'https://vjrlldnieqyrqgkctnqr.supabase.co',
   chave: 'sb_publishable_2x-xtpusA55R6AHfK8zayQ_NdXopyZu',
+  // Administradores por e-mail ou ID da conta (nunca pelo nome). O nome e a foto podem mudar sem perder o acesso.
+  admins: ['jhonatancruzdosreis.dev@gmail.com'],
 };

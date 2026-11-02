@@ -109,6 +109,8 @@ img { max-width: 100%; }
 .mc-hab.travada { opacity: .4; } .mc-hab p { margin: 2px 0 0; color: var(--lua-dim); }
 .mc-ops { display: grid; gap: 6px; }
 @media (max-width: 980px) { .ed-mec { grid-template-columns: 1fr; } .ed-previa { position: static; max-height: none; } }
+.perfil-topo { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; padding: 18px; border: 1px solid var(--linha); background: linear-gradient(110deg, color-mix(in srgb, var(--pc) 30%, transparent), transparent 70%), var(--painel); }
+.perfil-ava { width: 96px; height: 96px; border-radius: 50%; background: var(--painel-3) center/cover no-repeat; border: 2px solid var(--pc); display: grid; place-items: center; font: 700 30px var(--f-mono); color: #0b0d14; flex: none; }
 .volta-camp:hover { border-color: var(--ouro); }
 .volta-camp[hidden] { display: none; }
 .volta-camp svg { flex: none; width: 15px; height: 15px; color: var(--ouro); }
@@ -1107,7 +1109,9 @@ const veredito = (total, dt) => dt ? (total >= dt ? ` contra DT ${dt}: <span cla
 /* =================================================================
    CAPACIDADES (banco compartilhado, quem está vendo, imagens)
    ================================================================= */
-let db = null, sb = null, ME = null, DONO = false, PERFIL = null, MEU_PRINCIPAL = null;
+let db = null, sb = null, ME = null, DONO = false, PERFIL = null, MEU_PRINCIPAL = null, SESSAO = null;
+// administrador: pelo papel no banco (preso ao ID) ou pela lista de e-mails/IDs do config.js; nunca pelo nome
+const ehAdminConta = (session, perfil) => { const L = (window.ADR_CONFIG?.admins || []).map(x => String(x).toLowerCase().trim()); const em = String(session?.user?.email || '').toLowerCase(); return perfil?.papel === 'admin' || (!!em && L.includes(em)) || L.includes(String(session?.user?.id || '').toLowerCase()); };
 const PERFIS = {};
 async function nomeDe(ids) {
   const falta = ids.filter(i => i && !(i in PERFIS));
@@ -3868,14 +3872,33 @@ ROTAS.entrar = async () => {
   app.className = 'pagina estreita';
   if (!sb) { app.innerHTML = '<div class="aviso">O site não encontrou a configuração do Supabase (config.js).</div>'; return; }
   if (ME) {
-    app.innerHTML = `<div><span class="rotulo">Sua conta</span><h1>${esc(PERFIL?.nome || 'Agente')}</h1></div>
-      <div class="caixa" style="display:grid; gap:12px"><div class="campo"><label class="rotulo" for="meu-nome">Nome que aparece na mesa</label><input type="text" id="meu-nome" value="${esc(PERFIL?.nome || '')}"></div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn" id="salvar-nome">Salvar nome</button><button class="btn sec" id="sair-conta">Sair da conta</button></div>
-      ${DONO ? '<span class="tag crit" style="justify-self:start">Administrador</span>' : ''}</div>`;
-    $('#salvar-nome').onclick = async () => { const nome = $('#meu-nome').value.trim(); if (!nome) return toast('Escreva um nome.');
-      const { error } = await sb.from('perfis').update({ nome }).eq('id', ME); if (error) return toast('Não deu para salvar: ' + error.message);
-      PERFIL.nome = nome; PERFIS[ME] = nome; desenharQuem(); toast('Nome salvo.'); };
-    $('#sair-conta').onclick = async () => { await sb.auth.signOut(); location.hash = 'inicio'; location.reload(); };
+    const email = SESSAO?.user?.email || '', P = PERFIL || {};
+    let foto = P.foto || '';
+    const des = () => `<div class="perfil-topo" style="--pc:${esc(P.cor || corDe(ME))}"><div class="perfil-ava" id="pf-ava" style="${foto ? `background-image:url('${esc(foto)}')` : `background-color:${esc(P.cor || corDe(ME))}`}">${foto ? '' : esc(iniciais(P.nome))}</div>
+        <div><span class="rotulo">Sua conta</span><h1 style="margin:0">${esc(P.nome || 'Agente')}</h1>${P.frase ? `<p class="dim" style="margin:4px 0 0; font-style:italic">“${esc(P.frase)}”</p>` : ''}${DONO ? '<span class="tag crit" style="margin-top:6px; display:inline-block">Administrador</span>' : ''}</div></div>
+      <div class="caixa" style="display:grid; gap:12px"><h3 style="margin:0">Perfil</h3>
+        <div class="grade-campos"><div class="campo"><label class="rotulo" for="meu-nome">Nome que aparece na mesa</label><input type="text" id="meu-nome" value="${esc(P.nome || '')}" maxlength="40"></div>
+        <div class="campo"><label class="rotulo" for="pf-frase">Frase</label><input type="text" id="pf-frase" value="${esc(P.frase || '')}" maxlength="90" placeholder="Uma linha sobre você"></div>
+        <div class="campo"><label class="rotulo" for="pf-foto">Foto de perfil</label><input type="file" id="pf-foto" accept="image/*"></div>
+        <div class="campo"><label class="rotulo" for="pf-cor">Cor</label><input type="color" id="pf-cor" value="${esc(P.cor || '#7b5ca8')}" style="height:42px; padding:2px"></div></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn" id="salvar-nome">Salvar perfil</button>${foto ? '<button class="btn sec" id="pf-tirar">Tirar foto</button>' : ''}</div></div>
+      <div class="caixa" style="display:grid; gap:8px"><h3 style="margin:0">Conta</h3>
+        <div class="linha-acao"><span><span class="rotulo">E-mail</span> ${esc(email || '(sem e-mail)')}</span></div>
+        <div class="linha-acao"><span style="min-width:0; overflow-wrap:anywhere"><span class="rotulo">ID</span> <span class="mono" style="font-size:12px">${esc(ME)}</span></span><button class="btn mini sec" id="pf-copiar">Copiar</button></div>
+        <p class="faint" style="margin:0; font-size:13px">${DONO ? 'Seu acesso de administrador está preso ao seu ID e ao seu e-mail, não ao nome. Pode trocar o nome e a foto à vontade.' : 'O nome e a foto podem mudar quando quiser; a conta é reconhecida pelo ID e pelo e-mail.'}</p>
+        <button class="btn sec" id="sair-conta" style="justify-self:start">Sair da conta</button></div>`;
+    const ligarP = () => {
+      $('#pf-foto').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) { foto = u; $('#pf-ava').style.backgroundImage = `url('${u}')`; $('#pf-ava').textContent = ''; toast('Foto enviada. Clique em Salvar perfil.'); } };
+      $('#pf-tirar')?.addEventListener('click', () => { foto = ''; toast('Foto removida. Clique em Salvar perfil.'); });
+      $('#pf-copiar').onclick = async () => { try { await navigator.clipboard.writeText(ME); toast('ID copiado.'); } catch (e) { toast(ME); } };
+      $('#salvar-nome').onclick = async () => { const nome = $('#meu-nome').value.trim(); if (!nome) return toast('Escreva um nome.');
+        const extra = { foto, frase: $('#pf-frase').value.trim(), cor: $('#pf-cor').value };
+        const { error } = await sb.from('perfis').update({ nome }).eq('id', ME); if (error) return toast('Não deu para salvar: ' + error.message);
+        try { await db.doc('usuarios/' + ME).set({ uid: ME, ...extra, t: Date.now() }); } catch (e) { return toast('O nome salvou, a foto e a frase não.'); }
+        Object.assign(PERFIL, { nome, ...extra }); PERFIS[ME] = nome; desenharQuem(); toast('Perfil salvo.'); app.innerHTML = des(); ligarP(); };
+      $('#sair-conta').onclick = async () => { await sb.auth.signOut(); location.hash = 'inicio'; location.reload(); };
+    };
+    app.innerHTML = des(); ligarP();
     return;
   }
   app.innerHTML = `<div><span class="rotulo">Acesso ao arquivo</span><h1>Entrar</h1></div>
@@ -3895,7 +3918,7 @@ ROTAS.entrar = async () => {
   $('#discord').onclick = async () => { const { error } = await sb.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: location.origin + location.pathname } }); if (error) toast('Discord não está ativado no Supabase: ' + error.message); };
 };
 function desenharQuem() {
-  $('#quem').innerHTML = ME ? `<a href="#entrar" style="display:flex; gap:8px; align-items:center; color:var(--lua-dim); text-decoration:none"><span>${esc(PERFIL?.nome || '')}</span><span class="ava" style="background:${corDe(ME)}">${esc(iniciais(PERFIL?.nome || '?'))}</span></a>`
+  $('#quem').innerHTML = ME ? `<a href="#entrar" style="display:flex; gap:8px; align-items:center; color:var(--lua-dim); text-decoration:none"><span>${esc(PERFIL?.nome || '')}</span><span class="ava" style="${PERFIL?.foto ? `background:center/cover url('${esc(PERFIL.foto)}')` : `background:${esc(PERFIL?.cor || corDe(ME))}`}">${PERFIL?.foto ? '' : esc(iniciais(PERFIL?.nome || '?'))}</span></a>`
     : '<a class="btn mini" href="#entrar" style="text-decoration:none">Entrar</a>';
 }
 
@@ -3903,12 +3926,13 @@ function desenharQuem() {
    INÍCIO DO APP
    ================================================================= */
 async function carregarSessao(session) {
-  ME = session?.user?.id || null; DONO = false; PERFIL = null;
+  ME = session?.user?.id || null; DONO = false; PERFIL = null; SESSAO = session || null;
   db = ME ? criarBanco(sb) : null;
   if (ME) {
     const { data } = await sb.from('perfis').select('id,nome,papel').eq('id', ME).maybeSingle();
     PERFIL = data || { id: ME, nome: session.user.email?.split('@')[0] || 'Agente', papel: 'jogador' };
-    DONO = PERFIL.papel === 'admin'; PERFIS[ME] = PERFIL.nome;
+    DONO = ehAdminConta(session, PERFIL); PERFIS[ME] = PERFIL.nome;
+    try { const u = (await db.doc('usuarios/' + ME).get()).data(); if (u) Object.assign(PERFIL, { foto: u.foto || '', frase: u.frase || '', cor: u.cor || '' }); } catch (e) {}
     try { MEU_PRINCIPAL = (await db.doc('cacadores/' + ME).get()).data()?.ficha || null; } catch (e) { MEU_PRINCIPAL = null; }
   }
   desenharQuem();
