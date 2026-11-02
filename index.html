@@ -1610,7 +1610,7 @@ ROTAS.agente = async id => {
       </div>
       <div style="display:grid; gap:14px; align-content:start; min-width:0">
         <div class="ident">
-          ${[['Jogador', F.jogador], ['Idade', F.idade], ['Classe', `${F.classe} / ${F.subclasse}`], ['Patente', `${K.pat.nome}, limite ${K.pat.limite}`]].map(([k, v]) => `<div class="linha"><span class="k rotulo">${k}</span><span class="v">${esc(v || '—')}</span></div>`).join('')}
+          ${[['Jogador', F.jogador], ['Idade', F.idade], ['Classe', nivelDe(F) === 0 ? 'Mundano (sem classe)' : `${F.classe} / ${F.subclasse}`], ['Patente', `${K.pat.nome}, limite ${K.pat.limite}`]].map(([k, v]) => `<div class="linha"><span class="k rotulo">${k}</span><span class="v">${esc(v || '—')}</span></div>`).join('')}
         </div>
         <div class="edit-only grade-campos">
           <div class="campo"><label class="rotulo" for="e-nome">Nome</label><input type="text" id="e-nome" data-campo="nome" value="${esc(F.nome)}"></div>
