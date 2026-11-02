@@ -35,6 +35,29 @@ begin
        and not coalesce((d->>'canonico')::boolean, false);
   end if;
 
+  -- extensão Deu a Louca nos Bichos: detetives do dono (ou do mestre de um caso em que estão)
+  if s[1] = 'bichos-detetives' then
+    if velho is null then return d->>'dono' = u; end if;
+    if velho->>'dono' = u then return coalesce(d->>'dono', u) = u; end if;
+    return exists (
+      select 1 from jsonb_array_elements_text(coalesce(velho->'casos', '[]'::jsonb)) as c(id)
+      join public.docs x on x.path = 'bichos-casos/' || c.id
+      where x.dados->>'mestre' = u);
+  end if;
+  -- casos dos Bichos: igual às campanhas
+  if s[1] = 'bichos-casos' then
+    select dados->>'mestre' into mestre from public.docs where path = 'bichos-casos/' || s[2];
+    if array_length(s, 1) = 2 then return coalesce(mestre, d->>'mestre') = u and coalesce(d->>'mestre', u) = u; end if;
+    if mestre = u then return true; end if;
+    if s[3] = 'rolagens' then return velho is null and d->>'uid' = u; end if;
+    if s[3] = 'membros' then return s[4] = u; end if;
+    if s[3] = 'detetives' then
+      return coalesce(velho->>'por', d->>'por') = u
+          or exists (select 1 from public.docs f where f.path = 'bichos-detetives/' || s[4] and f.dados->>'dono' = u);
+    end if;
+    return false;
+  end if;
+
   -- fichas: o dono; ou o mestre de uma campanha em que a ficha está
   if s[1] = 'fichas' then
     if velho is null then return d->>'dono' = u; end if;

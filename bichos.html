@@ -1,0 +1,1054 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a110a">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Deu a Louca nos Bichos: o mistério dos ovos desaparecidos da Baronesa Cleusa. Extensão do Além da Realidade.">
+<title>Deu a Louca nos Bichos · A.R.</title>
+<link rel="icon" href="img/icone/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Special+Elite&family=Nunito:ital,wght@0,400;0,600;0,800;1,400&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="banco.js"></script>
+<script src="bichos-dados.js"></script>
+<style>
+:root {
+  color-scheme: dark;
+  --madeira: #1a110a; --madeira-2: #24170d; --tabua: #2e1e11; --tabua-2: #3a2716; --veio: rgba(242,182,50,.12);
+  --papel: #f3e6c8; --papel-2: #e6d4ac; --tinta: #2a1a0e;
+  --ambar: #f2b632; --ambar-hi: #ffd36b; --fita: #f4c430; --vermelho: #e4574d; --teal: #3fb8a3; --azul: #5aa8e8;
+  --texto: #f6ead2; --texto-dim: #c9b48e; --texto-faint: #8c7656;
+  --f-disp: 'Luckiest Guy', 'Arial Black', sans-serif;
+  --f-maq: 'Special Elite', 'Courier New', monospace;
+  --f-body: 'Nunito', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--madeira); }
+body { margin: 0; color: var(--texto); font: 16px/1.55 var(--f-body); min-height: 100vh;
+  background: radial-gradient(70vmax 50vmax at 50% -10%, rgba(242,182,50,.16), transparent 60%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 2px, transparent 2px 140px), var(--madeira);
+  background-attachment: fixed; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: var(--ambar); }
+img { max-width: 100%; display: block; }
+:focus-visible { outline: 2px solid var(--ambar); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--f-disp); font-weight: 400; letter-spacing: .02em; line-height: 1.05; margin: 0; }
+h2 { font-size: clamp(26px, 4vw, 38px); color: var(--ambar); text-shadow: 2px 2px 0 #000; }
+h3 { font-size: 21px; color: var(--ambar-hi); }
+
+/* topo */
+.topo { position: sticky; top: 0; z-index: 20; background: #120b06; border-bottom: 3px solid #000; }
+.topo::after { content: ""; display: block; height: 12px; background: repeating-linear-gradient(-45deg, var(--fita) 0 16px, #111 16px 32px); }
+.topo-in { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; gap: 10px 20px; padding: 8px 16px; flex-wrap: wrap; }
+.marca { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--texto); }
+.marca svg { width: 34px; height: 34px; }
+.marca b { font: 400 21px/1 var(--f-disp); }
+.marca b i { font-style: normal; color: var(--ambar); }
+.nav { display: flex; gap: 2px 18px; flex-wrap: wrap; flex: 1; }
+.nav a { color: var(--texto-dim); text-decoration: none; font-weight: 800; font-size: 15px; padding: 6px 0; border-bottom: 3px solid transparent; }
+.nav a.aqui, .nav a:hover { color: var(--ambar); border-color: var(--ambar); }
+.quem { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--texto-dim); }
+.volta { font: 12px var(--f-maq); color: var(--texto-faint); text-decoration: none; border: 1px dashed var(--texto-faint); padding: 3px 8px; }
+.volta:hover { color: var(--ambar); border-color: var(--ambar); }
+
+@media (max-width: 640px) { .nav { order: 3; flex-basis: 100%; gap: 2px 16px; } .marca b { font-size: 18px; } .volta { display: none; } }
+main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 80px; }
+.pagina { display: grid; gap: 22px; }
+.cab { display: flex; align-items: end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.cab p { margin: 6px 0 0; color: var(--texto-dim); }
+.vazio { padding: 40px 16px; text-align: center; color: var(--texto-dim); font-family: var(--f-maq); }
+
+/* botões e campos */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 16px; background: var(--ambar); color: #1a0f05; border: 2px solid #000; box-shadow: 3px 3px 0 #000; font-weight: 800; text-decoration: none; border-radius: 6px; transition: transform .08s, box-shadow .08s; }
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #000; }
+.btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+.btn:disabled { opacity: .5; cursor: default; transform: none; }
+.btn.sec { background: var(--tabua-2); color: var(--texto); }
+.btn.perigo { background: var(--vermelho); color: #fff; }
+.btn.teal { background: var(--teal); }
+.btn.mini { padding: 4px 10px; font-size: 13px; box-shadow: 2px 2px 0 #000; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.campo { display: grid; gap: 4px; }
+.rotulo { font: 12px var(--f-maq); color: var(--texto-dim); text-transform: uppercase; letter-spacing: .08em; }
+input[type=text], input[type=number], input[type=url], select, textarea { width: 100%; padding: 9px 11px; background: #120b06; border: 2px solid var(--tabua-2); border-radius: 6px; color: var(--texto); }
+input:focus, select:focus, textarea:focus { border-color: var(--ambar); outline: none; }
+textarea { min-height: 80px; resize: vertical; }
+
+/* caixas */
+.caixa { background: linear-gradient(180deg, var(--tabua), var(--madeira-2)); border: 2px solid #000; border-radius: 10px; box-shadow: 4px 4px 0 rgba(0,0,0,.6); padding: 16px; }
+.papel { background: var(--papel); color: var(--tinta); border-radius: 4px; box-shadow: 3px 4px 0 rgba(0,0,0,.55); padding: 16px 18px; position: relative; }
+.papel h3 { color: var(--tinta); }
+.papel .rotulo { color: #7a5a35; }
+.fita { display: inline-block; background: repeating-linear-gradient(-45deg, var(--fita) 0 14px, #f0b820 14px 28px); color: #111; font: 400 15px var(--f-disp); padding: 4px 14px; border: 2px solid #000; transform: rotate(-1.5deg); letter-spacing: .04em; }
+.grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.tag { display: inline-block; font: 12px var(--f-maq); padding: 2px 8px; border-radius: 4px; background: rgba(0,0,0,.35); border: 1px solid var(--tabua-2); }
+.est { align-self: center; display: inline-block; font-weight: 800; font-size: 12px; padding: 2px 9px; border-radius: 999px; color: #111; background: var(--ec); border: 2px solid #000; }
+.est.off { background: #555; color: #bbb; text-decoration: line-through; }
+
+/* capa */
+.capa { position: relative; border: 3px solid #000; border-radius: 12px; overflow: hidden; box-shadow: 6px 6px 0 #000; }
+.capa img { width: 100%; height: auto; aspect-ratio: 1677/938; object-fit: cover; }
+.convoca { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, .8fr); gap: 20px; align-items: start; }
+.convoca .papel p { margin: 0 0 10px; }
+.convoca .papel h3 { margin: 12px 0 6px; }
+.conv-sel { font-family: var(--f-maq); font-size: 15px; }
+.citacao { font: italic 18px/1.4 var(--f-body); color: var(--ambar-hi); border-left: 4px solid var(--ambar); padding: 6px 14px; margin: 0; }
+.aviso-ovo { text-align: center; font-family: var(--f-maq); color: var(--texto-dim); }
+@media (max-width: 860px) { .convoca { grid-template-columns: 1fr; } }
+
+/* regras */
+.regras { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 22px; align-items: start; }
+.sumario { position: sticky; top: 90px; display: grid; gap: 4px; }
+.sumario button { text-align: left; background: none; border: 0; border-left: 3px solid var(--tabua-2); padding: 7px 12px; color: var(--texto-dim); font-weight: 800; }
+.sumario button.aqui { color: var(--ambar); border-color: var(--ambar); background: rgba(242,182,50,.07); }
+.texto-regra { display: grid; gap: 14px; }
+.texto-regra h3 { margin-top: 10px; }
+.texto-regra p, .texto-regra li { margin: 0; color: var(--texto); }
+.texto-regra p + p { margin-top: 8px; }
+.texto-regra .lead { font-size: 18px; color: var(--ambar-hi); }
+.texto-regra b { color: var(--ambar-hi); }
+.texto-regra ol, .texto-regra ul { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+.glossario { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.glossario div { background: var(--papel); color: var(--tinta); padding: 8px 10px; border-radius: 4px; display: grid; }
+.glossario b { color: var(--tinta) !important; font-weight: 800; }
+.glossario span { font: 12px var(--f-maq); color: #7a5a35; } .glossario span::before { content: "no Brutal: "; }
+.regra-card { background: var(--papel); color: var(--tinta); border-radius: 4px; padding: 12px 14px; box-shadow: 2px 3px 0 rgba(0,0,0,.5); display: grid; gap: 4px; }
+.regra-card b { color: var(--tinta) !important; font: 400 18px var(--f-disp); letter-spacing: .02em; }
+.regra-card .meta { font: 12px var(--f-maq); color: #7a5a35; }
+.regra-card p { color: var(--tinta) !important; margin: 0; }
+.regra-card i { color: #6b4a28; }
+.cards-regra { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+@media (max-width: 860px) { .regras { grid-template-columns: 1fr; } .sumario { position: static; display: flex; flex-wrap: wrap; } .sumario button { border-left: 0; border-bottom: 3px solid var(--tabua-2); } }
+
+/* espécie */
+.especie { display: grid; gap: 8px; background: var(--papel); color: var(--tinta); border-radius: 6px; padding: 14px; box-shadow: 3px 4px 0 rgba(0,0,0,.55); border-top: 8px solid var(--sc); }
+.especie .nm { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.especie .nm b { font: 400 24px var(--f-disp); }
+.texto-regra .especie p, .texto-regra .especie b, .texto-regra .especie span:not(.est), .texto-regra .especie i { color: var(--tinta); }
+.texto-regra .especie .tg, .texto-regra .especie .nm span { color: #7a5a35; }
+.especie .nm span { font: 12px var(--f-maq); color: #7a5a35; }
+.especie .tg { font: 12px var(--f-maq); color: #7a5a35; }
+.especie p { margin: 0; font-size: 14.5px; }
+.especie .hab { border-top: 2px dashed rgba(0,0,0,.25); padding-top: 8px; display: grid; gap: 2px; font-size: 14px; }
+.especie .hab b { font-weight: 800; }
+.especie.escolher { cursor: pointer; border: 3px solid transparent; transition: transform .1s; }
+.especie.escolher:hover { transform: rotate(-.6deg) translateY(-2px); }
+.especie.escolher.aqui { border-color: var(--teal); box-shadow: 0 0 0 3px #000, 4px 6px 0 rgba(0,0,0,.6); }
+
+/* avatar */
+.ava { width: 56px; height: 56px; flex: none; border-radius: 50%; border: 3px solid #000; background: var(--sc) center/cover no-repeat; display: grid; place-items: center; font: 400 22px var(--f-disp); color: #1a0f05; box-shadow: 2px 2px 0 #000; }
+.ava.g { width: 112px; height: 112px; font-size: 44px; }
+.ava.fora { filter: grayscale(1) brightness(.6); }
+
+/* cartão de detetive */
+.card-det { display: flex; gap: 12px; align-items: center; padding: 12px; background: var(--tabua); border: 2px solid #000; border-radius: 10px; box-shadow: 3px 3px 0 #000; text-decoration: none; color: var(--texto); }
+.card-det:hover { background: var(--tabua-2); }
+.card-det .nm { font: 400 20px var(--f-disp); }
+.card-det .sub { font: 12px var(--f-maq); color: var(--texto-dim); }
+.card-det.fora .nm { text-decoration: line-through; text-decoration-color: var(--vermelho); }
+
+/* dados */
+.d6 { --t: 30px; width: var(--t); height: var(--t); flex: none; background: #fbf4e2; border: 2px solid #000; border-radius: 22%; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: calc(var(--t) * .12); box-shadow: 2px 2px 0 #000; }
+.d6 i { width: 100%; height: 100%; border-radius: 50%; background: transparent; transform: scale(.78); }
+.d6 i.p { background: #1a0f05; }
+.d6.ok { background: var(--teal); } .d6.ok i.p { background: #04110e; }
+.d6.falha { background: #6b5a48; opacity: .75; } .d6.falha i.p { background: #2a1a0e; }
+.d6.seis { background: var(--ambar); }
+.d6.vazio { background: transparent; border-style: dashed; border-color: var(--texto-faint); box-shadow: none; }
+.d6.g { --t: 46px; }
+.d6.rola { animation: rola .5s ease both; }
+@keyframes rola { 0% { transform: rotate(-200deg) scale(.4); opacity: 0; } 70% { transform: rotate(15deg) scale(1.1); } 100% { transform: none; opacity: 1; } }
+.fila-dados { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+/* ficha */
+.ficha { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.ficha-topo { grid-column: 1 / -1; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+.ficha-topo h2 { font-size: clamp(30px, 5vw, 46px); }
+.ficha-topo .sub { font: 14px var(--f-maq); color: var(--texto-dim); }
+.pilha { display: grid; gap: 8px; }
+.pilha .cab-p { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.pilha .cab-p b { font: 400 19px var(--f-disp); color: var(--ambar-hi); }
+.pilha .num { font: 400 28px var(--f-disp); }
+.ctrl { display: inline-flex; gap: 4px; }
+.ctrl button { width: 34px; height: 34px; border: 2px solid #000; background: var(--tabua-2); color: var(--texto); border-radius: 6px; font-weight: 800; box-shadow: 2px 2px 0 #000; }
+.ctrl button:disabled { opacity: .35; cursor: default; }
+.faro { display: flex; gap: 4px; flex-wrap: wrap; }
+.faro button { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #000; background: #120b06; padding: 0; }
+.faro button.on { background: var(--teal); box-shadow: 0 0 10px rgba(63,184,163,.7); }
+.encrencas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.encrenca { display: grid; gap: 6px; justify-items: center; text-align: center; background: #120b06; border: 2px solid #000; border-radius: 8px; padding: 10px 6px; }
+.encrenca b { font: 400 16px var(--f-disp); }
+.encrenca.ativa { border-color: var(--vermelho); box-shadow: inset 0 0 18px rgba(228,87,77,.35); }
+.encrenca .val { font: 400 30px var(--f-disp); color: var(--vermelho); }
+.encrenca .val.zero { color: var(--texto-faint); }
+.bloco { display: grid; gap: 10px; }
+.vant { display: grid; gap: 2px; padding: 10px 12px; background: #120b06; border-left: 4px solid var(--vc, var(--ambar)); border-radius: 4px; }
+.vant b { font-weight: 800; } .vant .meta { font: 12px var(--f-maq); color: var(--texto-dim); } .vant p { margin: 0; font-size: 14px; }
+.vant.off { opacity: .45; }
+.apego { display: grid; gap: 4px; }
+.apego .linha { display: flex; gap: 8px; align-items: center; }
+.apego .linha input[type=text] { flex: 1; }
+.chk { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--texto-dim); white-space: nowrap; }
+.fora-banner { grid-column: 1 / -1; text-align: center; padding: 20px; border: 3px solid #000; border-radius: 10px; background: repeating-linear-gradient(-45deg, var(--fita) 0 22px, #111 22px 44px); }
+.fora-banner span { display: inline-block; background: #000; color: var(--fita); font: 400 clamp(22px, 4vw, 34px) var(--f-disp); padding: 6px 20px; }
+@media (max-width: 860px) { .ficha { grid-template-columns: 1fr; } }
+
+/* mesa / caso */
+.mesa { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, .85fr); gap: 18px; align-items: start; }
+.placar { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.placar > div { background: #120b06; border: 2px solid #000; border-radius: 10px; padding: 12px; display: grid; gap: 6px; }
+.placar .rotulo { color: var(--texto-dim); }
+.placar .big { font: 400 34px var(--f-disp); color: var(--ambar); line-height: 1; }
+.placar .d6 { --t: 20px; }
+.placar .culp .big { color: var(--vermelho); }
+.fase { justify-self: start; display: inline-flex; align-items: center; gap: 8px; font: 400 18px var(--f-disp); padding: 4px 14px; border: 2px solid #000; border-radius: 999px; background: var(--teal); color: #04110e; }
+.fase.suspense { background: var(--ambar); }
+.fase.acareacao { background: var(--vermelho); color: #fff; animation: pulso 1.4s ease-in-out infinite; }
+@keyframes pulso { 50% { box-shadow: 0 0 18px rgba(228,87,77,.9); } }
+.feed { display: grid; gap: 8px; max-height: 70vh; overflow: auto; padding-right: 4px; }
+.rol { background: var(--papel); color: var(--tinta); border-radius: 4px; padding: 10px 12px; display: grid; gap: 6px; box-shadow: 2px 3px 0 rgba(0,0,0,.5); border-left: 6px solid var(--rc, var(--teal)); }
+.rol.falhou { --rc: var(--vermelho); }
+.rol.culpado { background: #2a0f0c; color: #ffd9d4; --rc: var(--vermelho); }
+.rol.sistema { background: #1d2a26; color: #d6f5ee; --rc: var(--teal); }
+.rol .top { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.rol .top b { font-weight: 800; }
+.rol .hora { font: 11px var(--f-maq); opacity: .7; }
+.rol .res { font: 400 18px var(--f-disp); }
+.rol .ef { font: 12px var(--f-maq); opacity: .8; }
+.rol .d6 { --t: 24px; }
+.mural { display: grid; gap: 10px; }
+.pista { background: var(--papel); color: var(--tinta); padding: 10px 14px; border-radius: 3px; box-shadow: 2px 3px 0 rgba(0,0,0,.5); position: relative; font-size: 15px; }
+.pista::before { content: ""; position: absolute; top: -6px; left: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--vermelho); border: 2px solid #000; transform: translateX(-50%); }
+.pista:nth-child(odd) { transform: rotate(-.7deg); } .pista:nth-child(even) { transform: rotate(.6deg); }
+.suspeito { display: grid; gap: 4px; background: #120b06; border: 2px dashed var(--texto-faint); border-radius: 8px; padding: 10px 12px; }
+.suspeito b { font: 400 18px var(--f-disp); color: var(--ambar-hi); }
+.suspeito .tg { font: 12px var(--f-maq); color: var(--texto-dim); }
+.suspeito p { margin: 0; font-size: 14px; }
+.suspeito.inocente { opacity: .5; } .suspeito.inocente b::after { content: " · inocente"; color: var(--teal); font-size: 13px; }
+.det-mesa { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px; background: #120b06; border: 2px solid #000; border-radius: 8px; }
+.det-mesa .nm { font: 400 17px var(--f-disp); }
+.det-mesa .st { display: flex; gap: 10px; flex-wrap: wrap; font: 12px var(--f-maq); color: var(--texto-dim); }
+.det-mesa .st b { color: var(--texto); }
+.det-mesa .acoes-m { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }
+.det-mesa.fora { opacity: .5; }
+.abas { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 3px solid #000; }
+.abas button { background: var(--tabua); border: 2px solid #000; border-bottom: 0; border-radius: 8px 8px 0 0; padding: 8px 14px; font-weight: 800; color: var(--texto-dim); }
+.abas button.aqui { background: var(--ambar); color: #1a0f05; }
+.acao-c { display: grid; gap: 4px; padding: 10px 12px; background: #120b06; border: 2px solid #000; border-left: 5px solid var(--vermelho); border-radius: 6px; }
+.acao-c .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.acao-c b { font: 400 17px var(--f-disp); }
+.acao-c .meta { font: 12px var(--f-maq); color: var(--texto-dim); }
+.acao-c p { margin: 0; font-size: 13.5px; color: var(--texto-dim); }
+.lista-acoes { display: grid; gap: 8px; }
+.intentos { display: grid; gap: 6px; }
+.intentos button { display: flex; justify-content: space-between; gap: 10px; text-align: left; padding: 7px 10px; background: #120b06; border: 1px solid var(--tabua-2); border-radius: 6px; color: var(--texto); font-size: 14px; }
+.intentos button:hover { border-color: var(--ambar); }
+.intentos button span { font: 400 16px var(--f-disp); color: var(--ambar); white-space: nowrap; }
+.codigo { font: 15px var(--f-maq); background: #000; color: var(--fita); padding: 6px 10px; border-radius: 4px; user-select: all; word-break: break-all; }
+@media (max-width: 960px) { .mesa { grid-template-columns: 1fr; } .feed { max-height: none; } }
+
+/* modal */
+.fundo-modal { position: fixed; inset: 0; z-index: 50; background: rgba(10,6,3,.78); display: grid; place-items: center; padding: 16px; overflow: auto; }
+.modal { width: min(620px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: var(--madeira-2); border: 3px solid #000; border-radius: 12px; box-shadow: 6px 6px 0 #000; padding: 18px; display: grid; gap: 14px; }
+.cab-m { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.cab-m h2 { font-size: 26px; }
+.btn-x { background: none; border: 0; font-size: 28px; color: var(--texto-dim); line-height: 1; }
+.opcoes-rol { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.opcoes-rol button { text-align: left; padding: 8px 10px; background: #120b06; border: 2px solid var(--tabua-2); border-radius: 8px; color: var(--texto); display: grid; gap: 2px; }
+.opcoes-rol button span { font-size: 12px; color: var(--texto-dim); }
+.opcoes-rol button.aqui { border-color: var(--ambar); background: rgba(242,182,50,.12); }
+.resultado { text-align: center; display: grid; gap: 10px; justify-items: center; padding: 10px 0; }
+.resultado .veredito { font: 400 34px var(--f-disp); }
+.resultado .veredito.ok { color: var(--teal); } .resultado .veredito.no { color: var(--vermelho); }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; background: var(--ambar); color: #1a0f05; border: 2px solid #000; box-shadow: 3px 3px 0 #000; padding: 10px 16px; font-weight: 800; border-radius: 8px; animation: sobe .25s ease; }
+@keyframes sobe { from { transform: translate(-50%, 20px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="topo-in">
+    <a class="marca" href="#inicio" aria-label="Início">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="20" cy="22" rx="12" ry="15" fill="#fbf4e2" stroke="#000" stroke-width="2"/><path d="M8 24 l5 -4 l4 4 l5 -5 l4 5 l5 -4 l2 2" fill="none" stroke="#000" stroke-width="2"/><circle cx="29" cy="11" r="6" fill="none" stroke="#f2b632" stroke-width="2.5"/><path d="m33 15 4 4" stroke="#f2b632" stroke-width="3" stroke-linecap="round"/></svg>
+      <b>Deu a Louca <i>nos Bichos</i></b>
+    </a>
+    <nav class="nav" id="nav">
+      <a href="#inicio" data-sec="inicio">O Caso</a>
+      <a href="#regras" data-sec="regras">Regras</a>
+      <a href="#detetives" data-sec="detetives">Detetives</a>
+      <a href="#mesas" data-sec="mesas">Mesas</a>
+    </nav>
+    <div class="quem" id="quem"></div>
+    <a class="volta" href="./#inicio">← Além da Realidade</a>
+  </div>
+</header>
+<main><div id="app" class="pagina"><div class="vazio">Abrindo o arquivo do caso…</div></div></main>
+<div id="camada"></div>
+
+<script>
+'use strict';
+const B = window.BICHOS;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nl = s => esc(s).replace(/\n/g, '<br>');
+const app = $('#app');
+const ESP = Object.fromEntries(B.ESPECIES.map(e => [e.id, e]));
+const PRONTO = Object.fromEntries(B.PRONTOS.map(p => [p.id, p]));
+const ACAO = { ...Object.fromEntries(B.ACOES_GERAIS.map(a => [a.id, a])), ...B.ACOES_UNICAS };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const d6 = () => { const a = new Uint32Array(1); crypto.getRandomValues(a); return 1 + (a[0] % 6); };
+const uid8 = () => Math.random().toString(36).slice(2, 10);
+const horaBR = t => t ? new Date(t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+const iniciais = n => (n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+const FASES = { livre: 'Cena Livre', suspense: 'Suspense', acareacao: 'Acareação' };
+const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+const dado = (v, cls = '') => `<span class="d6 ${cls}" title="${v || ''}">${Array.from({ length: 9 }, (_, i) => `<i class="${v && PIPS[v].includes(i) ? 'p' : ''}"></i>`).join('')}</span>`;
+const estTag = (k, off) => `<span class="est ${off ? 'off' : ''}" style="--ec:${B.ESTILOS[k].cor}">${B.ESTILOS[k].nome}</span>`;
+const avatar = (f, g = '') => { const e = ESP[f.especie] || {}; return `<span class="ava ${g} ${f.fora ? 'fora' : ''}" style="--sc:${e.cor || '#888'};${f.foto ? `background-image:url('${esc(f.foto)}')` : ''}">${f.foto ? '' : esc(iniciais(f.nome))}</span>`; };
+
+/* ---------- modal ---------- */
+function abrirModal(titulo, corpo, ligar) {
+  const camada = $('#camada');
+  camada.innerHTML = `<div class="fundo-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(titulo)}"><div class="cab-m"><h2>${esc(titulo)}</h2><button class="btn-x" data-fechar aria-label="Fechar">×</button></div>${corpo}</div></div>`;
+  const fechar = () => { camada.innerHTML = ''; };
+  camada.querySelector('[data-fechar]').onclick = fechar;
+  camada.querySelector('.fundo-modal').addEventListener('click', e => { if (e.target.classList.contains('fundo-modal')) fechar(); });
+  ligar?.(camada.querySelector('.modal'), fechar);
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#camada').innerHTML = ''; });
+function escolherDetetive(titulo, lista, aoEscolher) {
+  abrirModal(titulo, lista.length ? `<div class="grade">${lista.map(f => `<button class="card-det" data-f="${f.id}" style="text-align:left">${avatar(f)}<div><div class="nm">${esc(f.nome)}</div><div class="sub">${esc(ESP[f.especie]?.nome)}</div></div></button>`).join('')}</div>` : '<div class="vazio">Nenhum detetive aqui.</div>', (m, fechar) => {
+    m.addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (b) { fechar(); aoEscolher(lista.find(f => f.id === b.dataset.f)); } });
+  });
+}
+
+/* ---------- conexão ---------- */
+let sb = null, db = null, ME = null, MEU_NOME = '';
+let SUBS = [];
+const assinar = f => SUBS.push(f);
+const limparSubs = () => { SUBS.forEach(f => { try { f(); } catch (e) {} }); SUBS = []; };
+const precisaEntrar = () => `<div class="caixa vazio"><p>Para abrir fichas e mesas você precisa entrar com a sua conta do Além da Realidade.</p><a class="btn" href="./#entrar">Entrar pelo A.R.</a></div>`;
+async function carregarPart() { if (!ME) return { casos: [] }; const s = await db.doc(`data/users/${ME}/bichos`).get(); return s.exists ? { casos: [], ...s.data() } : { casos: [] }; }
+async function salvarPart(p) { await db.doc(`data/users/${ME}/bichos`).set(p); }
+
+/* ---------- roteador ---------- */
+const ROTAS = {};
+async function rotear() {
+  limparSubs(); $('#camada').innerHTML = '';
+  const h = location.hash.slice(1) || 'inicio';
+  const [base, ...resto] = h.split('-'); const arg = resto.join('-');
+  const sec = { detetive: 'detetives', novo: 'detetives', caso: 'mesas', escudo: 'mesas' }[base] || base;
+  $$('#nav a').forEach(a => a.classList.toggle('aqui', a.dataset.sec === sec));
+  const fn = ROTAS[base] || ROTAS.inicio;
+  try { await fn(arg); } catch (e) { console.error(e); app.innerHTML = `<div class="vazio">Deu ruim abrindo esta página: ${esc(e.message || e.code || e)}</div>`; }
+  scrollTo({ top: 0 });
+}
+addEventListener('hashchange', rotear);
+
+/* =================================================================
+   INÍCIO
+   ================================================================= */
+ROTAS.inicio = async () => {
+  app.innerHTML = `
+  <div class="capa"><img src="img/bichos/capa.webp" alt="Texugo, coruja e raposa detetives diante do ninho vazio da Baronesa, cercado por fita de cena do crime." width="1677" height="938"></div>
+  <div class="convoca">
+    <div class="papel">
+      <span class="fita">🪺 GansoTopolópis</span>
+      <p class="conv-sel" style="margin-top:14px">"Os ovos da Baronesa Cleusa desapareceram na madrugada. O condado inteiro… é suspeito."</p>
+      <h3>🪶 O Crime</h3>
+      <p>Na manhã fria de terça-feira, a Baronesa Gansa Cleusa, nobre soberana do Condado de GansoTopolópis, acordou para o horror: seu ninho estava vazio. Seus preciosos ovos, herdeiros legítimos do título baronial, haviam sumido sem deixar rastro. Sem penas. Sem testemunhas. Sem explicação.</p>
+      <h3>🔍 A Investigação</h3>
+      <p>Diante do escândalo que abalou toda a nobreza animal, uma equipe de detetives foi convocada às pressas. Coelhos analistas, corvos investigadores, raposas interrogadoras e tatus farejadores agora percorrem cada canto do condado em busca de pistas, rastros e contradições nos depoimentos.</p>
+      <h3>🏰 O Condado</h3>
+      <p>GansoTopolópis parece pacato à primeira vista, com seus campos de trigo e lagos tranquilos. Porém, conforme a investigação avança, segredos antigos começam a emergir. Rivalidades entre vizinhos, alianças suspeitas e testemunhos contraditórios revelam que nem todo animal é tão inocente quanto aparenta.</p>
+      <h3>⚠️ O Caso</h3>
+      <p>Cabe a vocês vasculharem o condado, interrogarem os suspeitos e desvendarem o mistério antes que as pistas desapareçam… e os ovos também.</p>
+    </div>
+    <div class="bloco">
+      <div class="caixa bloco">
+        <h3>Como entrar no caso</h3>
+        <ol style="margin:0;padding-left:20px;display:grid;gap:6px">
+          <li>Leia as <a href="#regras">regras</a>. É o Brutal com penas.</li>
+          <li>Crie seu <a href="#detetives">detetive</a> escolhendo uma das 11 espécies.</li>
+          <li>Entre na <a href="#mesas">mesa</a> com o código que o Mestre mandar.</li>
+        </ol>
+        <div class="btns"><a class="btn" href="#novo">Criar detetive</a><a class="btn sec" href="#mesas">Mesas</a></div>
+      </div>
+      <blockquote class="citacao">Alguém no condado sabe onde estão os ovos. E esse alguém está muito, muito quieto.</blockquote>
+      <div class="caixa bloco">
+        <h3>Suspeitos conhecidos</h3>
+        ${B.PRONTOS.map(p => `<div class="suspeito"><b>${esc(p.nome)}</b><span class="tg">${esc(p.especie)}</span><p>"${esc(p.frase)}"</p></div>`).join('')}
+      </div>
+    </div>
+  </div>
+  <p class="aviso-ovo">🥚 Extensão do Além da Realidade · adaptado do Brutal: Corte Rápido 🥚</p>`;
+};
+
+/* =================================================================
+   REGRAS
+   ================================================================= */
+const cardRegra = (x, extra = '') => `<div class="regra-card"><b>${esc(x.nome)}</b>${extra}<p>${esc(x.txt)}</p></div>`;
+function especieCard(e, cls = '') {
+  return `<div class="especie ${cls}" style="--sc:${e.cor}" data-esp="${e.id}">
+    <div class="nm"><b>${esc(e.nome)}</b><span>${esc(e.papel)}</span></div>
+    <div class="tg">${esc(e.tags)}</div>
+    <div class="btns">${e.estilos.map(k => estTag(k)).join('')}</div>
+    <p>${esc(e.desc)}</p>
+    <div class="hab"><b>${esc(e.hab.nome)}</b><i>"${esc(e.hab.frase)}"</i><span class="tg">Cena: ${esc(e.hab.cena)} · Recarga: ${esc(e.hab.recarga)}</span><span>${esc(e.hab.txt)}</span></div>
+  </div>`;
+}
+ROTAS.regras = async arg => {
+  const sec = B.REGRAS.find(r => r.id === arg) || B.REGRAS[0];
+  app.innerHTML = `<div class="cab"><div><h2>Faro Rápido</h2><p>Regras de Deu a Louca nos Bichos, adaptadas do Brutal: Corte Rápido.</p></div></div>
+  <div class="regras"><nav class="sumario" aria-label="Sumário">${B.REGRAS.map(r => `<button data-r="${r.id}" class="${r.id === sec.id ? 'aqui' : ''}">${esc(r.titulo)}</button>`).join('')}</nav>
+  <article class="caixa texto-regra"><h2>${esc(sec.titulo)}</h2>${sec.html}</article></div>`;
+  $('.sumario').onclick = e => { const b = e.target.closest('[data-r]'); if (b) location.hash = 'regras-' + b.dataset.r; };
+  const art = $('.texto-regra');
+  const pre = (sel, html) => { const el = art.querySelector(sel); if (el) el.outerHTML = html; };
+  pre('[data-especies]', `<div class="grade">${B.ESPECIES.map(e => especieCard(e)).join('')}</div>`);
+  pre('[data-vant="gerais"]', `<div class="cards-regra">${B.VANT_GERAIS.map(v => cardRegra(v, `<span class="meta">Custo: ${v.custo} PF · Recarga: ${esc(v.recarga)}</span>`)).join('')}</div>`);
+  pre('[data-vant="estilo"]', `<div class="cards-regra">${Object.entries(B.VANT_ESTILO).map(([k, v]) => cardRegra(v, `<span class="meta">Estilo: ${B.ESTILOS[k].nome} · Custo: ${v.custo}${typeof v.custo === 'number' ? ' PF' : ''} · Recarga: ${esc(v.recarga)}</span>`)).join('')}</div>`);
+  pre('[data-perfis]', `<div class="cards-regra">${Object.values(B.PERFIS).map(p => `<div class="regra-card"><b>${esc(p.nome)}</b><span class="meta">${esc(p.tags)}</span><p>${esc(p.txt)}</p><p><i>Ações Únicas:</i> ${p.acoes.map(a => B.ACOES_UNICAS[a].nome).join(', ')}.</p><p><i>Intento Único:</i> ${esc(p.intento)}</p></div>`).join('')}</div>`);
+  pre('[data-intentos]', `<div class="cards-regra">${B.INTENTOS.map(([t, n]) => `<div class="regra-card"><p>${esc(t)}</p><span class="meta">+${n} PL</span></div>`).join('')}</div>`);
+  const meta = a => `<span class="meta">Cena: ${esc(a.cena)} · Custo: ${a.custo ? a.custo + ' PL' : 'Sem custo'}</span>`;
+  pre('[data-acoes="gerais"]', `<div class="cards-regra">${B.ACOES_GERAIS.map(a => cardRegra(a, meta(a))).join('')}</div>`);
+  pre('[data-acoes="unicas"]', `<div class="cards-regra">${Object.values(B.ACOES_UNICAS).map(a => cardRegra(a, meta(a))).join('')}</div>`);
+  pre('[data-golpes]', `<div class="cards-regra">${Object.values(B.GOLPES).map(g => `<div class="regra-card"><b>${esc(g.nome)}</b><span class="meta">Cena: ${esc(g.cena)} · Recarga: ${esc(g.recarga)} · Custo: ${esc(g.custo)} PL</span><p><i>${esc(g.frase)}</i></p><p>${esc(g.txt)}</p></div>`).join('')}</div>`);
+  pre('[data-iniciativa]', `<ol>${B.ESPECIES.map(e => `<li><b>${esc(e.nome)}</b>: ${esc(e.grito)}</li>`).join('')}<li><b>Culpado</b>: Por último, e sempre com surpresa.</li></ol>`);
+  if (sec.id === 'culpado') art.insertAdjacentHTML('beforeend', `<h3>Culpados prontos</h3><div class="cards-regra">${B.PRONTOS.map(p => fichaPronto(p)).join('')}</div>`);
+};
+function fichaPronto(p) {
+  return `<div class="regra-card"><b>${esc(p.nome)}</b><span class="meta">${esc(p.especie)} · Perfis: ${p.perfis.map(x => B.PERFIS[x].nome).join(' + ')}</span><p><i>"${esc(p.frase)}"</i></p>
+    <p><i>Dados iniciais:</i> ${p.dados} · <i>PL iniciais:</i> ${p.pl} · <i>Peças por Acareação:</i> ${p.pecas} · <i>Pilha de Dedução:</i> ${p.alvo}</p>
+    <p><i>Ações Únicas:</i> ${p.acoes.map(a => B.ACOES_UNICAS[a].nome).join(', ')} · <i>Golpe Baixo:</i> ${B.GOLPES[p.golpe].nome}</p><p>${esc(p.txt)}</p></div>`;
+}
+
+/* =================================================================
+   DETETIVES
+   ================================================================= */
+const novaFicha = (nome, especie) => ({ dono: ME, nome, especie, foto: '', pilha: 6, pf: 0, deducao: 0, galo: 0, enrolado: 0, aliciado: 0, agarrado: false, tiques: 0, desmoralizados: [], fora: false,
+  apegos: { item: { txt: '', usado: false }, relacao: { txt: '', usado: false }, rabo: { txt: '', revelado: false } }, notas: '', casos: [], criado: Date.now() });
+
+ROTAS.detetives = async () => {
+  if (!ME) { app.innerHTML = `<div class="cab"><h2>Detetives</h2></div>${precisaEntrar()}`; return; }
+  app.innerHTML = `<div class="cab"><div><h2>Seus detetives</h2><p>Cada um com bico, focinho ou carapaça própria.</p></div><a class="btn" href="#novo">Novo detetive</a></div><div class="grade" id="lista"><div class="vazio">Procurando no celeiro…</div></div>`;
+  assinar(db.collection('bichos-detetives').where('dono', '==', ME).onSnapshot(s => {
+    const l = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.criado || 0) - (a.criado || 0));
+    $('#lista').innerHTML = l.length ? l.map(f => `<a class="card-det ${f.fora ? 'fora' : ''}" href="#detetive-${f.id}">${avatar(f)}<div><div class="nm">${esc(f.nome)}</div><div class="sub">${esc(ESP[f.especie]?.nome)} ${esc(ESP[f.especie]?.papel)} · ${f.pilha} dados · ${f.pf} PF</div></div></a>`).join('') : '<div class="vazio">Nenhum detetive ainda. O condado precisa de você.</div>';
+  }, e => toast('Não deu para ler: ' + e.message)));
+};
+
+ROTAS.novo = async () => {
+  if (!ME) { app.innerHTML = precisaEntrar(); return; }
+  let esc_ = null;
+  app.innerHTML = `<div class="cab"><div><h2>Novo detetive</h2><p>Escolha a espécie. Ela define seus Estilos, sua habilidade e sua vez na Acareação.</p></div></div>
+  <div class="grade" id="esps">${B.ESPECIES.map(e => especieCard(e, 'escolher')).join('')}</div>
+  <div class="caixa bloco" id="form" hidden>
+    <h3 id="f-tit">Detetive</h3>
+    <div class="campo"><label class="rotulo" for="f-nome">Nome</label><input type="text" id="f-nome" maxlength="60" placeholder="Ex.: Inspetor Bigodão"></div>
+    <div class="btns"><button class="btn" id="f-criar">Criar ficha</button></div>
+  </div>`;
+  $('#esps').onclick = e => {
+    const c = e.target.closest('[data-esp]'); if (!c) return;
+    esc_ = c.dataset.esp; $$('#esps .especie').forEach(x => x.classList.toggle('aqui', x === c));
+    $('#form').hidden = false; $('#f-tit').textContent = `${ESP[esc_].nome} ${ESP[esc_].papel}`; $('#f-nome').focus();
+    $('#form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+  $('#f-criar').onclick = async () => {
+    const nome = $('#f-nome').value.trim(); if (!nome) { toast('Todo detetive tem nome, até o estagiário.'); return; }
+    $('#f-criar').disabled = true;
+    try { const ref = await db.collection('bichos-detetives').add(novaFicha(nome, esc_)); location.hash = 'detetive-' + ref.id; }
+    catch (e) { toast('Não deu para criar: ' + e.message); $('#f-criar').disabled = false; }
+  };
+};
+
+/* contexto de caso do detetive (fase e se ele está numa mesa) */
+async function casoDe(f) {
+  const id = (f.casos || [])[0]; if (!id) return null;
+  const s = await db.doc('bichos-casos/' + id).get();
+  return s.exists ? { id, ...s.data() } : null;
+}
+
+ROTAS.detetive = async id => {
+  if (!ME) { app.innerHTML = precisaEntrar(); return; }
+  const ref = db.doc('bichos-detetives/' + id);
+  let F = null, CASO = null;
+  app.innerHTML = '<div class="vazio">Abrindo a ficha…</div>';
+  const desenhar = () => {
+    const f = F, e = ESP[f.especie];
+    const meu = f.dono === ME, pode = meu || (CASO && CASO.mestre === ME);
+    const dis = pode ? '' : 'disabled';
+    const vantEst = e.estilos.map(k => ({ k, ...B.VANT_ESTILO[k] }));
+    app.innerHTML = `<div class="ficha">
+      ${f.fora ? '<div class="fora-banner"><span>FORA DO CASO</span></div>' : ''}
+      <div class="ficha-topo">${avatar(f, 'g')}<div style="flex:1;min-width:220px;display:grid;gap:6px">
+        <h2>${esc(f.nome)}</h2><div class="sub">${esc(e.nome)} ${esc(e.papel)} · ${esc(e.tags)}</div>
+        <div class="btns">${e.estilos.map(k => estTag(k, (f.desmoralizados || []).includes(k))).join('')}${CASO ? `<a class="tag" href="#caso-${CASO.id}">Mesa: ${esc(CASO.nome)} · ${FASES[CASO.fase || 'livre']}</a>` : ''}</div></div>
+        <div class="btns">${pode && !f.fora ? '<button class="btn" id="rolar">🎲 Arriscar dados</button>' : ''}${meu ? '<button class="btn sec mini" id="editar">Editar</button>' : ''}</div>
+      </div>
+
+      <div class="bloco">
+        <div class="caixa pilha"><div class="cab-p"><b>Pilha de Compostura</b><span class="num">${f.pilha}/6</span></div>
+          <div class="fila-dados">${Array.from({ length: 6 }, (_, i) => dado(i < f.pilha ? 6 : 0, (i < f.pilha ? '' : 'vazio') + ' g')).join('')}</div>
+          <div class="ctrl"><button data-d="pilha:-1" ${dis} aria-label="Tirar dado">−</button><button data-d="pilha:1" ${dis} aria-label="Pôr dado">+</button></div></div>
+        <div class="caixa pilha"><div class="cab-p"><b>Pilha de Dedução</b><span class="num">${f.deducao}</span></div>
+          <div class="fila-dados">${Array.from({ length: Math.max(6, f.deducao) }, (_, i) => dado(i < f.deducao ? 6 : 0, (i < f.deducao ? 'ok' : 'vazio'))).join('')}</div>
+          <p class="tag" style="justify-self:start">Só enche numa Acareação. O tamanho certo é segredo do Mestre.</p>
+          <div class="ctrl"><button data-d="deducao:-1" ${dis}>−</button><button data-d="deducao:1" ${dis}>+</button></div></div>
+        <div class="caixa pilha"><div class="cab-p"><b>Pontos de Faro</b><span class="num">${f.pf}/10</span></div>
+          <div class="faro">${Array.from({ length: 10 }, (_, i) => `<button class="${i < f.pf ? 'on' : ''}" data-pf="${i + 1}" ${dis} aria-label="${i + 1} PF"></button>`).join('')}</div></div>
+        <div class="caixa bloco"><b class="rotulo">Dados de Encrenca</b>
+          <div class="encrencas">${[['galo', 'Galo'], ['enrolado', 'Enrolado'], ['aliciado', 'Aliciado']].map(([k, n]) => `<div class="encrenca ${f[k] ? 'ativa' : ''}"><b>${n}</b><span class="val ${f[k] ? '' : 'zero'}">${f[k] || '·'}</span><div class="ctrl"><button data-d="${k}:-1" ${dis}>−</button><button data-d="${k}:1" ${dis}>+</button></div></div>`).join('')}</div>
+          <div class="btns" style="align-items:center"><span class="rotulo">Tique Nervoso</span><span class="num" style="font:400 22px var(--f-disp)">${f.tiques}</span><div class="ctrl"><button data-d="tiques:-1" ${dis}>−</button><button data-d="tiques:1" ${dis}>+</button></div>
+          <label class="chk"><input type="checkbox" data-b="agarrado" ${f.agarrado ? 'checked' : ''} ${dis}> Agarrado</label></div>
+          <p class="tag">O Galo nunca fica abaixo do Tique Nervoso.</p>
+        </div>
+      </div>
+
+      <div class="bloco">
+        <div class="especie" style="--sc:${e.cor}"><div class="hab" style="border:0;padding:0"><b>${esc(e.hab.nome)}</b><i>"${esc(e.hab.frase)}"</i><span class="tg">Cena: ${esc(e.hab.cena)} · Recarga: ${esc(e.hab.recarga)}</span><span>${esc(e.hab.txt)}</span></div></div>
+        <div class="caixa bloco"><b class="rotulo">Vantagens</b>
+          ${B.VANT_GERAIS.map(v => `<div class="vant"><b>${esc(v.nome)}</b><span class="meta">Custo: ${v.custo} PF · Recarga: ${esc(v.recarga)}</span><p>${esc(v.txt)}</p></div>`).join('')}
+          ${vantEst.map(v => `<div class="vant ${(f.desmoralizados || []).includes(v.k) ? 'off' : ''}" style="--vc:${B.ESTILOS[v.k].cor}"><b>${esc(v.nome)}</b><span class="meta">${B.ESTILOS[v.k].nome} · Custo: ${v.custo}${typeof v.custo === 'number' ? ' PF' : ''} · Recarga: ${esc(v.recarga)}</span><p>${esc(v.txt)}</p></div>`).join('')}
+        </div>
+        <div class="caixa bloco"><b class="rotulo">Apegos</b>
+          ${[['item', 'Item Icônico', 'usado', 'Usado na sessão', 2], ['relacao', 'Relação Afetiva', 'usado', 'Visitada na sessão', 2], ['rabo', 'Rabo Preso', 'revelado', 'Revelado', 3]].map(([k, n, flag, rot, pts]) => `<div class="apego"><span class="rotulo">${n} · ${pts} PF</span><div class="linha"><input type="text" data-ap="${k}" value="${esc(f.apegos?.[k]?.txt)}" placeholder="${k === 'rabo' ? 'Só você e o Mestre sabem…' : ''}" ${meu ? '' : 'disabled'}><label class="chk"><input type="checkbox" data-apf="${k}:${flag}:${pts}" ${f.apegos?.[k]?.[flag] ? 'checked' : ''} ${dis}> ${rot}</label></div></div>`).join('')}
+        </div>
+        <div class="caixa campo"><label class="rotulo" for="notas">Caderninho de anotações</label><textarea id="notas" ${meu ? '' : 'disabled'} placeholder="Depoimentos, horários, quem estava com lama no pé…">${esc(f.notas)}</textarea></div>
+        ${meu ? `<details class="caixa"><summary class="rotulo" style="cursor:pointer">Zona de perigo</summary><div class="btns" style="margin-top:10px">${f.fora ? '<button class="btn sec mini" id="voltar">Voltar ao caso</button>' : ''}<button class="btn perigo mini" id="apagar">Apagar detetive</button></div></details>` : ''}
+      </div>
+    </div>`;
+    ligar(meu, pode);
+  };
+  let filaF = Promise.resolve();
+  const salvar = parcial => (filaF = filaF.then(() => ref.update(parcial)).catch(e => toast('Não salvou: ' + e.message)));
+  const ligar = (meu, pode) => {
+    app.querySelectorAll('[data-d]').forEach(b => b.onclick = () => {
+      const [k, d] = b.dataset.d.split(':'); const v = (F[k] || 0) + +d;
+      const lim = { pilha: [0, 6], deducao: [0, 12], galo: [F.tiques || 0, 99], enrolado: [0, 6], aliciado: [0, 6], tiques: [0, 99] }[k];
+      const nv = clamp(v, lim[0], lim[1]); const p = { [k]: nv };
+      if (k === 'tiques' && (F.galo || 0) > 0 && F.galo < nv) p.galo = nv;
+      F = { ...F, ...p }; desenhar(); salvar(p);
+    });
+    app.querySelectorAll('[data-pf]').forEach(b => b.onclick = () => { const n = +b.dataset.pf; const v = F.pf === n ? n - 1 : n; F.pf = v; desenhar(); salvar({ pf: v }); });
+    app.querySelectorAll('[data-b]').forEach(c => c.onchange = () => salvar({ [c.dataset.b]: c.checked }));
+    app.querySelectorAll('[data-ap]').forEach(i => i.onchange = () => salvar({ apegos: { [i.dataset.ap]: { txt: i.value } } }));
+    app.querySelectorAll('[data-apf]').forEach(c => c.onchange = () => {
+      const [k, flag, pts] = c.dataset.apf.split(':');
+      const p = { apegos: { [k]: { [flag]: c.checked } } };
+      if (c.checked) { p.pf = clamp(F.pf + +pts, 0, 10); toast(`+${pts} PF pelo apego.`); }
+      F = { ...F, pf: p.pf ?? F.pf }; salvar(p);
+    });
+    const n = $('#notas'); if (n && meu) n.onchange = () => salvar({ notas: n.value });
+    $('#rolar')?.addEventListener('click', () => abrirRolagem(F, CASO));
+    $('#editar')?.addEventListener('click', () => editarFicha(F, ref));
+    $('#voltar')?.addEventListener('click', () => salvar({ fora: false }));
+    $('#apagar')?.addEventListener('click', () => abrirModal('Apagar detetive', `<p>Apagar <b>${esc(F.nome)}</b> para sempre? Ele sai de todas as mesas.</p><div class="btns"><button class="btn perigo" id="sim">Apagar</button></div>`, (m, fechar) => {
+      m.querySelector('#sim').onclick = async () => { try { for (const c of F.casos || []) await db.doc(`bichos-casos/${c}/detetives/${id}`).delete().catch(() => {}); await ref.delete(); fechar(); toast('Detetive aposentado.'); location.hash = 'detetives'; } catch (e) { toast('Não deu: ' + e.message); } };
+    }));
+  };
+  assinar(ref.onSnapshot(async s => {
+    if (!s.exists) { app.innerHTML = '<div class="vazio">Esse detetive sumiu igual aos ovos.</div>'; return; }
+    F = { id, ...s.data() };
+    if (document.activeElement?.matches('textarea, input[type=text]') && app.contains(document.activeElement)) return;
+    CASO = await casoDe(F).catch(() => null);
+    desenhar();
+  }, e => toast('Não deu para ler: ' + e.message)));
+};
+
+function editarFicha(F, ref) {
+  abrirModal('Editar detetive', `<div class="campo"><label class="rotulo" for="e-nome">Nome</label><input type="text" id="e-nome" value="${esc(F.nome)}" maxlength="60"></div>
+    <div class="campo"><label class="rotulo" for="e-esp">Espécie</label><select id="e-esp">${B.ESPECIES.map(e => `<option value="${e.id}" ${e.id === F.especie ? 'selected' : ''}>${esc(e.nome)} ${esc(e.papel)}</option>`).join('')}</select></div>
+    <div class="campo"><label class="rotulo" for="e-foto">Retrato (link de imagem)</label><input type="url" id="e-foto" value="${esc(F.foto)}" placeholder="https://…"></div>
+    <div class="campo"><label class="rotulo" for="e-arq">Ou envie uma imagem</label><input type="file" id="e-arq" accept="image/*"></div>
+    <div class="btns"><button class="btn" id="e-ok">Salvar</button></div>`, (m, fechar) => {
+    m.querySelector('#e-ok').onclick = async () => {
+      const b = m.querySelector('#e-ok'); b.disabled = true;
+      try {
+        let foto = m.querySelector('#e-foto').value.trim();
+        const arq = m.querySelector('#e-arq').files[0];
+        if (arq) {
+          if (arq.size > 4e6) throw new Error('Imagem acima de 4 MB.');
+          const ext = (arq.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const nome = `${ME}/bichos-${F.id}-${Date.now()}.${ext}`;
+          const { error } = await sb.storage.from('imagens').upload(nome, arq, { upsert: true, contentType: arq.type });
+          if (error) throw error;
+          foto = sb.storage.from('imagens').getPublicUrl(nome).data.publicUrl;
+        }
+        await ref.update({ nome: m.querySelector('#e-nome').value.trim() || F.nome, especie: m.querySelector('#e-esp').value, foto });
+        fechar();
+      } catch (e) { toast('Não salvou: ' + (e.message || e)); b.disabled = false; }
+    };
+  });
+}
+
+/* =================================================================
+   ROLAGEM
+   ================================================================= */
+const ACOES_ROL = [
+  { id: 'teste', nome: 'Teste', sub: 'Investigar, convencer, fugir…' },
+  { id: 'espanto', nome: 'Teste de Espanto', sub: 'Um dado, sem Estilo' },
+  { id: 'rastro', nome: 'Seguir o Rastro', sub: 'Acareação · Ligeiro', estilo: 'ligeiro', acar: true },
+  { id: 'apertar', nome: 'Apertar', sub: 'Acareação · Potente', estilo: 'potente', acar: true },
+  { id: 'cena', nome: 'Fazer Cena', sub: 'Acareação · Complexo Desenrolado', estilo: 'desenrolado', complexo: true, acar: true },
+  { id: 'cobertura', nome: 'Dar Cobertura', sub: 'Acareação · Sucessos para um aliado', acar: true },
+  { id: 'respirar', nome: 'Respirar Fundo', sub: 'Acareação · +1 dado', acar: true, semRolar: true },
+  { id: 'jogar', nome: 'Se Jogar na Frente', sub: 'Acareação · Descarta tudo', acar: true, semRolar: true },
+];
+
+async function abrirRolagem(F, CASO) {
+  const e = ESP[F.especie];
+  const fase = CASO?.fase || 'livre';
+  let acao = fase === 'acareacao' ? 'rastro' : 'teste';
+  let aliados = [];
+  if (CASO) { try { const s = await db.collection(`bichos-casos/${CASO.id}/detetives`).get(); const ids = s.docs.map(d => d.id).filter(x => x !== F.id); aliados = (await Promise.all(ids.map(x => db.doc('bichos-detetives/' + x).get()))).filter(x => x.exists).map(x => ({ id: x.id, ...x.data() })); } catch (er) {} }
+  abrirModal(`Arriscar dados · ${F.nome}`, `
+    <p class="tag" style="justify-self:start">${CASO ? `${esc(CASO.nome)} · ${FASES[fase]}` : 'Sem mesa: A rolagem fica só aqui'}</p>
+    <div class="opcoes-rol" id="r-acoes">${ACOES_ROL.filter(a => !a.acar || fase === 'acareacao').map(a => `<button data-a="${a.id}"><b>${a.nome}</b><span>${a.sub}</span></button>`).join('')}</div>
+    <div id="r-corpo"></div>`, (m, fechar) => {
+    const corpo = m.querySelector('#r-corpo');
+    const pinta = () => {
+      m.querySelectorAll('[data-a]').forEach(b => b.classList.toggle('aqui', b.dataset.a === acao));
+      const A = ACOES_ROL.find(a => a.id === acao);
+      if (A.semRolar) {
+        corpo.innerHTML = acao === 'respirar' ? `<p>Você recebe 1 dado na Pilha de Compostura (máximo 6).</p><button class="btn" id="r-ir">Respirar fundo</button>`
+          : `<p>Escolha quem completa a Pilha de Dedução na hora. Você descarta ${e.id === 'texugo' ? 'todos os seus dados menos um (Deixa Comigo)' : 'todos os seus dados'}. Uma vez por sessão.</p>
+            <div class="campo"><label class="rotulo" for="r-alvo">Quem</label><select id="r-alvo"><option value="${F.id}">${esc(F.nome)} (você)</option>${aliados.map(a => `<option value="${a.id}">${esc(a.nome)}</option>`).join('')}</select></div><button class="btn perigo" id="r-ir">Se jogar na frente</button>`;
+      } else {
+        const max = acao === 'espanto' ? 1 : F.pilha;
+        const est = A.estilo || '';
+        corpo.innerHTML = `
+          <div class="campo"><span class="rotulo">Quantos dados arriscar (você tem ${F.pilha})</span><div class="btns" id="r-n">${Array.from({ length: max }, (_, i) => `<button class="btn sec mini" data-n="${i + 1}">${i + 1}</button>`).join('') || '<span class="tag">Sem dados na Pilha de Compostura.</span>'}</div></div>
+          ${acao === 'espanto' ? '' : `<div class="campo"><label class="rotulo" for="r-est">Estilo</label><select id="r-est" ${A.estilo ? 'disabled' : ''}><option value="">Nenhum dos seus (sucesso em 4+)</option>${Object.entries(B.ESTILOS).map(([k, x]) => `<option value="${k}" ${k === est ? 'selected' : ''}>${x.nome}${e.estilos.includes(k) ? (F.desmoralizados || []).includes(k) ? ' · desmoralizado' : ' · seu (3+)' : ''}</option>`).join('')}</select></div>
+          <label class="chk"><input type="checkbox" id="r-cx" ${A.complexo || F.enrolado ? 'checked' : ''} ${A.complexo || F.enrolado ? 'disabled' : ''}> Teste Complexo (2 sucessos)${F.enrolado ? ' · você está Enrolado' : ''}</label>`}
+          ${acao === 'cobertura' ? `<div class="campo"><label class="rotulo" for="r-alvo">Cobrir quem</label><select id="r-alvo">${aliados.map(a => `<option value="${a.id}">${esc(a.nome)}</option>`).join('')}</select></div>` : ''}
+          ${acao === 'teste' ? '<div class="campo"><label class="rotulo" for="r-txt">O que você está tentando</label><input type="text" id="r-txt" maxlength="120" placeholder="Ex.: Revistar o galinheiro"></div>' : ''}
+          <div id="r-res"></div>`;
+        m.querySelectorAll('[data-n]').forEach(b => b.onclick = () => rolar(+b.dataset.n));
+      }
+      m.querySelector('#r-ir')?.addEventListener('click', () => semRolar());
+    };
+    m.querySelector('#r-acoes').onclick = ev => { const b = ev.target.closest('[data-a]'); if (b) { acao = b.dataset.a; pinta(); } };
+    pinta();
+
+    const postar = async (rol) => {
+      if (!CASO) return;
+      await db.collection(`bichos-casos/${CASO.id}/rolagens`).add({ uid: ME, ficha: F.id, fnome: F.nome, especie: F.especie, t: Date.now(), aplicado: !(rol.efeitos || []).length, ...rol });
+    };
+    async function semRolar() {
+      const b = m.querySelector('#r-ir'); b.disabled = true;
+      try {
+        if (acao === 'respirar') {
+          const nv = clamp(F.pilha + 1, 0, 6);
+          await db.doc('bichos-detetives/' + F.id).update({ pilha: nv }); F.pilha = nv;
+          await postar({ tipo: 'respirar', texto: 'Respirou fundo (+1 dado)', efeitos: [] });
+          toast('Ufa. +1 dado.'); fechar();
+        } else {
+          const alvo = m.querySelector('#r-alvo').value;
+          const fica = e.id === 'texugo' && F.pilha > 0 ? 1 : 0;
+          const desc = F.pilha - fica;
+          await db.doc('bichos-detetives/' + F.id).update({ pilha: fica });
+          const ef = [{ t: 'palheiro', n: desc }];
+          if (alvo === F.id) await db.doc('bichos-detetives/' + F.id).update({ deducaoCompleta: true });
+          else ef.push({ t: 'completa', ficha: alvo });
+          const nomeAlvo = alvo === F.id ? F.nome : aliados.find(a => a.id === alvo)?.nome;
+          await postar({ tipo: 'jogar', texto: `Se jogou na frente: ${nomeAlvo} completa a Pilha de Dedução (${desc} dado(s) para o Palheiro)`, efeitos: ef });
+          toast('Que coragem. Ou burrice.'); fechar();
+        }
+      } catch (er) { toast('Não deu: ' + er.message); b.disabled = false; }
+    }
+    async function rolar(n) {
+      m.querySelectorAll('[data-n]').forEach(b => b.disabled = true);
+      const A = ACOES_ROL.find(a => a.id === acao);
+      const est = acao === 'espanto' ? '' : (A.estilo || m.querySelector('#r-est')?.value || '');
+      const seuEst = est && e.estilos.includes(est) && !(F.desmoralizados || []).includes(est);
+      const dt = seuEst ? 3 : 4;
+      const complexo = acao !== 'espanto' && (!!m.querySelector('#r-cx')?.checked);
+      const vals = Array.from({ length: n }, d6);
+      const suc = vals.filter(v => v >= dt).length, seis = vals.filter(v => v === 6).length;
+      const ok = suc >= (complexo ? 2 : 1);
+      const falhas = n - suc;
+      const descarta = acao === 'espanto' || fase === 'acareacao';
+      const efeitos = []; const p = {};
+      let pilha = F.pilha, ded = F.deducao || 0, texto = '';
+      if (acao !== 'cobertura') pilha -= falhas;
+      if (falhas && acao !== 'cobertura') efeitos.push({ t: descarta ? 'palheiro' : 'culpado', n: falhas });
+      if (F.aliciado && falhas) p.aliciado = clamp(F.aliciado + falhas, 0, 6);
+      if (acao === 'rastro' && F.agarrado) texto = 'Tentou seguir o rastro, mas está Agarrado: nada vai para a Dedução';
+      else if (acao === 'rastro') {
+        pilha -= suc; ded += suc;
+        for (let i = 0; i < seis; i++) { if (pilha > 0) { pilha--; ded++; } else { ded++; efeitos.push({ t: 'palheiro', n: -1 }); } }
+        texto = `Seguiu o rastro: +${ded - (F.deducao || 0)} na Dedução`;
+      } else if (acao === 'apertar') {
+        texto = ok ? 'Apertou o Culpado: Ele descarta 1 dado' : 'Tentou apertar o Culpado e nada';
+        if (ok) efeitos.push({ t: 'culpado', n: -1 }, { t: 'palheiro', n: 1 });
+      } else if (acao === 'cena') texto = ok ? 'Fez uma cena: Tirar do Caso custa 1 dado e 3 PL a mais para o Culpado' : 'Fez uma cena e ninguém ligou';
+      else if (acao === 'cobertura') {
+        const alvo = m.querySelector('#r-alvo')?.value; const nomeAlvo = aliados.find(a => a.id === alvo)?.nome || '?';
+        const pato = aliados.find(a => a.id === alvo)?.especie === 'pato';
+        if (suc && alvo) { pilha -= suc; efeitos.push({ t: e.id === 'cavalo' ? 'deducao' : 'pilha', ficha: alvo, n: suc }); }
+        texto = `Deu cobertura para ${nomeAlvo}: ${suc} dado(s)${e.id === 'cavalo' ? ' direto na Dedução (Garupa, se ainda não usou)' : ''}${pato ? ' · Pato: Se usar Carência, devolva os dados' : ''}`;
+      } else if (acao === 'espanto') texto = ok ? 'Passou no Teste de Espanto' : 'Levou um baita susto';
+      else texto = m.querySelector('#r-txt')?.value.trim() || 'Teste';
+      p.pilha = clamp(pilha, 0, 6); if (acao === 'rastro' && !F.agarrado) p.deducao = ded;
+      let ganhouPf = 0; if (e.id === 'raposa' && seis) { ganhouPf = seis; p.pf = clamp(F.pf + seis, 0, 10); }
+      const corpoRes = m.querySelector('#r-res');
+      corpoRes.innerHTML = `<div class="resultado"><div class="fila-dados">${vals.map((v, i) => dado(v, `g rola ${v >= dt ? (v === 6 ? 'ok seis' : 'ok') : 'falha'}`).replace('class="d6', `style="animation-delay:${i * 80}ms" class="d6`)).join('')}</div>
+        <div class="veredito ${ok ? 'ok' : 'no'}">${ok ? 'Sucesso!' : 'Falhou!'}</div>
+        <div>${suc} sucesso(s) em ${dt}+${complexo ? ' · Complexo' : ''}${falhas && acao !== 'cobertura' ? ` · ${falhas} dado(s) ${descarta ? 'descartado(s) no Palheiro' : 'sacrificado(s) para o Culpado'}` : ''}${ganhouPf ? ` · +${ganhouPf} PF (Olha Pra Mim)` : ''}</div>
+        ${acao === 'espanto' && !ok && e.id === 'coruja' ? '<p class="tag">Coruja: Você pode repetir este Teste de Espanto (rola de novo antes de aceitar).</p>' : ''}
+        <button class="btn sec" data-fechar2>Fechar</button></div>`;
+      corpoRes.querySelector('[data-fechar2]').onclick = fechar;
+      try {
+        await db.doc('bichos-detetives/' + F.id).update(p); Object.assign(F, p);
+        await postar({ tipo: acao, texto, dados: vals, dt, complexo, suc, ok, efeitos, estilo: est || null });
+      } catch (er) { toast('A rolagem não foi salva: ' + er.message); }
+    }
+  });
+}
+
+/* =================================================================
+   MESAS
+   ================================================================= */
+ROTAS.mesas = async () => {
+  if (!ME) { app.innerHTML = `<div class="cab"><h2>Mesas</h2></div>${precisaEntrar()}`; return; }
+  app.innerHTML = `<div class="cab"><div><h2>Mesas</h2><p>Cada mesa é um caso aberto, com Mural, rolagens e o Escudo do Mestre.</p></div><div class="btns"><button class="btn sec" id="entrar">Entrar com código</button><button class="btn" id="criar">Abrir caso</button></div></div><div class="grade" id="lista"><div class="vazio">Folheando os arquivos…</div></div>`;
+  const PART = await carregarPart();
+  const mestre = (await db.collection('bichos-casos').where('mestre', '==', ME).get()).docs.map(d => ({ id: d.id, ...d.data() }));
+  const outros = (await Promise.all(PART.casos.filter(c => !mestre.some(x => x.id === c)).map(c => db.doc('bichos-casos/' + c).get()))).filter(s => s.exists).map(s => ({ id: s.id, ...s.data() }));
+  const todos = [...mestre, ...outros];
+  $('#lista').innerHTML = todos.length ? todos.map(c => `<a class="card-det" href="#${c.mestre === ME ? 'escudo' : 'caso'}-${c.id}"><span class="ava" style="--sc:${c.mestre === ME ? 'var(--vermelho)' : 'var(--teal)'}">${c.mestre === ME ? 'M' : '🔍'}</span><div><div class="nm">${esc(c.nome)}</div><div class="sub">${c.mestre === ME ? 'Você é o Mestre' : 'Detetive'} · ${FASES[c.fase || 'livre']}</div></div></a>`).join('') : '<div class="vazio">Nenhum caso aberto. Ainda.</div>';
+  $('#criar').onclick = () => abrirModal('Abrir caso', `<div class="campo"><label class="rotulo" for="c-nome">Nome do caso</label><input type="text" id="c-nome" value="O Mistério dos Ovos Desaparecidos" maxlength="80"></div>
+    <div class="campo"><label class="rotulo" for="c-pr">Culpado (secreto)</label><select id="c-pr">${B.PRONTOS.map(p => `<option value="${p.id}">${esc(p.nome)} (${esc(p.especie)})</option>`).join('')}</select></div>
+    <p class="tag">Os quatro prontos entram como suspeitos no Mural. Só você sabe quem é o Culpado.</p><button class="btn" id="c-ok">Abrir</button>`, (m, fechar) => {
+    m.querySelector('#c-ok').onclick = async () => {
+      const b = m.querySelector('#c-ok'); b.disabled = true;
+      try {
+        const pr = PRONTO[m.querySelector('#c-pr').value];
+        const ref = await db.collection('bichos-casos').add({ mestre: ME, mestreNome: MEU_NOME, nome: m.querySelector('#c-nome').value.trim() || 'Caso sem nome', fase: 'livre', culpado: pr.dados, palheiro: 0, pistas: [], criado: Date.now(),
+          suspeitos: B.PRONTOS.map(p => ({ id: p.id, nome: p.nome, especie: p.especie, txt: p.txt, inocente: false })) });
+        await db.doc(`mestre/${ME}/bichos/${ref.id}`).set(escudoDe(pr));
+        fechar(); location.hash = 'escudo-' + ref.id;
+      } catch (e) { toast('Não deu: ' + e.message); b.disabled = false; }
+    };
+  });
+  $('#entrar').onclick = () => abrirModal('Entrar com código', `<div class="campo"><label class="rotulo" for="cod">Código do caso</label><input type="text" id="cod" placeholder="Cole o código que o Mestre mandou"></div><button class="btn" id="cod-ok">Entrar</button>`, (m, fechar) => {
+    m.querySelector('#cod-ok').onclick = async () => {
+      const id = m.querySelector('#cod').value.trim().replace(/^.*[#-]/, '');
+      if (!/^[A-Za-z0-9]{6,40}$/.test(id)) { toast('Código estranho, confere aí.'); return; }
+      const s = await db.doc('bichos-casos/' + id).get().catch(() => null);
+      if (!s?.exists) { toast('Nenhum caso com esse código.'); return; }
+      await entrarCaso(id); fechar(); location.hash = 'caso-' + id;
+    };
+  });
+};
+const escudoDe = pr => ({ pronto: pr.id, nome: pr.nome, perfis: [...pr.perfis], pl: pr.pl, pecas: pr.pecas, pecasUsadas: 0, acoes: [...pr.acoes], golpe: pr.golpe, alvo: pr.alvo, cena: 0,
+  solucao: { quem: pr.nome, porque: '', onde: '' }, pistasOcultas: [], notas: '' });
+async function entrarCaso(id) {
+  await db.doc(`bichos-casos/${id}/membros/${ME}`).set({ uid: ME, nome: MEU_NOME, entrou: Date.now() });
+  const P = await carregarPart(); if (!P.casos.includes(id)) { P.casos.push(id); await salvarPart(P); }
+}
+async function levarDetetive(casoId, f) {
+  await db.doc(`bichos-casos/${casoId}/detetives/${f.id}`).set({ por: ME, ficha: f.id, entrou: Date.now() });
+  await db.doc('bichos-detetives/' + f.id).update({ casos: [casoId, ...(f.casos || []).filter(c => c !== casoId)] });
+}
+
+/* ---------- peças comuns da mesa ---------- */
+function linhaRol(r) {
+  const cls = r.tipo === 'culpado' ? 'culpado' : r.tipo === 'sistema' ? 'sistema' : (r.ok === false ? 'falhou' : '');
+  const ef = (r.efeitos || []).length ? `<span class="ef">${r.aplicado ? '✔' : '⏳ aguardando o Mestre'} · ${r.efeitos.map(x => x.t === 'culpado' ? `Culpado ${x.n > 0 ? '+' : ''}${x.n}` : x.t === 'palheiro' ? `Palheiro ${x.n > 0 ? '+' : ''}${x.n}` : x.t === 'completa' ? 'Dedução completa' : `${x.t === 'deducao' ? 'Dedução' : 'Compostura'} de aliado +${x.n}`).join(' · ')}</span>` : '';
+  const quem = r.tipo === 'culpado' ? '🦹 O Culpado' : r.tipo === 'sistema' ? '📋 Mestre' : `${esc(r.fnome)} <span style="opacity:.7">${esc(ESP[r.especie]?.nome || '')}</span>`;
+  return `<div class="rol ${cls}"><div class="top"><b>${quem}</b><span class="hora">${horaBR(r.t)}</span></div>
+    ${r.dados ? `<div class="fila-dados">${r.dados.map(v => dado(v, v >= r.dt ? (v === 6 ? 'ok seis' : 'ok') : 'falha')).join('')}<span class="res">${r.ok ? 'Sucesso' : 'Falha'}</span><span class="hora">${r.suc} em ${r.dt}+${r.complexo ? ' · Complexo' : ''}${r.estilo ? ' · ' + B.ESTILOS[r.estilo].nome : ''}</span></div>` : ''}
+    <div>${esc(r.texto)}</div>${ef}</div>`;
+}
+function placar(C, extra = '') {
+  return `<div class="placar">
+    <div><span class="rotulo">Cena</span><span class="fase ${C.fase || 'livre'}">${FASES[C.fase || 'livre']}</span></div>
+    <div class="culp"><span class="rotulo">Pilha do Culpado</span><span class="big">${C.culpado ?? 0}</span><div class="fila-dados">${Array.from({ length: Math.min(C.culpado || 0, 12) }, () => dado(6)).join('')}</div></div>
+    <div><span class="rotulo">Palheiro</span><span class="big">${C.palheiro ?? 0}</span></div>${extra}</div>`;
+}
+const muralHtml = (C, mestre) => `
+  <div class="caixa bloco"><h3>📌 Pistas</h3><div class="mural">${(C.pistas || []).length ? C.pistas.map(p => `<div class="pista">${nl(p.txt)}${mestre ? ` <button class="btn mini sec" data-esconder="${p.id}">Esconder</button>` : ''}</div>`).join('') : '<div class="vazio">Nenhuma pista no mural ainda.</div>'}</div></div>
+  <div class="caixa bloco"><h3>🕵️ Suspeitos</h3>${(C.suspeitos || []).map(s => `<div class="suspeito ${s.inocente ? 'inocente' : ''}"><b>${esc(s.nome)}</b><span class="tg">${esc(s.especie)}</span><p>${esc(s.txt)}</p>${mestre ? `<div class="btns"><button class="btn mini sec" data-inoc="${s.id}">${s.inocente ? 'Voltar a suspeito' : 'Marcar inocente'}</button><button class="btn mini perigo" data-tirasus="${s.id}">Remover</button></div>` : ''}</div>`).join('') || '<div class="vazio">Ninguém sob suspeita. Suspeito.</div>'}</div>`;
+
+async function detetivesDoCaso(id) {
+  const s = await db.collection(`bichos-casos/${id}/detetives`).get();
+  const fs = await Promise.all(s.docs.map(d => db.doc('bichos-detetives/' + d.id).get()));
+  return fs.filter(x => x.exists).map(x => ({ id: x.id, ...x.data() })).sort((a, b) => B.ESPECIES.findIndex(e => e.id === a.especie) - B.ESPECIES.findIndex(e => e.id === b.especie));
+}
+
+/* ---------- visão do jogador ---------- */
+ROTAS.caso = async id => {
+  if (!ME) { app.innerHTML = precisaEntrar(); return; }
+  const ref = db.doc('bichos-casos/' + id);
+  const s0 = await ref.get(); if (!s0.exists) { app.innerHTML = '<div class="vazio">Esse caso foi arquivado.</div>'; return; }
+  if (s0.data().mestre !== ME) { const P = await carregarPart(); if (!P.casos.includes(id)) await entrarCaso(id); }
+  let C = s0.data(), DETS = [], ROLS = [];
+  app.innerHTML = `<div class="cab"><div><span class="fita">Mesa</span><h2 id="c-nome" style="margin-top:8px"></h2><p id="c-sub"></p></div><div class="btns" id="c-btns"></div></div>
+    <div id="c-placar"></div><div class="mesa"><div class="bloco"><div class="caixa bloco"><h3>Detetives na mesa</h3><div class="bloco" id="c-dets"></div></div><div id="c-mural" class="bloco"></div></div>
+    <div class="bloco"><h3>Rolagens</h3><div class="feed" id="c-feed"></div></div></div>`;
+  const desenhar = () => {
+    $('#c-nome').textContent = C.nome; $('#c-sub').textContent = `Mestre: ${C.mestreNome || '?'}${C.aviso ? ' · ' + C.aviso : ''}`;
+    $('#c-placar').innerHTML = placar(C);
+    const meus = DETS.filter(f => f.dono === ME);
+    $('#c-btns').innerHTML = `${C.mestre === ME ? `<a class="btn" href="#escudo-${id}">Escudo do Mestre</a>` : ''}${meus.filter(f => !f.fora).map(f => `<button class="btn" data-rolar="${f.id}">🎲 ${esc(f.nome)}</button>`).join('')}<button class="btn sec" id="levar">Levar detetive</button>`;
+    $('#c-dets').innerHTML = DETS.length ? DETS.map(f => `<div class="det-mesa ${f.fora ? 'fora' : ''}">${avatar(f)}<div><a class="nm" href="#detetive-${f.id}" style="color:inherit;text-decoration:none">${esc(f.nome)}</a>
+      <div class="st"><span>${esc(ESP[f.especie]?.nome)}</span><span>Compostura <b>${f.pilha}</b></span>${C.fase === 'acareacao' ? `<span>Dedução <b>${f.deducao || 0}</b>${f.deducaoCompleta ? ' ✔' : ''}</span>` : ''}<span>PF <b>${f.pf}</b></span>${f.galo ? `<span>Galo <b>${f.galo}</b></span>` : ''}${f.enrolado ? `<span>Enrolado <b>${f.enrolado}</b></span>` : ''}${f.agarrado ? '<span><b>Agarrado</b></span>' : ''}${f.fora ? '<span><b>Fora do caso</b></span>' : ''}</div></div></div>`).join('') : '<div class="vazio">Nenhum detetive ainda.</div>';
+    $('#c-mural').innerHTML = muralHtml(C, false);
+    $('#c-btns').onclick = async e => {
+      const r = e.target.closest('[data-rolar]'); if (r) { abrirRolagem({ ...DETS.find(f => f.id === r.dataset.rolar) }, { id, ...C }); return; }
+      if (e.target.closest('#levar')) {
+        const s = await db.collection('bichos-detetives').where('dono', '==', ME).get();
+        const l = s.docs.map(d => ({ id: d.id, ...d.data() })).filter(f => !DETS.some(x => x.id === f.id));
+        escolherDetetive('Levar qual detetive?', l, async f => { try { await levarDetetive(id, f); toast(`${f.nome} chegou na cena do crime.`); recarregarDets(); } catch (er) { toast('Não deu: ' + er.message); } });
+      }
+    };
+  };
+  const desenharFeed = () => { $('#c-feed').innerHTML = ROLS.length ? ROLS.map(linhaRol).join('') : '<div class="vazio">Silêncio no condado.</div>'; };
+  const recarregarDets = async () => { DETS = await detetivesDoCaso(id); desenhar(); };
+  assinar(ref.onSnapshot(s => { if (s.exists) { C = s.data(); desenhar(); } }));
+  assinar(db.collection(`bichos-casos/${id}/detetives`).onSnapshot(() => recarregarDets()));
+  assinar(db.collection(`bichos-casos/${id}/rolagens`).orderBy('t', 'desc').limit(60).onSnapshot(s => { ROLS = s.docs.map(d => d.data()); desenharFeed(); recarregarDets(); }));
+};
+
+/* ---------- escudo do mestre ---------- */
+let ABA_ESCUDO = 'culpado';
+ROTAS.escudo = async id => {
+  if (!ME) { app.innerHTML = precisaEntrar(); return; }
+  const ref = db.doc('bichos-casos/' + id), eRef = db.doc(`mestre/${ME}/bichos/${id}`);
+  const s0 = await ref.get();
+  if (!s0.exists) { app.innerHTML = '<div class="vazio">Esse caso foi arquivado.</div>'; return; }
+  if (s0.data().mestre !== ME) { location.hash = 'caso-' + id; return; }
+  let C = s0.data(), E = (await eRef.get()).data() || escudoDe(B.PRONTOS[0]), DETS = [], ROLS = [];
+  const aplicando = new Set();
+  // gravações no caso passam numa fila: update é ler-mesclar-gravar, e duas ao mesmo tempo se atropelam
+  let fila = Promise.resolve();
+  const emFila = fn => (fila = fila.then(fn, fn));
+
+  app.innerHTML = `<div class="cab"><div><span class="fita" style="background:repeating-linear-gradient(-45deg,var(--vermelho) 0 14px,#b23a31 14px 28px);color:#fff">Escudo do Mestre</span><h2 id="c-nome" style="margin-top:8px"></h2>
+    <p>Código para os jogadores: <span class="codigo">${id}</span></p></div><div class="btns"><a class="btn sec" href="#caso-${id}">Ver como jogador</a></div></div>
+    <div id="c-placar"></div>
+    <div class="mesa"><div class="bloco"><div class="abas" id="abas">${[['culpado', 'Culpado'], ['mesa', 'Mesa'], ['pistas', 'Pistas e solução'], ['mural', 'Mural']].map(([k, n]) => `<button data-aba="${k}">${n}</button>`).join('')}</div><div id="aba" class="bloco"></div></div>
+    <div class="bloco"><h3>Rolagens</h3><div class="feed" id="c-feed"></div></div></div>`;
+
+  const salvarE = async p => { E = { ...E, ...p }; try { await eRef.set(E); } catch (e) { toast('Escudo não salvou: ' + e.message); } };
+  const salvarC = async p => { C = { ...C, ...p }; try { await emFila(() => ref.update(p)); } catch (e) { toast('Não salvou: ' + e.message); } };
+  const postarC = (texto, tipo = 'culpado') => db.collection(`bichos-casos/${id}/rolagens`).add({ uid: ME, tipo, texto, t: Date.now(), aplicado: true }).catch(e => toast('Feed: ' + e.message));
+  const gastarPL = async (n, oque) => { if (n && E.pl < n) { toast(`Faltam PL: ${oque} custa ${n}.`); return false; } if (n) await salvarE({ pl: E.pl - n }); return true; };
+  const fichaRef = fid => db.doc('bichos-detetives/' + fid);
+  const escolherAlvo = (titulo, cb) => escolherDetetive(titulo, DETS.filter(f => !f.fora), cb);
+
+  async function darGalo(f, { atropelar = false } = {}) {
+    if ((C.culpado || 0) < 1) { toast('O Culpado está sem dados.'); return; }
+    const v = d6();
+    await salvarC({ culpado: C.culpado - 1, palheiro: (C.palheiro || 0) + 1 });
+    const s = await fichaRef(f.id).get(); const x = s.data();
+    if (v === 6 && !atropelar) {
+      await fichaRef(f.id).update({ fora: true });
+      await postarC(`Deu um Galo em ${f.nome} e tirou 6: ${f.nome} está FORA DO CASO`);
+      abrirModal('Tirou 6!', `<div class="resultado">${dado(6, 'g ok seis rola')}<p><b>${esc(f.nome)}</b> está fora do caso.</p>${E.pl >= 4 ? `<button class="btn" id="atp">Atropelar (4 PL): Deixar no caso com +3 Tiques</button>` : ''}</div>`, (m, fechar) => {
+        m.querySelector('#atp')?.addEventListener('click', async () => {
+          if (!(await gastarPL(4, 'Atropelar'))) return;
+          const t = (x.tiques || 0) + 3;
+          await fichaRef(f.id).update({ fora: false, tiques: t, galo: Math.max(x.galo || 0, t) });
+          await postarC(`Atropelou ${f.nome}: continua no caso, todo estropiado (+3 Tiques)`); fechar();
+        });
+      });
+      return;
+    }
+    const tiques = (x.tiques || 0) + 1;
+    const galo = Math.max((x.galo || 0) + v, tiques);
+    await fichaRef(f.id).update({ galo, tiques });
+    await postarC(`Deu um Galo em ${f.nome}: dado ${v}, Galo agora ${galo}, Tique ${tiques}`);
+    toast(`Galo ${v} em ${f.nome}.`);
+  }
+
+  async function usarAcao(aid) {
+    const a = ACAO[aid];
+    if (aid === 'galo') return escolherAlvo('Dar um Galo em quem?', f => darGalo(f));
+    if (aid === 'atropelar') { toast('Atropelar aparece quando Dar um Galo tira 6.'); return; }
+    if (aid === 'sumir') return encerrarAcareacao(true);
+    if (aid === 'peca') {
+      if (C.fase === 'acareacao' && E.pecasUsadas >= E.pecas) { toast(`Já usou as ${E.pecas} Peças desta Acareação.`); return; }
+      await salvarE({ pecasUsadas: (E.pecasUsadas || 0) + (C.fase === 'acareacao' ? 1 : 0) });
+      await postarC('Pregou uma Peça: TODOS fazem Teste de Espanto!'); await salvarC({ aviso: 'Teste de Espanto para todos!' }); return;
+    }
+    if (aid === 'rastros') { await salvarE({ alvo: (E.alvo || 4) + 1 }); await postarC('Apagou rastros: a dedução ficou mais difícil'); return; }
+    if (aid === 'tirar') return escolherAlvo('Tirar quem do caso?', async f => {
+      if (C.fase === 'acareacao' && f.pilha >= (C.culpado || 0)) { toast(`${f.nome} tem ${f.pilha} dados: Precisa ter menos que a sua Pilha (${C.culpado}).`); return; }
+      await fichaRef(f.id).update({ fora: true }); await postarC(`Tirou ${f.nome} do caso`);
+    });
+    if (aid === 'zombar') { await salvarE({ pl: E.pl + 1 }); await postarC('Zombou de um 6 dos detetives (+1 PL)'); return; }
+    if (!(await gastarPL(a.custo || 0, a.nome))) return;
+    if (aid === 'enrolar') return escolherAlvo('Enrolar quem?', async f => { await fichaRef(f.id).update({ enrolado: 3 }); await postarC(`Enrolou ${f.nome} (Enrolado 3: Todos os testes viram Complexos)`); });
+    if (aid === 'aliciar') return escolherAlvo('Aliciar quem?', async f => { await fichaRef(f.id).update({ aliciado: 1 }); await postarC(`Algo mudou em ${f.nome}…`); });
+    if (aid === 'agarrar') return escolherAlvo('Agarrar quem?', async f => { await fichaRef(f.id).update({ agarrado: true }); await postarC(`Agarrou ${f.nome}: sem Dedução e o Galo sobe a cada turno`); });
+    if (aid === 'desmoralizar') return escolherAlvo('Desmoralizar quem?', f => {
+      const e = ESP[f.especie];
+      abrirModal('Qual Estilo?', `<div class="btns">${e.estilos.map(k => `<button class="btn sec" data-k="${k}">${B.ESTILOS[k].nome}</button>`).join('')}</div>`, (m, fechar) => {
+        m.onclick = async ev => { const b = ev.target.closest('[data-k]'); if (!b) return; fechar(); await fichaRef(f.id).update({ desmoralizados: [...new Set([...(f.desmoralizados || []), b.dataset.k])] }); await postarC(`Desmoralizou ${f.nome}: ${B.ESTILOS[b.dataset.k].nome} fora de combate`); };
+      });
+    });
+    if (aid === 'casca') return escolherAlvo('Casca de Banana em quem (falhou no Espanto)?', f => darGalo(f));
+    await postarC(`Usou ${a.nome}`);
+  }
+
+  async function encerrarAcareacao(sumiu) {
+    for (const f of DETS) {
+      const s = await fichaRef(f.id).get(); const x = s.data();
+      await fichaRef(f.id).update({ pilha: clamp((x.pilha || 0) + (x.deducao || 0), 0, 6), deducao: 0, deducaoCompleta: false, agarrado: false });
+    }
+    await salvarC({ fase: 'livre', culpado: (C.culpado || 0) + (sumiu ? 1 : 0), aviso: '' });
+    await salvarE({ pecasUsadas: 0 });
+    await postarC(sumiu ? 'Sumiu no Mato! A Acareação acabou (+1 dado para o Culpado)' : 'A Acareação acabou', sumiu ? 'culpado' : 'sistema');
+  }
+
+  /* efeitos das rolagens dos jogadores: só o Mestre mexe na Pilha do Culpado e no Palheiro */
+  async function aplicarPendentes(docs) {
+    for (const d of docs) {
+      const r = d.data();
+      if (r.aplicado || !(r.efeitos || []).length || aplicando.has(d.id)) continue;
+      aplicando.add(d.id);
+      await emFila(async () => { try {
+        const cs = (await ref.get()).data(); let cul = cs.culpado || 0, pal = cs.palheiro || 0;
+        for (const x of r.efeitos) {
+          if (x.t === 'culpado') cul = Math.max(0, cul + x.n);
+          else if (x.t === 'palheiro') pal = Math.max(0, pal + x.n);
+          else if (x.t === 'pilha' || x.t === 'deducao') { const fs = await fichaRef(x.ficha).get(); if (fs.exists) { const v = fs.data(); await fichaRef(x.ficha).update(x.t === 'pilha' ? { pilha: clamp((v.pilha || 0) + x.n, 0, 6) } : { deducao: (v.deducao || 0) + x.n }); } }
+          else if (x.t === 'completa') await fichaRef(x.ficha).update({ deducaoCompleta: true }).catch(() => {});
+        }
+        await ref.update({ culpado: cul, palheiro: pal }); C.culpado = cul; C.palheiro = pal;
+        await db.doc(`bichos-casos/${id}/rolagens/${d.id}`).update({ aplicado: true });
+      } catch (e) { aplicando.delete(d.id); console.warn(e); } });
+    }
+  }
+
+  const desenharAba = () => {
+    $$('#abas button').forEach(b => b.classList.toggle('aqui', b.dataset.aba === ABA_ESCUDO));
+    const A = $('#aba');
+    if (ABA_ESCUDO === 'culpado') {
+      const pr = PRONTO[E.pronto];
+      A.innerHTML = `<div class="caixa bloco">
+        <div class="btns" style="justify-content:space-between;align-items:center"><div><h3>${esc(E.nome)}</h3><span class="tag">${E.perfis.map(p => B.PERFIS[p].nome).join(' + ')}</span></div>
+          <select id="e-pr" style="width:auto">${B.PRONTOS.map(p => `<option value="${p.id}" ${p.id === E.pronto ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select></div>
+        ${pr ? `<p style="margin:0"><i>"${esc(pr.frase)}"</i></p>` : ''}
+        <div class="placar">
+          <div><span class="rotulo">Pontos de Lorota</span><span class="big">${E.pl}</span><div class="ctrl"><button data-pl="-1">−</button><button data-pl="1">+</button></div></div>
+          <div class="culp"><span class="rotulo">Pilha do Culpado</span><span class="big">${C.culpado || 0}</span><div class="ctrl"><button data-cul="-1">−</button><button data-cul="1">+</button></div></div>
+          <div><span class="rotulo">Palheiro</span><span class="big">${C.palheiro || 0}</span><div class="ctrl"><button data-pal="-1">−</button><button data-pal="1">+</button></div></div>
+          <div><span class="rotulo">Peças nesta Acareação</span><span class="big">${E.pecasUsadas || 0}/${E.pecas}</span></div>
+        </div></div>
+        <div class="caixa bloco"><h3>Ações Gerais</h3><div class="lista-acoes">${B.ACOES_GERAIS.map(a => cardAcao(a)).join('')}</div></div>
+        <div class="caixa bloco"><h3>Ações Únicas</h3><div class="lista-acoes">${E.acoes.map(k => cardAcao(B.ACOES_UNICAS[k])).join('')}</div></div>
+        <div class="caixa bloco"><h3>Golpe Baixo</h3>${(() => { const g = B.GOLPES[E.golpe]; return `<div class="acao-c"><div class="top"><b>${esc(g.nome)}</b><button class="btn mini perigo" data-golpe>Usar</button></div><span class="meta">Cena: ${esc(g.cena)} · Custo: ${esc(g.custo)} PL · Recarga: ${esc(g.recarga)}</span><p>${esc(g.txt)}</p></div>`; })()}</div>
+        <div class="caixa bloco"><h3>Intentos (ganhar PL)</h3><div class="intentos">${[...B.INTENTOS, ...E.perfis.map(p => [B.PERFIS[p].intento + ' (Intento Único)', 0])].map(([t, n], i) => `<button data-int="${n}" data-i="${i}">${esc(t)}<span>${n ? '+' + n : '+?'}</span></button>`).join('')}</div></div>`;
+      A.querySelector('#e-pr').onchange = async ev => { const pr = PRONTO[ev.target.value]; if (!confirm(`Trocar o Culpado para ${pr.nome}? PL, ações e golpe voltam ao padrão dele.`)) { ev.target.value = E.pronto; return; } await salvarE({ ...escudoDe(pr), solucao: { ...E.solucao, quem: pr.nome }, pistasOcultas: E.pistasOcultas, notas: E.notas }); await salvarC({ culpado: pr.dados }); desenharAba(); };
+      A.querySelectorAll('[data-pl]').forEach(b => b.onclick = async () => { await salvarE({ pl: Math.max(0, E.pl + +b.dataset.pl) }); desenharAba(); });
+      A.querySelectorAll('[data-cul]').forEach(b => b.onclick = async () => { await salvarC({ culpado: Math.max(0, (C.culpado || 0) + +b.dataset.cul) }); desenharAba(); });
+      A.querySelectorAll('[data-pal]').forEach(b => b.onclick = async () => { await salvarC({ palheiro: Math.max(0, (C.palheiro || 0) + +b.dataset.pal) }); desenharAba(); });
+      A.querySelectorAll('[data-acao]').forEach(b => b.onclick = async () => { await usarAcao(b.dataset.acao); desenharAba(); });
+      A.querySelector('[data-golpe]').onclick = async () => {
+        const g = B.GOLPES[E.golpe]; const custo = g.id === 'cheiro' ? 2 * Math.max(1, DETS.length) : g.custo;
+        if (!(await gastarPL(custo, g.nome))) return; await postarC(`Golpe Baixo: ${g.nome}! ${g.txt}`); desenharAba();
+      };
+      A.querySelectorAll('[data-int]').forEach(b => b.onclick = async () => {
+        let n = +b.dataset.int; if (!n) { const v = prompt('Quantos PL esse Intento Único rendeu?', '1'); n = Math.max(0, parseInt(v, 10) || 0); if (!n) return; }
+        await salvarE({ pl: E.pl + n }); toast(`+${n} PL`); desenharAba();
+      });
+    } else if (ABA_ESCUDO === 'mesa') {
+      A.innerHTML = `<div class="caixa bloco"><span class="rotulo">Cena</span><div class="btns">${Object.entries(FASES).map(([k, n]) => `<button class="btn ${C.fase === k ? '' : 'sec'} mini" data-fase="${k}">${n}</button>`).join('')}${C.fase === 'acareacao' ? '<button class="btn perigo mini" id="encerrar">Encerrar Acareação</button>' : ''}</div>
+        <div class="campo"><label class="rotulo" for="aviso">Aviso para a mesa</label><input type="text" id="aviso" value="${esc(C.aviso)}" placeholder="Ex.: Todos rolam Espanto!"></div>
+        <div class="btns" style="align-items:center"><span class="rotulo">Tamanho da Pilha de Dedução (secreto)</span><span class="big" style="font:400 26px var(--f-disp)">${E.alvo}</span><div class="ctrl"><button data-alvo="-1">−</button><button data-alvo="1">+</button></div></div>
+        ${C.fase !== 'acareacao' && DETS.some(f => !f.fora && f.pilha < (C.culpado || 0)) ? '<p class="tag">A Pilha do Culpado já supera a de algum detetive: dá para começar uma Acareação.</p>' : ''}</div>
+        <div class="bloco">${DETS.map(f => `<div class="det-mesa ${f.fora ? 'fora' : ''}">${avatar(f)}<div><a class="nm" href="#detetive-${f.id}" style="color:inherit;text-decoration:none">${esc(f.nome)}</a>
+          <div class="st"><span>${esc(ESP[f.especie]?.nome)}</span><span>Compostura <b>${f.pilha}</b></span><span>Dedução <b>${f.deducao || 0}/${E.alvo}</b>${(f.deducao || 0) >= E.alvo || f.deducaoCompleta ? ' <b style="color:var(--teal)">✔ Pista Quente!</b>' : ''}</span><span>PF <b>${f.pf}</b></span><span>Galo <b>${f.galo || 0}</b></span><span>Tique <b>${f.tiques || 0}</b></span>${f.enrolado ? `<span>Enrolado <b>${f.enrolado}</b></span>` : ''}${f.aliciado ? `<span>Aliciado <b>${f.aliciado}</b></span>` : ''}${f.agarrado ? '<span><b>Agarrado</b></span>' : ''}${(f.desmoralizados || []).length ? `<span>Desmoralizado: <b>${f.desmoralizados.map(k => B.ESTILOS[k].nome).join(', ')}</b></span>` : ''}</div></div>
+          <div class="acoes-m">${f.fora ? `<button class="btn mini sec" data-volta="${f.id}">Voltar ao caso</button>` : `<button class="btn mini perigo" data-galo="${f.id}">Dar um Galo</button><button class="btn mini sec" data-pf="${f.id}">+1 PF (desafio)</button><button class="btn mini sec" data-espanto="${f.id}">Pedir Espanto</button>${f.agarrado ? `<button class="btn mini sec" data-solta="${f.id}">Soltar</button>` : ''}${(f.desmoralizados || []).length ? `<button class="btn mini sec" data-recomp="${f.id}">Se Recompor</button>` : ''}`}<button class="btn mini sec" data-tirad="${f.id}">Tirar da mesa</button></div></div>`).join('') || '<div class="vazio">Nenhum detetive. Passe o código para os jogadores.</div>'}</div>`;
+      A.querySelectorAll('[data-fase]').forEach(b => b.onclick = async () => {
+        const nova = b.dataset.fase;
+        if (nova === 'acareacao' && C.fase !== 'acareacao') { await salvarE({ pecasUsadas: 0 }); for (const f of DETS) await fichaRef(f.id).update({ deducao: 0, deducaoCompleta: false }); await postarC('ACAREAÇÃO! O Culpado está agindo bem debaixo do bico de vocês.', 'culpado'); }
+        else if (C.fase === 'acareacao' && nova !== 'acareacao') { await encerrarAcareacao(false); }
+        await salvarC({ fase: nova }); desenharAba();
+      });
+      A.querySelector('#encerrar')?.addEventListener('click', async () => { await encerrarAcareacao(false); desenharAba(); });
+      A.querySelector('#aviso').onchange = ev => salvarC({ aviso: ev.target.value.trim() });
+      A.querySelectorAll('[data-alvo]').forEach(b => b.onclick = async () => { await salvarE({ alvo: clamp(E.alvo + +b.dataset.alvo, 1, 6) }); desenharAba(); });
+      const F_ = x => DETS.find(f => f.id === x);
+      A.querySelectorAll('[data-galo]').forEach(b => b.onclick = () => darGalo(F_(b.dataset.galo)));
+      A.querySelectorAll('[data-pf]').forEach(b => b.onclick = async () => { const f = F_(b.dataset.pf); await fichaRef(f.id).update({ pf: clamp(f.pf + 1, 0, 10) }); await postarC(`${f.nome} topou o desafio: +1 PF`, 'sistema'); });
+      A.querySelectorAll('[data-espanto]').forEach(b => b.onclick = async () => { const f = F_(b.dataset.espanto); await postarC(`${f.nome}: Teste de Espanto!`, 'sistema'); });
+      A.querySelectorAll('[data-volta]').forEach(b => b.onclick = async () => { await fichaRef(b.dataset.volta).update({ fora: false }); });
+      A.querySelectorAll('[data-solta]').forEach(b => b.onclick = async () => { await fichaRef(b.dataset.solta).update({ agarrado: false }); });
+      A.querySelectorAll('[data-recomp]').forEach(b => b.onclick = async () => { await fichaRef(b.dataset.recomp).update({ desmoralizados: [] }); });
+      A.querySelectorAll('[data-tirad]').forEach(b => b.onclick = async () => { if (!confirm('Tirar este detetive da mesa?')) return; await db.doc(`bichos-casos/${id}/detetives/${b.dataset.tirad}`).delete(); });
+    } else if (ABA_ESCUDO === 'pistas') {
+      A.innerHTML = `<div class="papel bloco"><h3>A solução (só você vê)</h3>
+        ${[['quem', 'Quem pegou os ovos'], ['porque', 'Por quê'], ['onde', 'Onde estão agora']].map(([k, n]) => `<div class="campo"><label class="rotulo" for="s-${k}">${n}</label><input type="text" id="s-${k}" data-sol="${k}" value="${esc(E.solucao?.[k])}" style="background:#fffaf0;color:var(--tinta);border-color:#c9b48e"></div>`).join('')}</div>
+        <div class="caixa bloco"><h3>Pistas escondidas</h3><p class="tag">Revele no Mural quando um detetive achar.</p>
+          ${(E.pistasOcultas || []).map(p => `<div class="acao-c" style="border-left-color:var(--ambar)"><p style="color:var(--texto)">${nl(p.txt)}</p><div class="btns"><button class="btn mini teal" data-rev="${p.id}">Revelar no Mural</button><button class="btn mini perigo" data-apaga="${p.id}">Apagar</button></div></div>`).join('') || '<div class="vazio">Nenhuma pista escondida.</div>'}
+          <div class="campo"><label class="rotulo" for="nova-p">Nova pista</label><textarea id="nova-p" placeholder="Ex.: Uma pena de doninha presa no trinco do galinheiro."></textarea></div><button class="btn" id="add-p">Guardar pista</button></div>
+        <div class="caixa campo"><label class="rotulo" for="notas-e">Anotações do Mestre</label><textarea id="notas-e">${esc(E.notas)}</textarea></div>`;
+      A.querySelectorAll('[data-sol]').forEach(i => i.onchange = () => salvarE({ solucao: { ...E.solucao, [i.dataset.sol]: i.value } }));
+      A.querySelector('#notas-e').onchange = ev => salvarE({ notas: ev.target.value });
+      A.querySelector('#add-p').onclick = async () => { const t = A.querySelector('#nova-p').value.trim(); if (!t) return; await salvarE({ pistasOcultas: [...(E.pistasOcultas || []), { id: uid8(), txt: t }] }); desenharAba(); };
+      A.querySelectorAll('[data-apaga]').forEach(b => b.onclick = async () => { await salvarE({ pistasOcultas: E.pistasOcultas.filter(p => p.id !== b.dataset.apaga) }); desenharAba(); });
+      A.querySelectorAll('[data-rev]').forEach(b => b.onclick = async () => {
+        const p = E.pistasOcultas.find(x => x.id === b.dataset.rev);
+        await salvarC({ pistas: [...(C.pistas || []), { id: p.id, txt: p.txt, t: Date.now() }] });
+        await salvarE({ pistasOcultas: E.pistasOcultas.filter(x => x.id !== p.id), reveladas: [...(E.reveladas || []), p] });
+        await postarC('Nova pista no Mural!', 'sistema'); desenharAba();
+      });
+    } else {
+      A.innerHTML = muralHtml(C, true) + `<div class="caixa bloco"><h3>Novo suspeito</h3><div class="campo"><label class="rotulo" for="su-n">Nome</label><input type="text" id="su-n"></div><div class="campo"><label class="rotulo" for="su-e">Espécie</label><input type="text" id="su-e"></div><div class="campo"><label class="rotulo" for="su-t">Descrição</label><textarea id="su-t"></textarea></div><button class="btn" id="su-ok">Pôr no Mural</button></div>`;
+      A.querySelectorAll('[data-esconder]').forEach(b => b.onclick = async () => { const p = C.pistas.find(x => x.id === b.dataset.esconder); await salvarC({ pistas: C.pistas.filter(x => x.id !== p.id) }); await salvarE({ pistasOcultas: [...(E.pistasOcultas || []), { id: p.id, txt: p.txt }] }); desenharAba(); });
+      A.querySelectorAll('[data-inoc]').forEach(b => b.onclick = async () => { await salvarC({ suspeitos: C.suspeitos.map(s => s.id === b.dataset.inoc ? { ...s, inocente: !s.inocente } : s) }); desenharAba(); });
+      A.querySelectorAll('[data-tirasus]').forEach(b => b.onclick = async () => { await salvarC({ suspeitos: C.suspeitos.filter(s => s.id !== b.dataset.tirasus) }); desenharAba(); });
+      A.querySelector('#su-ok').onclick = async () => { const n = A.querySelector('#su-n').value.trim(); if (!n) return; await salvarC({ suspeitos: [...(C.suspeitos || []), { id: uid8(), nome: n, especie: A.querySelector('#su-e').value.trim(), txt: A.querySelector('#su-t').value.trim(), inocente: false }] }); desenharAba(); };
+    }
+  };
+  const cardAcao = a => `<div class="acao-c"><div class="top"><b>${esc(a.nome)}</b><button class="btn mini perigo" data-acao="${a.id}" ${a.id === 'atropelar' ? 'disabled' : ''}>Usar</button></div><span class="meta">Cena: ${esc(a.cena)} · Custo: ${a.custo ? a.custo + ' PL' : 'Sem custo'}</span><p>${esc(a.txt)}</p></div>`;
+  const desenhar = () => { $('#c-nome').textContent = C.nome; $('#c-placar').innerHTML = placar(C, `<div><span class="rotulo">PL do Culpado</span><span class="big">${E.pl}</span></div>`); };
+  $('#abas').onclick = e => { const b = e.target.closest('[data-aba]'); if (b) { ABA_ESCUDO = b.dataset.aba; desenharAba(); } };
+  const ocupado = () => document.activeElement?.matches('input, textarea, select') && $('#aba').contains(document.activeElement);
+  desenhar(); desenharAba();
+  assinar(ref.onSnapshot(s => { if (!s.exists) return; C = s.data(); desenhar(); if (!ocupado()) desenharAba(); }));
+  assinar(eRef.onSnapshot(s => { if (!s.exists) return; E = s.data(); desenhar(); if (!ocupado()) desenharAba(); }));
+  const recarregarDets = async () => { DETS = await detetivesDoCaso(id); if (!ocupado()) desenharAba(); };
+  assinar(db.collection(`bichos-casos/${id}/detetives`).onSnapshot(() => recarregarDets()));
+  assinar(db.collection(`bichos-casos/${id}/rolagens`).orderBy('t', 'desc').limit(60).onSnapshot(s => {
+    ROLS = s.docs.map(d => d.data()); $('#c-feed').innerHTML = ROLS.length ? ROLS.map(linhaRol).join('') : '<div class="vazio">Silêncio no condado.</div>';
+    aplicarPendentes(s.docs); recarregarDets();
+  }));
+};
+
+/* =================================================================
+   PARTIDA
+   ================================================================= */
+(async function iniciar() {
+  const cfg = window.ADR_CONFIG;
+  try {
+    sb = window.supabase.createClient(cfg.url, cfg.chave, { auth: { persistSession: true, detectSessionInUrl: false } });
+    db = window.criarBanco(sb);
+    const { data } = await sb.auth.getSession();
+    await sessao(data.session);
+    sb.auth.onAuthStateChange(async (ev, s) => { if ((s?.user?.id || null) !== ME) { await sessao(s); rotear(); } });
+  } catch (e) { console.error(e); }
+  rotear();
+})();
+async function sessao(s) {
+  ME = s?.user?.id || null; MEU_NOME = '';
+  if (ME) {
+    try { const { data } = await sb.from('perfis').select('nome').eq('id', ME).maybeSingle(); MEU_NOME = data?.nome || s.user.email?.split('@')[0] || 'Detetive'; } catch (e) { MEU_NOME = 'Detetive'; }
+  }
+  $('#quem').innerHTML = ME ? `<span>🔍 ${esc(MEU_NOME)}</span>` : '<a class="btn mini" href="./#entrar">Entrar</a>';
+}
+</script>
+</body>
+</html>

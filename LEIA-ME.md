@@ -10,6 +10,7 @@ Site estático (HTML, CSS e JS puros). O banco, o login e as imagens ficam no pr
 | `banco.js` | Ponte com o Supabase: documentos JSON, consultas e tempo real |
 | `config.js` | URL do projeto e chave publishable |
 | `schema.sql` | Tabelas, regras de acesso (RLS), bucket de imagens e tempo real |
+| `bichos.html` e `bichos-dados.js` | Extensão *Deu a Louca nos Bichos* (Brutal adaptado para mistério com bichos detetives): regras, detetives, mesas e escudo do mestre. Usa o mesmo login e banco |
 | `dados/` | Livro do A.R.RPG em JSON, bestiário com fichas de combate, rituais |
 | `img/criaturas/` | As 111 imagens do bestiário |
 
@@ -44,6 +45,8 @@ Tudo vai para a tabela `public.docs`, um documento JSON por caminho:
 | `campanhas/<id>` e subcoleções (`agentes`, `membros`, `rolagens`, `publico/*`) | Qualquer pessoa logada | Qualquer pessoa logada |
 | `homebrew/<id>` | Qualquer pessoa logada | Qualquer pessoa logada |
 | `mestre/<uid>/escudo/<campanha>` | Só o próprio mestre (e admins) | Só o próprio mestre |
+| `bichos-detetives/<id>`, `bichos-casos/<id>` (e `rolagens`, `membros`, `detetives`) | Qualquer pessoa logada | Como fichas e campanhas (com o `seguranca.sql`) |
+| `mestre/<uid>/bichos/<caso>` | Só o próprio mestre | Só o próprio mestre (Culpado, PL, solução e pistas escondidas) |
 | `data/users/<uid>/participacoes` | Só a própria pessoa | Só a própria pessoa |
 
 Pistas escondidas, anotações e PV das ameaças ficam no escudo, então jogador nenhum lê, nem abrindo o console.
