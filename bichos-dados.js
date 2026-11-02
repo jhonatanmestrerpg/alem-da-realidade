@@ -24,6 +24,9 @@ window.BICHOS = (() => {
     { id: 'lontra', nome: 'Lontra', papel: 'Mergulhadora', tags: 'Energética · Esportista · Competitiva', cor: '#7a5a3a', estilos: ['ligeiro', 'potente'], grito: 'Ninguém nada mais rápido que eu!',
       desc: 'Você cresceu ouvindo que perder é para os fracos e transformou o lago do condado na sua pista de treino. Ninguém percebe a pressão que você carrega nas costas. Talvez seja justamente ela que te faça chegar primeiro na pista.',
       hab: { nome: 'Fôlego de Lontra', frase: 'Eu nunca canso!', cena: 'Sem restrição', recarga: 'Fim de uma Acareação', txt: 'Uma vez por Acareação, você pode trocar o resultado de um dado que rolou pelo valor de um dos seus Dados de Encrenca.' } },
+    { id: 'ornitorrinco', nome: 'Ornitorrinco', papel: 'Agente Secreto', tags: 'Discreto · Treinado · Inexpressivo', cor: '#2bb3a8', estilos: ['ligeiro', 'potente'], grito: 'Krrrr-krrrr.',
+      desc: 'Por fora, um bicho parado que só faz um barulhinho estranho e passa o dia boiando no lago. Por dentro, um agente treinado em infiltração e luta, com o chapéu guardado debaixo da pelagem e uma pasta de missão para cada vizinho do condado. Ninguém suspeita do ornitorrinco. É exatamente por isso que ele está aqui.',
+      hab: { nome: 'Fachada de Bicho Bobo', frase: 'Krrrr. (Ninguém viu nada.)', cena: 'Cena Livre ou Suspense', recarga: 'Início de uma sessão', txt: 'Uma vez por sessão, antes de rolar um teste Ligeiro, declare que está agindo disfarçado. Se o teste tiver sucesso, os dados falhos dele vão para o Palheiro em vez de serem sacrificados para o Culpado. Se falhar, os dados falhos são sacrificados normalmente e o Culpado recebe 1 PL por desconfiar de você.' } },
     { id: 'tatu', nome: 'Tatu-bola', papel: 'Farejador', tags: 'Casca-grossa · Rabugento · Rebelde', cor: '#a08a6a', estilos: ['firme', 'potente'], grito: 'Ninguém mexe comigo!',
       desc: 'Você fareja mentira de longe e nunca soube respeitar autoridade, nem a da Baronesa. Para a maioria você é um rabugento completo. Quem te conhece sabe que tem um coração mole debaixo dessa carapaça.',
       hab: { nome: 'Virar Bola', frase: 'Pode bater, eu nem sinto!', cena: 'Acareação', recarga: 'Início de uma Acareação', txt: 'Uma vez por Acareação, ao receber um Galo, role um dado da sua Pilha de Compostura. Num sucesso, você descarta um dado da sua Pilha de Dedução em vez de receber o Galo. Numa falha, o dado é descartado e o Galo vem normalmente.' } },
@@ -164,7 +167,7 @@ window.BICHOS = (() => {
     { id: 'especies', titulo: 'Espécies e Estilos', html: `
       <p class="lead">Cada detetive é de uma espécie, que define seus dois Estilos, sua habilidade e sua posição na iniciativa.</p>
       ${t('Estilos', Object.values(ESTILOS).map(e => `<p><b style="color:${e.cor}">${e.nome}:</b> ${e.txt}</p>`).join('') + '<p>Quando você testa usando um dos seus Estilos, a dificuldade do teste cai em 1.</p>')}
-      ${t('As onze espécies', '<div data-especies></div>')}` },
+      ${t('As doze espécies', '<div data-especies></div>')}` },
     { id: 'apegos', titulo: 'Apegos', html: `
       <p class="lead">Apegos são o que prende o detetive ao mundo quando o caso fica feio. Usá-los rende Pontos de Faro.</p>
       ${t('Item Icônico', '<p>Um objeto que acompanha o detetive para todo lado: A lupa do avô, o cachimbo, o caderninho. Não some nem quebra, a não ser que você queira, e não serve como Recurso. Se for roubado ou perdido, volta antes do fim do caso. Usar o Item Icônico numa ação rende <b>2 PF</b>, uma vez por sessão e só pelo dono.</p>')}

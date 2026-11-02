@@ -126,7 +126,7 @@ textarea { min-height: 80px; resize: vertical; }
 @media (max-width: 860px) { .regras { grid-template-columns: 1fr; } .sumario { position: static; display: flex; flex-wrap: wrap; } .sumario button { border-left: 0; border-bottom: 3px solid var(--tabua-2); } }
 
 /* espécie */
-.especie { display: grid; gap: 8px; background: var(--papel); color: var(--tinta); border-radius: 6px; padding: 14px; box-shadow: 3px 4px 0 rgba(0,0,0,.55); border-top: 8px solid var(--sc); }
+.especie { display: grid; align-content: start; gap: 8px; background: var(--papel); color: var(--tinta); border-radius: 6px; padding: 14px; box-shadow: 3px 4px 0 rgba(0,0,0,.55); border-top: 8px solid var(--sc); }
 .especie .nm { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .especie .nm b { font: 400 24px var(--f-disp); }
 .texto-regra .especie p, .texto-regra .especie b, .texto-regra .especie span:not(.est), .texto-regra .especie i { color: var(--tinta); }
@@ -376,7 +376,7 @@ ROTAS.inicio = async () => {
         <h3>Como entrar no caso</h3>
         <ol style="margin:0;padding-left:20px;display:grid;gap:6px">
           <li>Leia as <a href="#regras">regras</a>. É o Brutal com penas.</li>
-          <li>Crie seu <a href="#detetives">detetive</a> escolhendo uma das 11 espécies.</li>
+          <li>Crie seu <a href="#detetives">detetive</a> escolhendo uma das 12 espécies.</li>
           <li>Entre na <a href="#mesas">mesa</a> com o código que o Mestre mandar.</li>
         </ol>
         <div class="btns"><a class="btn" href="#novo">Criar detetive</a><a class="btn sec" href="#mesas">Mesas</a></div>
@@ -646,6 +646,7 @@ async function abrirRolagem(F, CASO) {
           ${acao === 'espanto' ? '' : `<div class="campo"><label class="rotulo" for="r-est">Estilo</label><select id="r-est" ${A.estilo ? 'disabled' : ''}><option value="">Nenhum dos seus (sucesso em 4+)</option>${Object.entries(B.ESTILOS).map(([k, x]) => `<option value="${k}" ${k === est ? 'selected' : ''}>${x.nome}${e.estilos.includes(k) ? (F.desmoralizados || []).includes(k) ? ' · desmoralizado' : ' · seu (3+)' : ''}</option>`).join('')}</select></div>
           <label class="chk"><input type="checkbox" id="r-cx" ${A.complexo || F.enrolado ? 'checked' : ''} ${A.complexo || F.enrolado ? 'disabled' : ''}> Teste Complexo (2 sucessos)${F.enrolado ? ' · você está Enrolado' : ''}</label>`}
           ${acao === 'cobertura' ? `<div class="campo"><label class="rotulo" for="r-alvo">Cobrir quem</label><select id="r-alvo">${aliados.map(a => `<option value="${a.id}">${esc(a.nome)}</option>`).join('')}</select></div>` : ''}
+          ${acao === 'teste' && e.id === 'ornitorrinco' && fase !== 'acareacao' ? '<label class="chk"><input type="checkbox" id="r-disf"> Agindo disfarçado (Fachada de Bicho Bobo, 1 vez por sessão, só teste Ligeiro)</label>' : ''}
           ${acao === 'teste' ? '<div class="campo"><label class="rotulo" for="r-txt">O que você está tentando</label><input type="text" id="r-txt" maxlength="120" placeholder="Ex.: Revistar o galinheiro"></div>' : ''}
           <div id="r-res"></div>`;
         m.querySelectorAll('[data-n]').forEach(b => b.onclick = () => rolar(+b.dataset.n));
@@ -692,7 +693,8 @@ async function abrirRolagem(F, CASO) {
       const suc = vals.filter(v => v >= dt).length, seis = vals.filter(v => v === 6).length;
       const ok = suc >= (complexo ? 2 : 1);
       const falhas = n - suc;
-      const descarta = acao === 'espanto' || fase === 'acareacao';
+      const disfarce = !!m.querySelector('#r-disf')?.checked && est === 'ligeiro';
+      const descarta = acao === 'espanto' || fase === 'acareacao' || (disfarce && ok);
       const efeitos = []; const p = {};
       let pilha = F.pilha, ded = F.deducao || 0, texto = '';
       if (acao !== 'cobertura') pilha -= falhas;
@@ -713,7 +715,7 @@ async function abrirRolagem(F, CASO) {
         if (suc && alvo) { pilha -= suc; efeitos.push({ t: e.id === 'cavalo' ? 'deducao' : 'pilha', ficha: alvo, n: suc }); }
         texto = `Deu cobertura para ${nomeAlvo}: ${suc} dado(s)${e.id === 'cavalo' ? ' direto na Dedução (Pode tirar o cavalinho da chuva, se ainda não usou)' : ''}${pato ? ' · Pato: Se usar Carência, devolva os dados' : ''}`;
       } else if (acao === 'espanto') texto = ok ? 'Passou no Teste de Espanto' : 'Levou um baita susto';
-      else texto = m.querySelector('#r-txt')?.value.trim() || 'Teste';
+      else texto = (m.querySelector('#r-txt')?.value.trim() || 'Teste') + (disfarce ? (ok ? ' · disfarçado: falhas foram para o Palheiro' : ' · o disfarce falhou: Culpado +1 PL') : '');
       p.pilha = clamp(pilha, 0, 6); if (acao === 'rastro' && !F.agarrado) p.deducao = ded;
       let ganhouPf = 0; if (e.id === 'raposa' && seis) { ganhouPf = seis; p.pf = clamp(F.pf + seis, 0, 10); }
       const corpoRes = m.querySelector('#r-res');
