@@ -56,6 +56,9 @@ Imagens vão para o bucket público `imagens`, cada pessoa na pasta do próprio 
 - **Nunca** coloque no site a chave `secret`/`service_role` nem a senha do banco.
 - A senha do banco foi colada no chat: troque em *Project Settings › Database › Reset database password*.
 
+### Regras de escrita (seguranca.sql)
+Rode `seguranca.sql` no SQL Editor depois do `schema.sql`. Com ele, cada caminho só é escrito por quem é dono: a ficha pelo dono ou pelo mestre de uma campanha dela, a campanha e o que é público dela pelo mestre, rolagens e chat só pela própria conta (sem editar depois), homebrew só por quem criou, canonizar e os abates do bestiário só pelo administrador, e a atividade de cada conta só ela grava e só ela e o administrador leem.
+
 ## Ligação de voz (TURN)
 
 A voz vai direto de uma pessoa para a outra. Quando a rede não deixa (4G de algumas operadoras, Wi-Fi de empresa), ela passa por um servidor de retransmissão TURN.
