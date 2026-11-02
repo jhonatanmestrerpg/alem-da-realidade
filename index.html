@@ -4089,7 +4089,6 @@ ROTAS.entrar = async () => {
       <div class="caixa" style="display:grid; gap:8px"><h3 style="margin:0">Conta</h3>
         <div class="linha-acao"><span><span class="rotulo">E-mail</span> ${esc(email || '(sem e-mail)')}</span></div>
         <div class="linha-acao"><span style="min-width:0; overflow-wrap:anywhere"><span class="rotulo">ID</span> <span class="mono" style="font-size:12px">${esc(ME)}</span></span><button class="btn mini sec" id="pf-copiar">Copiar</button></div>
-        <p class="faint" style="margin:0; font-size:13px">O site registra quanto tempo cada conta passa em cada página, para os administradores acompanharem a mesa.</p>
         <p class="faint" style="margin:0; font-size:13px">${DONO ? 'Seu acesso de administrador está preso ao seu ID e ao seu e-mail, não ao nome. Pode trocar o nome e a foto à vontade.' : 'O nome e a foto podem mudar quando quiser; a conta é reconhecida pelo ID e pelo e-mail.'}</p>
         <button class="btn sec" id="sair-conta" style="justify-self:start">Sair da conta</button></div>
       ${DONO ? `<div class="caixa" style="display:grid; gap:10px"><div class="sec-f"><h3 style="margin:0">Contas da mesa</h3><a class="btn mini" href="#admin" style="text-decoration:none">Abrir painel do administrador</a></div><p class="faint" style="margin:0; font-size:13px">Busque pelo nome para ver o ID de alguém. Administrador é marcado no banco pelo ID, então trocar de nome não tira o acesso.</p>
