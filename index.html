@@ -1688,8 +1688,12 @@ ROTAS.agente = async id => {
       const margem = Math.max(2, E.margem - B.margem), critou = r.nat >= margem; { const cb = $('#crit-' + i); if (cb) cb.checked = critou; UI_ARMA[id + '|c|' + i] = critou; }
       return { r, critou, html: `Acerto ${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtv())}${critou ? ` <span class="critico">Crítico (${r.nat} natural, margem ${margem})</span>` : ''}` }; };
     const rolarDano = (i, crit) => { const it = F.equipamentos[i], E = armaEf(it), B = somaBonus(F.bonusAtaque), mx = $(`[data-mx="${i}"]`)?.checked ? +it.multExtra : 1;
-      if (B.custo || B.custoPs) { const a = { ...calc(F).max, ...(F.atual || {}) }; if (a.pst < B.custo) { toast(`Sem PST para os bônus ligados (precisa de ${B.custo}).`); return null; } if (a.ps < (B.custoPs || 0)) { toast(`Sem PS para os bônus ligados (precisa de ${B.custoPs}).`); return null; }
-        F.atual = { ...a, pst: a.pst - B.custo, ps: a.ps - (B.custoPs || 0) }; ajustarQueda(F); pendente = true; salvarVitais(); setTimeout(render, 60); }
+      // toda maldição da arma cobra 3 PS de quem empunha quando o golpe sai; sem PS, ela não ativa
+      const mals = modsDe(it).maldicoes, aV = { ...calc(F).max, ...(F.atual || {}) }; let malTxt = '';
+      if (aV.pst < (B.custo || 0)) { toast(`Sem PST para os bônus ligados (precisa de ${B.custo}).`); return null; } if (aV.ps < (B.custoPs || 0)) { toast(`Sem PS para os bônus ligados (precisa de ${B.custoPs}).`); return null; }
+      const custoMal = mals.length && aV.ps - (B.custoPs || 0) >= CUSTO_MALDICAO * mals.length ? CUSTO_MALDICAO * mals.length : 0;
+      if (mals.length) malTxt = custoMal ? `<br><span class="faint">Maldição: ${esc(mals.join(', '))} · −${custoMal} PS</span>` : `<br><span class="falha">Maldição não ativou: falta PS (${CUSTO_MALDICAO} por maldição)</span>`;
+      if (B.custo || B.custoPs || custoMal) { F.atual = { ...aV, pst: aV.pst - (B.custo || 0), ps: aV.ps - (B.custoPs || 0) - custoMal }; ajustarQueda(F); pendente = true; salvarVitais(); setTimeout(render, 60); }
       const nDist = B.distancia ? dadosDistancia($('[data-dist]')?.value ?? UI_ARMA[id + '|dist'], calc(F).mov) : 0;
       if (B.distancia && (+($('[data-dist]')?.value ?? UI_ARMA[id + '|dist']) || 0) > calc(F).mov * 2) toast(`Alvo além do alcance da ${B.distancia} (${calc(F).mov * 2} m): vale o teto.`);
       // o ×1,5 da arma vale para a arma e para bônus da pessoa (Êxtase); ritual e feitiço entram sem ele
@@ -1703,6 +1707,7 @@ ROTAS.agente = async id => {
       const ex = $('#extra-' + i).value.trim(); if (ex) { const r2 = rolar(multDados(ex, mx)); if (r2) { total += r2.total; txt += `<br>+ ${esc(ex)} → ${r2.detalhe} = ${r2.total} <span class="faint">(fora do crítico)</span>`; } }
       if (B.multTotal !== 1) { const t2 = Math.floor(total * B.multTotal); txt += `<br>× ${fmtMult(B.multTotal)} (${esc(B.nomes.filter(n => +(F.bonusAtaque.find(b => b.nome === n)?.multTotal) > 1).join(', '))}) = ${t2}`; total = t2; }
       if (B.nomes.length) txt += `<br><span class="faint">Bônus: ${esc(B.nomes.join(', '))}${B.custo ? ` · −${B.custo} PST` : ''}${B.custoPs ? ` · −${B.custoPs} PS` : ''}</span>`;
+      txt += malTxt;
       return { total, txt, crit }; };
     const limparTxt = t => t.replace(/<br>/g, ' · ').replace(/<(?!\/?span)[^>]+>/g, '');
     $$('[data-acerto]').forEach(b => b.onclick = () => { const i = +b.dataset.acerto, it = F.equipamentos[i], a = rolarAcerto(i);
@@ -1887,6 +1892,7 @@ function formRitual(salvarFn, r = {}) {
 }
 /* Bênçãos, Maldições e Melhorias (regras do livro): só armas; até 2 de cada tipo; nunca os três tipos juntos.
    Melhoria marcada "(Armas de Fogo)" ou "(Armas Brancas)" só entra nesse tipo de arma. */
+const CUSTO_MALDICAO = 3;
 const MOD_TIPOS = [['melhorias', 'Melhorias', 'melhorias'], ['bencaos', 'Bênçãos', 'bencaos'], ['maldicoes', 'Maldições', 'maldicoes']];
 const ehArma = it => !!it?.dano && it.categoria !== 'Granadas';
 const tipoArma = it => /fogo/i.test((it.categoria || '') + ' ' + (it.pericia || '')) ? 'Armas de Fogo' : 'Armas Brancas';
@@ -1940,7 +1946,7 @@ function armaEf(it) {
   const notas = [margem !== (+it.margem || 20) && `margem ${margem}`, acerto && `+${acerto} acerto`, dano !== it.dano && `dano ${dano}`, mult !== (+it.mult || 1) && `crítico ×${mult}`, critExtra && `crítico +${critExtra}`].filter(Boolean);
   return { margem, acerto, dano, mult, critExtra, notas };
 }
-const tagsMods = it => { const m = modsDe(it); return [...m.melhorias.map(n => `<span class="tag mod-m" title="Melhoria">${esc(n)}</span>`), ...m.bencaos.map(n => `<span class="tag mod-b" title="Bênção: vale para quem empunha">${esc(n.replace(/^Bênção d[aoe]s? /, ''))}</span>`), ...m.maldicoes.map(n => `<span class="tag mod-x" title="Maldição: vale para o alvo atingido">${esc(n.replace(/^Maldição d[aoe]s? /, ''))}</span>`)].join(''); };
+const tagsMods = it => { const m = modsDe(it); return [...m.melhorias.map(n => `<span class="tag mod-m" title="Melhoria">${esc(n)}</span>`), ...m.bencaos.map(n => `<span class="tag mod-b" title="Bênção: vale para quem empunha">${esc(n.replace(/^Bênção d[aoe]s? /, ''))}</span>`), ...m.maldicoes.map(n => `<span class="tag mod-x" title="Maldição: vale para o alvo atingido · custa 3 PS por golpe">${esc(n.replace(/^Maldição d[aoe]s? /, ''))}</span>`)].join(''); };
 function formItem(salvarFn, it = {}) {
   abrirModal(it.nome ? 'Editar item' : 'Novo item', `<div class="grade-campos"><div class="campo"><label class="rotulo" for="fi-n">Nome</label><input type="text" id="fi-n" value="${esc(it.nome)}"></div>
     <div class="campo"><label class="rotulo" for="fi-p">Peso (kg)</label><input type="number" step="0.1" id="fi-p" value="${esc(it.peso ?? 0)}"></div>
@@ -2464,8 +2470,8 @@ ROTAS.grimorio = async () => {
     } else if (abaGr === 'alquimia') {
       corpo = `<div class="grade-hab">${SIS.alquimia.map(a => `<article class="hab"><span class="nm">${esc(a.nome)}</span><p>${esc(a.efeito)}</p><span class="faint" style="font-size:13px">Componente: ${esc(a.componente)}</span></article>`).join('')}</div>`;
     } else {
-      const extra = { maldicoes: 'Só Bruxas concedem Maldições. O efeito vai para o alvo atingido pela arma.', bencaos: 'Só Ocultistas Destinados a partir do nível 5 concedem Bênçãos. O efeito vai para o portador da arma.', melhorias: 'Só Técnicos a partir do nível 3 concedem Melhorias. Podem ser retiradas com uma ação de interlúdio.', condicoes: '' }[abaGr];
-      corpo = `${extra ? `<div class="aviso">${extra} Nenhuma arma tem Bênção, Maldição e Melhoria ao mesmo tempo, nem mais de duas de cada.</div>` : ''}<div class="grade-hab">${SIS[abaGr].map(x => `<article class="hab"><span class="nm">${esc(x.nome)}</span><p>${esc(x.texto)}</p></article>`).join('')}</div>`;
+      const extra = { maldicoes: 'Só Bruxas concedem Maldições. O efeito vai para o alvo atingido pela arma. Toda maldição custa 3 PS de quem empunha a arma cada vez que o golpe sai.', bencaos: 'Só Ocultistas Destinados a partir do nível 5 concedem Bênçãos. O efeito vai para o portador da arma.', melhorias: 'Só Técnicos a partir do nível 3 concedem Melhorias. Podem ser retiradas com uma ação de interlúdio.', condicoes: '' }[abaGr];
+      corpo = `${extra ? `<div class="aviso">${extra} Nenhuma arma tem Bênção, Maldição e Melhoria ao mesmo tempo, nem mais de duas de cada.</div>` : ''}<div class="grade-hab">${SIS[abaGr].map(x => `<article class="hab"><div class="cab"><span class="nm">${esc(x.nome)}</span>${x.custo ? `<span class="tag">${esc(x.custo)}</span>` : ''}</div><p>${esc(x.texto)}</p></article>`).join('')}</div>`;
     }
     app.innerHTML = `<div><span class="rotulo">O que o Caos e o Destino deixaram escrito</span><h1>Grimório</h1></div>
       <div class="abas">${ABAS.map(([k, n]) => `<button class="${abaGr === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>${corpo}`;
