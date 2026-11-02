@@ -121,6 +121,7 @@ img { max-width: 100%; }
 .colunas { display: grid; grid-template-columns: repeat(14, 1fr); gap: 6px; align-items: end; height: 140px; } .col { display: grid; grid-template-rows: 1fr auto; height: 100%; gap: 4px; } .col i { align-self: end; display: block; background: linear-gradient(180deg, var(--sangue-hi), var(--sangue)); border-radius: 2px 2px 0 0; min-height: 0; } .col span { font: 10px var(--f-mono); color: var(--lua-faint); text-align: center; }
 .barras { display: grid; gap: 6px; } .barra-l { display: grid; grid-template-columns: minmax(110px, 200px) 1fr auto; gap: 10px; align-items: center; font-size: 13px; } .bl-t { height: 10px; background: var(--painel-3); } .bl-t i { display: block; height: 100%; background: var(--violeta); } .bl-v { font-size: 12px; }
 .tag.canon { color: var(--ouro); border-color: var(--ouro); }
+.caixa-dano { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--sangue); background: color-mix(in srgb, var(--sangue) 8%, var(--painel-2)); }
 .volta-camp:hover { border-color: var(--ouro); }
 .volta-camp[hidden] { display: none; }
 .volta-camp svg { flex: none; width: 15px; height: 15px; color: var(--ouro); }
@@ -236,7 +237,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .barra-teste { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; }
 .barra-teste .campo input { width: 80px; text-align: center; font-family: var(--f-mono); }
 .grade-per { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
-.per { background: var(--painel); border: 1px solid var(--linha); padding: 11px 13px; display: grid; gap: 7px; align-content: start; }
+.per { background: var(--painel); border: 1px solid var(--linha); padding: 11px 13px; display: grid; gap: 7px; align-content: start; } .per[hidden], #busca-per-nada[hidden] { display: none; }
 .per.zero { opacity: .62; }
 .per .topo-p { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .pips { display: flex; gap: 3px; }
@@ -1001,6 +1002,7 @@ const sabeFeitico = f => ehBruxa(f) || (f?.passivas || []).some(p => p.nome === 
 const vetorLiberado = f => !!(f?.vetor?.liberado);
 const vetorAtivo = f => vetorLiberado(f) && !!f.vetorVestido;
 const fotoEf = f => (vetorAtivo(f) && f.vetor.foto) || f?.foto || '';
+const normBusca = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 function calc(f) {
   const C = classe(f.classe) || { pv: 0, ps: 0, pst: 0 };
   const A = f.atributos || {}, N = nivelDe(f);
@@ -1665,9 +1667,12 @@ ROTAS.agente = async id => {
         : PP.livres < 0 ? `<div class="aviso" style="border-color:var(--sangue)">Esta ficha usa ${-PP.livres} ponto(s) de perícia a mais do que o permitido.</div>` : '';
       const contPts = `<span class="dim" style="font-size:13px">Pontos de perícia: <b class="mono" style="color:var(--ouro)">${PP.gastos}/${PP.total}</b> · ${(classe(F.classe)?.pericias || 0)} da classe + ${F.atributos?.inteligencia || 0} Int${nPat > 1 ? ` × ${nPat} patentes` : ''}</span>`;
       const escolhaV = opcoesVontade(F.vontade).length && podeEditar ? `<div class="caixa grade-campos">${seletorEscolhaVontade(F.vontade, F.vontadeEscolha, 'fvesc')}</div>` : '';
+      const bq = normBusca(window._buscaPer || ''), vis = n => bq ? normBusca(n).includes(bq) : nomes.includes(n);
       return `<div style="display:grid; gap:12px">${avisoPts}${escolhaV}${barra}${contPts}
-        <div class="grade-per">${nomes.map(n => { const P = dadosPericia(F, n);
-          return `<div class="per ${P.pontos + P.vt ? '' : 'zero'}"><div class="topo-p"><b>${esc(n)}</b><div class="pips">${Array.from({ length: Math.max(K.pat.limite, P.pontos) }, (_, k) => `<span class="pip ${k < P.pontos ? 'on' : ''}"></span>`).join('')}${P.vt ? '<span class="pip vt" title="+1 da Vontade"></span>' : ''}</div></div>
+        <input type="search" id="busca-per" placeholder="Buscar perícia (procura em todas)" value="${esc(window._buscaPer || '')}" autocomplete="off" style="max-width:340px">
+        <div class="vazio" id="busca-per-nada" ${!bq || SIS.pericias.some(p => vis(p.nome)) ? 'hidden' : ''}>Nenhuma perícia com esse nome.</div>
+        <div class="grade-per" data-base="${esc(JSON.stringify(nomes))}">${SIS.pericias.map(p => p.nome).map(n => { const P = dadosPericia(F, n);
+          return `<div class="per ${P.pontos + P.vt ? '' : 'zero'}" data-pnome="${esc(n)}" ${vis(n) ? '' : 'hidden'}><div class="topo-p"><b>${esc(n)}</b><div class="pips">${Array.from({ length: Math.max(K.pat.limite, P.pontos) }, (_, k) => `<span class="pip ${k < P.pontos ? 'on' : ''}"></span>`).join('')}${P.vt ? '<span class="pip vt" title="+1 da Vontade"></span>' : ''}</div></div>
           <div class="mono dim" style="font-size:12px" data-pline="${esc(id + '|p|' + n)}">${(G => `${G.dados}d20 + ${G.mod} (${SIGLA[G.atr]})`)(comAtributo(F, P, UI_ARMA['giro|' + id + '|p|' + n]))}</div>
           ${P.vb ? `<div style="display:flex; gap:4px; flex-wrap:wrap"><span class="tag tag-vetor">Vetor +1</span>${P.alem ? '<span class="tag tag-vetor">Além do limite +1 dado</span>' : ''}</div>` : ''}
           <div class="edit-only" style="display:flex; gap:6px; align-items:center"><button class="vbtn" data-pp="${esc(n)}" data-d="-1">−</button><button class="vbtn" data-pp="${esc(n)}" data-d="1">+</button>
@@ -1888,6 +1893,8 @@ ROTAS.agente = async id => {
     $('#e-foto')?.addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; const u = await enviarImagem(f); if (u) salvar({ foto: u }); });
     $$('#ficha [data-op-vontade]').forEach(sel => sel.onchange = () => { const ve = { ...(F.vontadeEscolha || {}), [sel.dataset.opVontade]: sel.value }; F.vontadeEscolha = ve; salvar({ vontadeEscolha: ve }); render(); });
     $('#dist-pts')?.addEventListener('click', () => { editando = true; mostrarTodas = true; render(); });
+    $('#busca-per')?.addEventListener('input', e => { window._buscaPer = e.target.value; const q = normBusca(e.target.value), g = $('.grade-per[data-base]'); if (!g) return; const base = JSON.parse(g.dataset.base); let algum = false;
+      g.querySelectorAll('[data-pnome]').forEach(d => { const n = d.dataset.pnome, v = q ? normBusca(n).includes(q) : base.includes(n); d.hidden = !v; if (v) algum = true; }); const nd = $('#busca-per-nada'); if (nd) nd.hidden = algum || !q; });
     $$('[data-pp]').forEach(b => b.onclick = () => { const n = b.dataset.pp, dd = +b.dataset.d; const lista = F.pericias || []; let p = lista.find(x => x.nome === n);
       if (!p) { p = { nome: n, pontos: 0, atributo: SIS.pericias.find(x => x.nome === n)?.atributo || 'inteligencia' }; lista.push(p); }
       if (dd > 0 && !ehMestre) {
@@ -2615,6 +2622,19 @@ const bannerAmeaca = (c, extra = '') => { const n = +c.nivel || 1, img = c.image
   return `<div class="am-banner" style="--bc:${c.npc && !c.elemento ? 'var(--ouro)' : corEl(c.elemento)}">${img ? `<div class="am-bgw"><div class="am-bg" style="background-image:url('${esc(img)}')"></div></div>` : ''}
     <div class="am-ft ${ehPapel(img) ? 'papel' : ''}" style="${img ? `background-image:url('${esc(img)}')` : ''}">${img ? '' : esc(iniciais(c.nome))}</div>
     <div class="am-tx">${c.fase === 2 ? '<span class="am-fase">Segunda fase</span>' : ''}<b>${esc(c.nome)}</b><span>Nível ${n}${c.npc ? '' : ' · ' + esc(nivelAm(n)[1])}${c.tipoCriatura || c.tamanho ? ` · ${esc([c.tipoCriatura, c.tamanho].filter(Boolean).join(' - '))}` : ''}</span><span class="am-el">${c.npc ? `NPC${c.papel ? ' · ' + esc(c.papel) : ''}${c.elemento ? ' · ' + esc(c.elemento) : ''}` : esc(c.elemento || 'Sem elemento')}${(c.elementosSec || []).length ? ' · ' + c.elementosSec.map(esc).join(', ') : ''}${c.ficha?.intangivel ? ' · Intangível' : ''}</span></div>${extra}</div>`; };
+// dano declarado: imunidade zera; tira RD e resistência (geral e do tipo); vulnerabilidade dobra o que sobrar
+function calcDano(bruto, tipo, def, ignorarRD) {
+  const L = [`${bruto} de dano${tipo ? ' ' + tipo : ''}`]; let v = Math.max(0, +bruto || 0);
+  if (tipo && (def.imun || []).includes(tipo)) return { final: 0, linhas: [...L, `imune a ${tipo}`] };
+  if (!ignorarRD && def.rd) { v -= def.rd; L.push(`− ${def.rd} RD`); }
+  const rg = +(def.resist || {})['Dano (geral)'] || 0; if (rg) { v -= rg; L.push(`− ${rg} resistência geral`); }
+  const rt = tipo ? +(def.resist || {})[tipo] || 0 : 0; if (rt) { v -= rt; L.push(`− ${rt} resistência a ${tipo}`); }
+  v = Math.max(0, v);
+  if (tipo && (def.vuln || []).includes(tipo)) { v *= 2; L.push(`× 2 vulnerável a ${tipo}`); }
+  return { final: v, linhas: L };
+}
+const caixaDano = (rdTxt, res = '') => `<div class="caixa-dano"><span class="rotulo">Declarar dano</span><div class="linha-ex"><input type="number" min="0" id="dn-v" placeholder="Dano" inputmode="numeric" style="max-width:110px"><select id="dn-t"><option value="">Sem tipo</option>${DANOS.map(t => `<option>${t}</option>`).join('')}</select><button class="btn mini" id="dn-ok">Aplicar</button></div>
+  <label class="giro" style="gap:6px"><input type="checkbox" id="dn-rd"> <span>Ignora RD</span></label><span class="faint" style="font-size:12px">${esc(rdTxt)}</span><div class="res" id="dn-res">${res}</div></div>`;
 const defesasAm = f => { const im = [...(f.imunidades || []), ...(f.imunidadesExtra ? [f.imunidadesExtra] : [])], rs = Object.entries(f.resist || {}).filter(([, v]) => +v), vu = f.vulner || [];
   return im.length || rs.length || vu.length ? `<div class="defesas-am">${im.length ? `<div><span class="rotulo">Imune</span> ${im.map(esc).join(', ')}</div>` : ''}${rs.length ? `<div><span class="rotulo">Resistências</span> ${rs.map(([t, v]) => `${esc(t)} ${esc(v)}`).join(' · ')}</div>` : ''}${vu.length ? `<div><span class="rotulo">Vulnerável</span> ${vu.map(esc).join(', ')}</div>` : ''}</div>` : ''; };
 function cardAcaoAm(a, i, quem, ed) {
@@ -3611,6 +3631,8 @@ ROTAS.escudo = async id => {
       const blocoCond = x0 ? `<div style="display:grid; gap:6px"><span class="rotulo">Condições</span><div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center">${I0.conds.map((cd, j) => `<span class="cond-chip" title="${esc(textoCond(cd))}">${esc(cd.turnos ? `${cd.nome} (${cd.turnos})` : cd.nome)}<button data-rmc="${sel}" data-j="${j}" aria-label="Tirar ${esc(cd.nome)}">×</button></span>`).join('')}
           <select data-addc="${sel}" style="width:auto; padding:3px 6px; font-size:12.5px"><option value="">+ condição</option>${SIS.condicoes.map(cd => `<option>${esc(cd.nome)}</option>`).join('')}</select></div>
           ${I0.f && ((I0.f.condicoes || []).length || quedaAtiva(I0.f).length) ? `<button class="btn mini sec" style="justify-self:start" data-resolver="${esc(I0.f.id)}">Resolver condições de ${esc(I0.f.nome.split(' ')[0])}</button>` : ''}</div>` : '';
+      const defX = x => { if (x.tipo === 'agente') { const f = st.fichas[x.ref]; const K = f ? calc(f) : null; return { rd: K?.rd || 0, rdPar: K?.rdPar || 0, resist: {}, imun: [], vuln: [] }; } const fc = x.ficha || {}; return { rd: +fc.rd || 0, resist: fc.resist || {}, imun: fc.imunidades || [], vuln: fc.vulner || [] }; };
+      const rdTxtX = x => { const d = defX(x), rs = Object.entries(d.resist).filter(([, v]) => +v).map(([t, v]) => `${t} ${v}`); return [`RD ${d.rd}`, ...(d.rdPar ? [`RD paranormal ${d.rdPar}`] : []), ...rs, ...(d.imun.length ? ['imune: ' + d.imun.join(', ')] : []), ...(d.vuln.length ? ['vulnerável: ' + d.vuln.join(', ')] : [])].join(' · '); };
       let det = '<div class="vazio-det">Selecione alguém na ordem de iniciativa</div>';
       if (x0 && x0.tipo === 'agente' && I0.f) { const f = I0.f, K = I0.K, a = I0.a, ab = est0.aba;
         const armas = (f.equipamentos || []).filter(it => it.dano);
@@ -3625,11 +3647,11 @@ ROTAS.escudo = async id => {
             <div class="am-tx"><b>${esc(f.nome)}</b><span>${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''}</span><span class="am-el">Nv ${nivelDe(f)} · ${esc(patente(nivelDe(f)).nome || '')}</span></div><a class="btn mini sec am-acao" href="#agente-${esc(f.id)}" style="text-decoration:none">Ficha</a></div>
           ${['pv', 'ps', 'pst'].map(k => barraCris(k, a[k], K.max[k], 'data-cbv-' + k, [5, 1]).replace('<span class="v">', `<span class="v clicavel" data-cbaj="${k}" role="button" tabindex="0" title="Digitar valor ou mudar o máximo">`)).join('')}
           <div class="abas abas-mini">${[['atributos', 'Atributos'], ['combate', 'Combate'], ['condicoes', `Condições${I0.conds.length ? ' ' + I0.conds.length : ''}`]].map(([k, l]) => `<button class="${ab === k ? 'aqui' : ''}" data-dab="${k}">${l}</button>`).join('')}</div>
-          <div style="display:grid; gap:10px">${cx}</div><div class="res" id="cb-res"></div>
+          ${caixaDano(rdTxtX(x0), window._dnRes?.k === chave0 ? window._dnRes.txt : '')}<div style="display:grid; gap:10px">${cx}</div><div class="res" id="cb-res"></div>
           <div class="lin-acoes">${f.morto ? `<span class="tag crit">Morto${f.morto.causa ? ': ' + esc(f.morto.causa) : ''}</span><button class="btn mini ouro" data-cb-reviver>Reviver</button>` : '<button class="btn mini sec" data-cb-matar>Declarar morte</button>'}<button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`; }
-      else if (x0 && (x0.tipo === 'ameaca' || x0.ficha)) det = `<div id="cb-amf"></div>${blocoCond}<div class="lin-acoes">${x0.fase === 2 ? '<button class="btn mini sec" data-fase="1">Voltar à fase 1</button>' : `<button class="btn mini fase2-btn" data-fase="2" title="${x0.ficha?.fase2 ? 'Usa a segunda fase da ficha' : 'Sem fase 2 na ficha: você define na hora'}">Segunda fase</button>`}<button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`;
+      else if (x0 && (x0.tipo === 'ameaca' || x0.ficha)) det = `<div id="cb-amf"></div>${caixaDano(rdTxtX(x0), window._dnRes?.k === chave0 ? window._dnRes.txt : '')}${blocoCond}<div class="lin-acoes"><button class="btn mini sec" data-cb-editar>Editar ficha</button>${x0.fase === 2 ? '<button class="btn mini sec" data-fase="1">Voltar à fase 1</button>' : `<button class="btn mini fase2-btn" data-fase="2" title="${x0.ficha?.fase2 ? 'Usa a segunda fase da ficha' : 'Sem fase 2 na ficha: você define na hora'}">Segunda fase</button>`}<button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`;
       else if (x0) det = `<div class="am-banner" style="--bc:var(--ouro)"><div class="am-ft ag">${esc(iniciais(x0.nome))}</div><div class="am-tx"><b>${esc(x0.nome)}</b><span class="am-el">NPC</span></div></div>
-          ${barraCris('pv', x0.pv, x0.pvMax, 'data-cbv-pv', [10, 1]).replace('<span class="v">', '<span class="v clicavel" data-npcaj role="button" tabindex="0">')}${blocoCond}<div class="lin-acoes"><button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`;
+          ${barraCris('pv', x0.pv, x0.pvMax, 'data-cbv-pv', [10, 1]).replace('<span class="v">', '<span class="v clicavel" data-npcaj role="button" tabindex="0">')}${caixaDano(rdTxtX(x0), window._dnRes?.k === chave0 ? window._dnRes.txt : '')}${blocoCond}<div class="lin-acoes"><button class="btn mini sec" data-cb-editar>Completar ficha</button><button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`;
       corpo.innerHTML = `<div style="display:grid; gap:14px">
         <div class="cb-topo"><h2>${c.ativo ? 'Em combate' : 'Combate parado'}</h2>
           <div class="cb-acoes"><div class="menu-pop"><button class="btn sec mini" data-menu>Configurações</button><div hidden><button id="cb-ini">Rolar iniciativa das ameaças e NPCs</button><button id="cb-ord">Ordenar por iniciativa</button><button id="cb-limpar">Limpar lista</button></div></div>
@@ -3666,6 +3688,21 @@ ROTAS.escudo = async id => {
       $$('[data-cbaj]').forEach(sp => sp.onclick = () => { const f = I0.f, k = sp.dataset.cbaj; ajustarVital(f, k, { mestre: true, aoSalvar: async ({ atual, maxExtra }) => {
         f.atual = atual; if (maxExtra) f.maxExtra = maxExtra; ajustarQueda(f); render();
         try { await db.doc('fichas/' + f.id).update({ atual, queda: f.queda || {}, ...(maxExtra ? { maxExtra } : {}) }); } catch (e) { toast('Não deu para alterar a ficha.'); } } }); });
+      $('#dn-ok')?.addEventListener('click', async () => { const bruto = +$('#dn-v').value; if (!bruto) return toast('Digite o dano.');
+        const tipo = $('#dn-t').value, def = defX(x0), ign = $('#dn-rd').checked;
+        const d2 = x0.tipo === 'agente' ? { ...def, rd: tipo === 'Mental' ? 0 : def.rd + (tipo === 'Paranormal' ? def.rdPar : 0) } : def;
+        const R2 = calcDano(bruto, tipo, d2, ign), txt = `${esc(R2.linhas.join(' '))} = <b>${R2.final}</b>`; window._dnRes = { k: chave0, txt };
+        if (x0.tipo === 'agente') { const f = I0.f, a = { ...I0.a }; a.pv = Math.max(0, a.pv - R2.final); f.atual = a; const caiu = a.pv === 0 && marcas(f, 'pv') == null; ajustarQueda(f); render(); try { await db.doc('fichas/' + f.id).update({ atual: a, queda: f.queda || {} }); } catch (e) { toast('Não deu para alterar a ficha.'); } if (caiu) toast(`${f.nome} caiu.`); }
+        else { x0.pv = Math.max(0, x0.pv - R2.final); salvarE(); render(); }
+        const o = $('#dn-res'); if (o) o.innerHTML = txt; toast(`${x0.nome}: −${R2.final} PV`);
+        rolarMestre(`${x0.nome} sofreu dano`, { total: R2.final, detalhe: esc(R2.linhas.join(' ')) }, x0.tipo !== 'agente'); });
+      $('#dn-v')?.addEventListener('keydown', e => { if (e.key === 'Enter') $('#dn-ok').click(); });
+      $('[data-cb-editar]')?.addEventListener('click', () => { const base = x0.tipo === 'ameaca' ? CRI.find(k => String(k.id) === String(x0.ref)) || {} : {};
+        const tipoF = x0.tipo === 'npc' ? 'npc' : 'ameaca';
+        formAmeaca({ ...base, tipo: tipoF, nome: x0.nome, papel: x0.papel, elemento: x0.elemento ?? base.elemento, nivel: x0.nivel || base.nivel || 1, imagem: x0.imagem || base.imagem || '', descricao: x0.descricao || base.descricao || '', tipoCriatura: x0.tipoCriatura || base.tipoCriatura, tamanho: x0.tamanho || base.tamanho, elementosSec: x0.elementosSec || base.elementosSec, ficha: { ...(base.ficha || {}), ...(x0.ficha || { pv: x0.pvMax }) } }, novo => {
+          const cheio = x0.pv >= x0.pvMax, novoMax = +novo.ficha?.pv || x0.pvMax;
+          Object.assign(x0, { nome: novo.nome, papel: novo.papel, elemento: novo.elemento, nivel: novo.nivel, imagem: novo.imagem, descricao: novo.descricao, tipoCriatura: novo.tipoCriatura, tamanho: novo.tamanho, elementosSec: novo.elementosSec, ficha: novo.ficha, pvMax: novoMax, pv: cheio ? novoMax : Math.min(x0.pv, novoMax) });
+          salvarE(); publicarCombate(); render(); toast('Ficha alterada só neste combate.'); }); });
       const outCb = (tit, tipo, expr, r) => { const o = $('#cb-res'); if (o) o.innerHTML = `${esc(tit)}: ${r.detalhe} = <b>${r.total}</b>`; popRolagem({ quem: I0.f.nome, titulo: tit, tipo, expr, linhas: [{ det: r.detalhe, total: r.total }], total: r.total, nat20: r.nat20, dano: tipo === 'Dano' }); rolarMestre(`${I0.f.nome}: ${tit}`, r, true); };
       $$('[data-cbper]').forEach(b => b.onclick = () => { const n = b.dataset.cbper, P = dadosPericia(I0.f, n); outCb(n, 'Teste', `${P.dados}d20+${P.mod}`, teste(P.dados, P.mod)); });
       $$('[data-cbatq]').forEach(b => b.onclick = () => { const it = (I0.f.equipamentos || []).filter(q => q.dano)[+b.dataset.cbatq], E2 = armaEf(it), P = dadosPericia(I0.f, it.pericia || tipoArma(it)); outCb(it.nome, 'Acerto', `${P.dados}d20+${P.mod + E2.acerto}`, teste(P.dados, P.mod + E2.acerto)); });
