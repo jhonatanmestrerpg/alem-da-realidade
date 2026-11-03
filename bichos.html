@@ -249,6 +249,12 @@ textarea { min-height: 80px; resize: vertical; }
 .intentos button { display: flex; justify-content: space-between; gap: 10px; text-align: left; padding: 7px 10px; background: #120b06; border: 1px solid var(--tabua-2); border-radius: 6px; color: var(--texto); font-size: 14px; }
 .intentos button:hover { border-color: var(--ambar); }
 .intentos button span { font: 400 16px var(--f-disp); color: var(--ambar); white-space: nowrap; }
+.hist-filtros { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+.hist-filtros .campo { min-width: 180px; }
+.hist-resumo { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.hist-resumo .det-mesa { grid-template-columns: auto 1fr; }
+.hist-dia { font: 400 18px var(--f-disp); color: var(--ambar); margin: 10px 0 2px; }
+.feed.cheio { max-height: none; }
 .codigo { font: 15px var(--f-maq); background: #000; color: var(--fita); padding: 6px 10px; border-radius: 4px; user-select: all; word-break: break-all; }
 @media (max-width: 960px) { .mesa { grid-template-columns: 1fr; } .feed { max-height: none; } }
 
@@ -344,7 +350,7 @@ async function rotear() {
   limparSubs(); $('#camada').innerHTML = '';
   const h = location.hash.slice(1) || 'inicio';
   const [base, ...resto] = h.split('-'); const arg = resto.join('-');
-  const sec = { detetive: 'detetives', novo: 'detetives', caso: 'mesas', escudo: 'mesas' }[base] || base;
+  const sec = { detetive: 'detetives', novo: 'detetives', caso: 'mesas', escudo: 'mesas', historico: 'mesas' }[base] || base;
   $$('#nav a').forEach(a => a.classList.toggle('aqui', a.dataset.sec === sec));
   const fn = ROTAS[base] || ROTAS.inicio;
   try { await fn(arg); } catch (e) { console.error(e); app.innerHTML = `<div class="vazio">Deu ruim abrindo esta página: ${esc(e.message || e.code || e)}</div>`; }
@@ -813,7 +819,7 @@ ROTAS.caso = async id => {
   let C = s0.data(), DETS = [], ROLS = [];
   app.innerHTML = `<div class="cab"><div><span class="fita">Mesa</span><h2 id="c-nome" style="margin-top:8px"></h2><p id="c-sub"></p></div><div class="btns" id="c-btns"></div></div>
     <div id="c-placar"></div><div class="mesa"><div class="bloco"><div class="caixa bloco"><h3>Detetives na mesa</h3><div class="bloco" id="c-dets"></div></div><div id="c-mural" class="bloco"></div></div>
-    <div class="bloco"><h3>Rolagens</h3><div class="feed" id="c-feed"></div></div></div>`;
+    <div class="bloco"><div class="btns" style="justify-content:space-between;align-items:center"><h3>Rolagens</h3><a class="btn mini sec" href="#historico-${id}">Histórico completo</a></div><div class="feed" id="c-feed"></div></div></div>`;
   const desenhar = () => {
     $('#c-nome').textContent = C.nome; $('#c-sub').textContent = `Mestre: ${C.mestreNome || '?'}${C.aviso ? ' · ' + C.aviso : ''}`;
     $('#c-placar').innerHTML = placar(C);
@@ -838,6 +844,45 @@ ROTAS.caso = async id => {
   assinar(db.collection(`bichos-casos/${id}/rolagens`).orderBy('t', 'desc').limit(60).onSnapshot(s => { ROLS = s.docs.map(d => d.data()); desenharFeed(); recarregarDets(); }));
 };
 
+
+/* ---------- histórico de rolagens (todos da mesa veem) ---------- */
+const TIPOS_HIST = { todos: 'Tudo', dados: 'Só rolagens de dados', teste: 'Testes', espanto: 'Testes de Espanto', rastro: 'Seguir o Rastro', apertar: 'Apertar', cena: 'Fazer Cena', cobertura: 'Dar Cobertura', culpado: 'Ações do Culpado', sistema: 'Avisos do Mestre' };
+ROTAS.historico = async id => {
+  if (!ME) { app.innerHTML = precisaEntrar(); return; }
+  const s0 = await db.doc('bichos-casos/' + id).get();
+  if (!s0.exists) { app.innerHTML = '<div class="vazio">Esse caso foi arquivado.</div>'; return; }
+  const C = s0.data(), mestre = C.mestre === ME;
+  let ROLS = [], fDet = 'todos', fTipo = 'todos';
+  app.innerHTML = `<div class="cab"><div><span class="fita">Histórico</span><h2 style="margin-top:8px">${esc(C.nome)}</h2><p>Todas as rolagens e ações da mesa, da mais nova para a mais antiga.</p></div>
+    <div class="btns"><a class="btn sec" href="#${mestre ? 'escudo' : 'caso'}-${id}">Voltar para a mesa</a></div></div>
+    <div class="caixa hist-filtros"><div class="campo"><label class="rotulo" for="h-det">Detetive</label><select id="h-det"></select></div>
+      <div class="campo"><label class="rotulo" for="h-tipo">Tipo</label><select id="h-tipo">${Object.entries(TIPOS_HIST).map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></div></div>
+    <div class="hist-resumo" id="h-resumo"></div><div class="feed cheio" id="h-feed"><div class="vazio">Desenterrando os registros…</div></div>`;
+  const desenhar = () => {
+    const nomes = {}; ROLS.forEach(r => { if (r.ficha && !nomes[r.ficha]) nomes[r.ficha] = { nome: r.fnome, especie: r.especie }; });
+    const selD = $('#h-det'); const atual = fDet;
+    selD.innerHTML = `<option value="todos">Todos</option>${Object.entries(nomes).map(([k, v]) => `<option value="${k}" ${k === atual ? 'selected' : ''}>${esc(v.nome)}</option>`).join('')}<option value="culpado" ${atual === 'culpado' ? 'selected' : ''}>O Culpado e o Mestre</option>`;
+    // resumo por detetive: rolagens, dados rolados, sucessos, 6s, falhas
+    $('#h-resumo').innerHTML = Object.entries(nomes).map(([k, v]) => {
+      const rs = ROLS.filter(r => r.ficha === k && r.dados);
+      const dados = rs.reduce((a, r) => a + r.dados.length, 0), suc = rs.reduce((a, r) => a + (r.suc || 0), 0), seis = rs.reduce((a, r) => a + r.dados.filter(x => x === 6).length, 0), ok = rs.filter(r => r.ok).length;
+      return `<div class="det-mesa">${avatar({ nome: v.nome, especie: v.especie })}<div><span class="nm">${esc(v.nome)}</span><div class="st"><span>Rolagens <b>${rs.length}</b></span><span>Passou <b>${ok}</b></span><span>Dados <b>${dados}</b></span><span>Sucessos <b>${suc}</b></span><span>Seis <b>${seis}</b></span></div></div></div>`;
+    }).join('');
+    const lista = ROLS.filter(r => (fDet === 'todos' || (fDet === 'culpado' ? !r.ficha : r.ficha === fDet))
+      && (fTipo === 'todos' || (fTipo === 'dados' ? !!r.dados : r.tipo === fTipo)));
+    let dia = '', html = '';
+    for (const r of lista) {
+      const d = new Date(r.t).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+      if (d !== dia) { dia = d; html += `<div class="hist-dia">${esc(d)}</div>`; }
+      html += linhaRol(r);
+    }
+    $('#h-feed').innerHTML = html || '<div class="vazio">Nada com esses filtros.</div>';
+  };
+  $('#h-det').onchange = e => { fDet = e.target.value; desenhar(); };
+  $('#h-tipo').onchange = e => { fTipo = e.target.value; desenhar(); };
+  assinar(db.collection(`bichos-casos/${id}/rolagens`).orderBy('t', 'desc').limit(1000).onSnapshot(s => { ROLS = s.docs.map(d => d.data()); desenhar(); }));
+};
+
 /* ---------- escudo do mestre ---------- */
 let ABA_ESCUDO = 'culpado';
 ROTAS.escudo = async id => {
@@ -856,7 +901,7 @@ ROTAS.escudo = async id => {
     <p>Código para os jogadores: <span class="codigo">${id}</span></p></div><div class="btns"><a class="btn sec" href="#caso-${id}">Ver como jogador</a></div></div>
     <div id="c-placar"></div>
     <div class="mesa"><div class="bloco"><div class="abas" id="abas">${[['culpado', 'Culpado'], ['mesa', 'Mesa'], ['pistas', 'Pistas e solução'], ['mural', 'Mural']].map(([k, n]) => `<button data-aba="${k}">${n}</button>`).join('')}</div><div id="aba" class="bloco"></div></div>
-    <div class="bloco"><h3>Rolagens</h3><div class="feed" id="c-feed"></div></div></div>`;
+    <div class="bloco"><div class="btns" style="justify-content:space-between;align-items:center"><h3>Rolagens</h3><a class="btn mini sec" href="#historico-${id}">Histórico completo</a></div><div class="feed" id="c-feed"></div></div></div>`;
 
   const salvarE = async p => { E = { ...E, ...p }; try { await eRef.set(E); } catch (e) { toast('Escudo não salvou: ' + e.message); } };
   const salvarC = async p => { C = { ...C, ...p }; try { await emFila(() => ref.update(p)); } catch (e) { toast('Não salvou: ' + e.message); } };
