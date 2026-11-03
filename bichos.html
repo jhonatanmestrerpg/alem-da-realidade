@@ -310,8 +310,8 @@ body.quadro-cheio { overflow: hidden; }
 .quadro-palco { position: relative; margin: 0 auto; }
 .quadro-zoom { display: inline-flex; gap: 4px; align-items: center; }
 .quadro-zoom span { font: 12px var(--f-maq); color: var(--texto-dim); min-width: 42px; text-align: center; }
-.quadro-wrap:fullscreen .q-fs-bar, .quadro-wrap.tela-cheia .q-fs-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(14px, env(safe-area-inset-bottom)); z-index: 41; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
-.q-fs-bar #q-sair { font-size: 15px; padding: 8px 16px; }
+.quadro-wrap:fullscreen .q-fs-bar, .quadro-wrap.tela-cheia .q-fs-bar { position: fixed; right: max(10px, env(safe-area-inset-right)); top: max(10px, env(safe-area-inset-top)); background: rgba(18,11,6,.85); padding: 6px; border-radius: 10px; border: 2px solid #000; z-index: 41; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.q-fs-bar { flex-wrap: nowrap !important; } .q-fs-bar .btn { min-width: 38px; padding: 6px 9px; font-size: 15px; } .q-fs-bar #q-sair { padding: 6px 12px; }
 .q-fs-bar { display: none; }
 .quadro { position: absolute; left: 0; top: 0; width: 1600px; height: 1000px; transform-origin: 0 0; user-select: none;
   background: radial-gradient(circle at 20% 30%, rgba(255,255,255,.05) 0 2px, transparent 3px) 0 0 / 14px 14px, radial-gradient(circle at 70% 60%, rgba(0,0,0,.18) 0 2px, transparent 3px) 0 0 / 11px 11px, linear-gradient(135deg, #b98a55, #a77744 50%, #b48552);
@@ -353,6 +353,10 @@ body.quadro-cheio { overflow: hidden; }
 .resultado { text-align: center; display: grid; gap: 10px; justify-items: center; padding: 10px 0; }
 .resultado .veredito { font: 400 34px var(--f-disp); }
 .resultado .veredito.ok { color: var(--teal); } .resultado .veredito.no { color: var(--vermelho); }
+.fundo-modal.f2 { z-index: 70; }
+.mini-modal { width: min(420px, 100%); }
+.mini-modal h2 { font-size: 24px; }
+.quadro-wrap .fundo-modal, .quadro-wrap .toast { position: fixed; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; background: var(--ambar); color: #1a0f05; border: 2px solid #000; box-shadow: 3px 3px 0 #000; padding: 10px 16px; font-weight: 800; border-radius: 8px; animation: sobe .25s ease; }
 @keyframes sobe { from { transform: translate(-50%, 20px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
@@ -394,7 +398,31 @@ const d6 = () => { const a = new Uint32Array(1); crypto.getRandomValues(a); retu
 const uid8 = () => Math.random().toString(36).slice(2, 10);
 const horaBR = t => t ? new Date(t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
 const iniciais = n => (n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
-function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; hospedar(t); setTimeout(() => t.remove(), 2600); }
+/* confirmação e pergunta no visual do jogo (no lugar das caixinhas cinzas do navegador) */
+function janela2(html, ligar) {
+  let c = $('#camada2'); if (!c) { c = document.createElement('div'); c.id = 'camada2'; }
+  hospedar(c); c.innerHTML = `<div class="fundo-modal f2"><div class="modal mini-modal" role="alertdialog" aria-modal="true">${html}</div></div>`;
+  const fechar = () => { c.innerHTML = ''; };
+  ligar(c.querySelector('.modal'), fechar, c.querySelector('.fundo-modal'));
+}
+function confirmar(msg, { titulo = 'Tem certeza?', ok = 'Sim', perigo = true } = {}) {
+  return new Promise(res => janela2(`<h2>${esc(titulo)}</h2><p style="margin:0">${esc(msg)}</p><div class="btns" style="justify-content:flex-end"><button class="btn sec" data-r="0">Cancelar</button><button class="btn ${perigo ? 'perigo' : ''}" data-r="1">${esc(ok)}</button></div>`, (m, fechar, fundo) => {
+    const fim = v => { fechar(); res(v); };
+    m.querySelectorAll('[data-r]').forEach(b => b.onclick = () => fim(b.dataset.r === '1'));
+    fundo.addEventListener('click', e => { if (e.target === fundo) fim(false); });
+    m.querySelector('[data-r="1"]').focus();
+  }));
+}
+function perguntar(titulo, valor = '', { multi = false, ok = 'OK', tipo = 'text' } = {}) {
+  return new Promise(res => janela2(`<h2>${esc(titulo)}</h2>${multi ? `<textarea id="pg-v" style="min-height:110px">${esc(valor)}</textarea>` : `<input type="${tipo}" id="pg-v" value="${esc(valor)}">`}<div class="btns" style="justify-content:flex-end"><button class="btn sec" data-r="0">Cancelar</button><button class="btn" data-r="1">${esc(ok)}</button></div>`, (m, fechar, fundo) => {
+    const v = m.querySelector('#pg-v'), fim = r => { fechar(); res(r); };
+    m.querySelector('[data-r="0"]').onclick = () => fim(null); m.querySelector('[data-r="1"]').onclick = () => fim(v.value);
+    v.addEventListener('keydown', e => { if (e.key === 'Enter' && !multi) fim(v.value); });
+    fundo.addEventListener('click', e => { if (e.target === fundo) fim(null); });
+    v.focus(); v.select?.();
+  }));
+}
 const FASES = { livre: 'Cena Livre', investigacao: 'Investigação', suspense: 'Suspense', acareacao: 'Acareação' };
 const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
 const dado = (v, cls = '') => `<span class="d6 ${cls}" title="${v || ''}">${Array.from({ length: 9 }, (_, i) => `<i class="${v && PIPS[v].includes(i) ? 'p' : ''}"></i>`).join('')}</span>`;
@@ -402,15 +430,17 @@ const estTag = (k, off) => `<span class="est ${off ? 'off' : ''}" style="--ec:${
 const avatar = (f, g = '') => { const e = ESP[f.especie] || {}; return `<span class="ava ${g} ${f.fora ? 'fora' : ''}" style="--sc:${e.cor || '#888'};${f.foto ? `background-image:url('${esc(f.foto)}')` : ''}">${f.foto ? '' : esc(iniciais(f.nome))}</span>`; };
 
 /* ---------- modal ---------- */
+// em tela cheia o navegador só desenha o elemento em tela cheia: as janelas vão para dentro dele
+const hospedar = el => { const host = document.fullscreenElement || document.webkitFullscreenElement || document.body; if (el.parentNode !== host) host.appendChild(el); return el; };
 function abrirModal(titulo, corpo, ligar) {
-  const camada = $('#camada');
+  const camada = hospedar($('#camada'));
   camada.innerHTML = `<div class="fundo-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(titulo)}"><div class="cab-m"><h2>${esc(titulo)}</h2><button class="btn-x" data-fechar aria-label="Fechar">×</button></div>${corpo}</div></div>`;
   const fechar = () => { camada.innerHTML = ''; };
   camada.querySelector('[data-fechar]').onclick = fechar;
   camada.querySelector('.fundo-modal').addEventListener('click', e => { if (e.target.classList.contains('fundo-modal')) fechar(); });
   ligar?.(camada.querySelector('.modal'), fechar);
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#camada').innerHTML = ''; });
+document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; const c2 = $('#camada2'); if (c2?.innerHTML) { c2.querySelector('[data-r="0"]')?.click(); return; } $('#camada').innerHTML = ''; });
 function escolherDetetive(titulo, lista, aoEscolher) {
   abrirModal(titulo, lista.length ? `<div class="grade">${lista.map(f => `<button class="card-det" data-f="${f.id}" style="text-align:left">${avatar(f)}<div><div class="nm">${esc(f.nome)}</div><div class="sub">${esc(ESP[f.especie]?.nome)}</div></div></button>`).join('')}</div>` : '<div class="vazio">Nenhum detetive aqui.</div>', (m, fechar) => {
     m.addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (b) { fechar(); aoEscolher(lista.find(f => f.id === b.dataset.f)); } });
@@ -1039,7 +1069,7 @@ function montarQuadro(el, id, getC, getQ) {
   const blocoFios = k => { const l = fiosDe(k); return `<div class="fios-lista"><span class="rotulo">🧶 Barbantes (${l.length})</span>${l.map(f => `<div class="linha"><span>${esc(rotulo(f.split('|').find(x => x !== k)))}</span><button class="btn mini perigo" data-cortar="${esc(f)}">✂️ Cortar</button></div>`).join('') || '<span class="tag">Nada ligado aqui. Use "Ligar com barbante".</span>'}${l.length > 1 ? '<button class="btn mini perigo" data-cortar-todos style="justify-self:start">✂️ Cortar todos</button>' : ''}</div>`; };
   const ligarCortes = (m, k, reabrir) => {
     m.querySelectorAll('[data-cortar]').forEach(b => b.onclick = async () => { await cortar([b.dataset.cortar]); reabrir(); });
-    m.querySelector('[data-cortar-todos]')?.addEventListener('click', async () => { if (!confirm('Cortar todos os barbantes deste item?')) return; await cortar(fiosDe(k)); reabrir(); });
+    m.querySelector('[data-cortar-todos]')?.addEventListener('click', async () => { if (!await confirmar('Cortar todos os barbantes deste item?')) return; await cortar(fiosDe(k)); reabrir(); });
   };
   const abrirItem = k => {
     const C = getC(), Q = getQ() || {}, [t, iid] = [k.slice(0, 1), k.slice(2)];
@@ -1058,7 +1088,7 @@ function montarQuadro(el, id, getC, getQ) {
   // ligar com barbante / cortar barbante
   el.addEventListener('click', async e => {
     const fio = e.target.closest('[data-fio]');
-    if (fio) { if (!confirm('Cortar este barbante?')) return; const Q = getQ() || {}; Q.fios = { ...(Q.fios || {}), [fio.dataset.fio]: null }; desenhar(); await salvarQ(id, { fios: { [fio.dataset.fio]: null } }); return; }
+    if (fio) { const [fa, fb] = fio.dataset.fio.split('|'); if (!await confirmar(`${rotulo(fa)}  ↔  ${rotulo(fb)}`, { titulo: '✂️ Cortar este barbante?', ok: 'Cortar' })) return; const Q = getQ() || {}; Q.fios = { ...(Q.fios || {}), [fio.dataset.fio]: null }; desenhar(); await salvarQ(id, { fios: { [fio.dataset.fio]: null } }); return; }
     if (!ligando) return;
     const it = e.target.closest('.q-item'); if (!it) return;
     if (!sel) { sel = it.dataset.k; desenhar(); return; }
@@ -1069,7 +1099,7 @@ function montarQuadro(el, id, getC, getQ) {
   return {
     desenhar,
     ligar(v) { ligando = v; sel = null; desenhar(); },
-    async nota() { const txt = prompt('O que escrever no papelzinho?'); if (!txt?.trim()) return; const nid = uid8(), Q = getQ() || {}; Q.notas = { ...(Q.notas || {}), [nid]: { txt: txt.trim() } }; desenhar(); await salvarQ(id, { notas: { [nid]: { txt: txt.trim() } } }); },
+    async nota() { const txt = await perguntar('O que escrever no papelzinho?', '', { multi: true, ok: 'Pregar no quadro' }); if (!txt?.trim()) return; const nid = uid8(), Q = getQ() || {}; Q.notas = { ...(Q.notas || {}), [nid]: { txt: txt.trim() } }; desenhar(); await salvarQ(id, { notas: { [nid]: { txt: txt.trim() } } }); },
   };
 }
 
@@ -1122,19 +1152,19 @@ ROTAS.caso = async id => {
         ${ns.map(n => `<details class="dia" ${n === ns[0] ? 'open' : ''}><summary>Dia ${n}<span>${(dias[n] || []).length} pista(s)${C.diasFim?.[n] ? ' · encerrado em ' + new Date(C.diasFim[n]).toLocaleDateString('pt-BR') : ''}</span></summary><div class="mural">${(dias[n] || []).map(papelPista).join('') || '<div class="vazio">Nenhuma pista neste dia.</div>'}</div></details>`).join('') || '<div class="vazio">Nenhum dia encerrado ainda.</div>'}</div>`;
     } else if (ABA_MESA === 'quadro') {
       if (!QUADRO) {
-        A.innerHTML = `<div class="caixa bloco"><div class="quadro-bar"><button class="btn mini" id="q-ligar">🧶 Ligar com barbante</button><button class="btn mini sec" id="q-nota">📝 Anotação</button><button class="btn mini sec" id="q-cheia">⛶ Tela cheia</button><span class="quadro-zoom"><button class="btn mini sec" data-zoom="-1" aria-label="Diminuir">−</button><span id="q-zv">100%</span><button class="btn mini sec" data-zoom="1" aria-label="Aumentar">+</button><button class="btn mini sec" data-zoom="0">Ajustar</button></span>
+        A.innerHTML = `<div class="caixa bloco"><div class="quadro-bar"><button class="btn mini" id="q-ligar" data-ligar>🧶 Ligar com barbante</button><button class="btn mini sec" id="q-nota" data-nota>📝 Anotação</button><button class="btn mini sec" id="q-cheia">⛶ Tela cheia</button><span class="quadro-zoom"><button class="btn mini sec" data-zoom="-1" aria-label="Diminuir">−</button><span id="q-zv">100%</span><button class="btn mini sec" data-zoom="1" aria-label="Aumentar">+</button><button class="btn mini sec" data-zoom="0">Ajustar</button></span>
           <span class="tag" id="q-dica">Arraste fotos e papéis. Toque num item para ler e ver ou cortar os barbantes dele. Para ligar, ative o barbante e toque em dois itens.</span></div>
-          <div class="quadro-wrap" id="q-wrap"><div class="quadro-palco" id="q-palco"><div class="quadro" id="q-quadro"></div></div><div class="q-fs-bar"><button class="btn mini" data-zoom="-1">−</button><button class="btn mini" data-zoom="1">+</button><button class="btn mini" data-zoom="0">Ajustar</button><button class="btn mini perigo" id="q-sair">✕ Sair do quadro</button></div></div><p class="tag">O quadro é da equipe toda: o que um detetive mexe, os outros veem.</p></div>`;
+          <div class="quadro-wrap" id="q-wrap"><div class="quadro-palco" id="q-palco"><div class="quadro" id="q-quadro"></div></div><div class="q-fs-bar"><button class="btn mini" data-ligar title="Ligar com barbante" aria-label="Ligar com barbante">🧶</button><button class="btn mini sec" data-nota title="Anotação" aria-label="Anotação">📝</button><button class="btn mini sec" data-zoom="-1" aria-label="Diminuir">−</button><button class="btn mini sec" data-zoom="1" aria-label="Aumentar">+</button><button class="btn mini sec" data-zoom="0" title="Ver o quadro inteiro" aria-label="Ajustar">⤢</button><button class="btn mini perigo" id="q-sair">✕ Sair</button></div></div><p class="tag">O quadro é da equipe toda: o que um detetive mexe, os outros veem.</p></div>`;
         QUADRO = montarQuadro($('#q-quadro'), id, () => C, () => Q);
         let lig = false;
-        $('#q-ligar').onclick = () => { lig = !lig; QUADRO.ligar(lig); $('#q-ligar').textContent = lig ? '✋ Parar de ligar' : '🧶 Ligar com barbante'; $('#q-ligar').classList.toggle('perigo', lig); };
-        $('#q-nota').onclick = () => QUADRO.nota();
+        A.querySelectorAll('[data-ligar]').forEach(b => b.onclick = () => { lig = !lig; QUADRO.ligar(lig); A.querySelectorAll('[data-ligar]').forEach(x => { x.textContent = x.id ? (lig ? '✋ Parar de ligar' : '🧶 Ligar com barbante') : (lig ? '✋' : '🧶'); x.classList.toggle('perigo', lig); }); });
+        A.querySelectorAll('[data-nota]').forEach(b => b.onclick = () => QUADRO.nota());
         // o quadro é uma tela fixa de 1600x1000 que escala por inteiro: no celular fica igual ao computador, só menor
         let zoom = null, manual = false;
         const wrap = $('#q-wrap'), palco = $('#q-palco'), qd = $('#q-quadro');
         const caber = () => { const cheio = document.fullscreenElement === wrap || wrap.classList.contains('tela-cheia'); const w = wrap.clientWidth - 6, h = (cheio ? wrap.clientHeight - 60 : Infinity) - 6; return Math.max(.2, Math.min(w / 1600, h / 1000, 1.4)); };
         const aplicar = z => { zoom = Math.max(.2, Math.min(2, z)); qd.style.transform = `scale(${zoom})`; palco.style.width = 1600 * zoom + 'px'; palco.style.height = 1000 * zoom + 'px'; $('#q-zv').textContent = Math.round(zoom * 100) + '%'; };
-        const inicial = () => Math.max(caber(), (document.fullscreenElement === wrap || wrap.classList.contains('tela-cheia')) ? .45 : .55);
+        const inicial = () => (document.fullscreenElement === wrap || wrap.classList.contains('tela-cheia')) ? Math.max(.3, Math.min(1.4, (wrap.clientHeight - 8) / 1000)) : Math.max(caber(), .55);
         aplicar(inicial());
         A.querySelectorAll('[data-zoom]').forEach(b => b.onclick = () => { const d = +b.dataset.zoom; manual = d !== 0; aplicar(d ? zoom * (d > 0 ? 1.25 : 0.8) : caber()); });
         const reajustar = () => { if (!manual && $('#q-wrap')) aplicar(inicial()); };
@@ -1369,7 +1399,7 @@ ROTAS.escudo = async id => {
         <div class="caixa bloco"><h3>Habilidades exclusivas</h3><div class="lista-acoes">${habsC.map((h, i) => `<div class="acao-c" style="border-left-color:var(--ambar)"><div class="top"><b>${esc(h.nome)}</b><button class="btn mini perigo" data-hab="${i}">Usar</button></div><span class="meta">Cena: ${esc(h.cena || 'Sem restrição')} · Custo: ${h.custo ? h.custo + ' PL' : 'Sem custo'}</span>${h.frase ? `<p><i>"${esc(h.frase)}"</i></p>` : ''}<p>${esc(h.txt)}</p></div>`).join('') || '<div class="vazio">Sem habilidades exclusivas. Crie na aba Suspeitos.</div>'}</div></div>
         <div class="caixa bloco"><h3>Golpe Baixo</h3>${(() => { const g = B.GOLPES[E.golpe]; return `<div class="acao-c"><div class="top"><b>${esc(g.nome)}</b><button class="btn mini perigo" data-golpe>Usar</button></div><span class="meta">Cena: ${esc(g.cena)} · Custo: ${esc(g.custo)} PL · Recarga: ${esc(g.recarga)}</span><p>${esc(g.txt)}</p></div>`; })()}</div>
         <div class="caixa bloco"><h3>Intentos (ganhar PL)</h3><div class="intentos">${[...B.INTENTOS, ...E.perfis.map(p => [B.PERFIS[p].intento + ' (Intento Único)', 0])].map(([t, n], i) => `<button data-int="${n}" data-i="${i}">${esc(t)}<span>${n ? '+' + n : '+?'}</span></button>`).join('')}</div></div>`;
-      A.querySelector('#e-pr').onchange = async ev => { const pr = fichaSusp(E, C, ev.target.value); if (!confirm(`Trocar o Culpado para ${pr.nome}? PL, ações, golpe e habilidades vêm da ficha dele.`)) { ev.target.value = E.pronto; return; } await tornarCulpado(pr); desenharAba(); };
+      A.querySelector('#e-pr').onchange = async ev => { const pr = fichaSusp(E, C, ev.target.value); if (!await confirmar(`Trocar o Culpado para ${pr.nome}? PL, ações, golpe e habilidades vêm da ficha dele.`)) { ev.target.value = E.pronto; return; } await tornarCulpado(pr); desenharAba(); };
       A.querySelectorAll('[data-hab]').forEach(b => b.onclick = async () => { const h = habsC[+b.dataset.hab]; if (!(await gastarPL(h.custo || 0, h.nome))) return; await postarC(`${h.nome}!${h.frase ? ` "${h.frase}"` : ''}`); desenharAba(); });
       A.querySelectorAll('[data-pl]').forEach(b => b.onclick = async () => { await salvarE({ pl: Math.max(0, E.pl + +b.dataset.pl) }); desenharAba(); });
       A.querySelectorAll('[data-cul]').forEach(b => b.onclick = async () => { await salvarC({ culpado: Math.max(0, (C.culpado || 0) + +b.dataset.cul) }); desenharAba(); });
@@ -1380,7 +1410,7 @@ ROTAS.escudo = async id => {
         if (!(await gastarPL(custo, g.nome))) return; await postarC(`Golpe Baixo: ${g.nome}! ${g.txt}`); desenharAba();
       };
       A.querySelectorAll('[data-int]').forEach(b => b.onclick = async () => {
-        let n = +b.dataset.int; if (!n) { const v = prompt('Quantos PL esse Intento Único rendeu?', '1'); n = Math.max(0, parseInt(v, 10) || 0); if (!n) return; }
+        let n = +b.dataset.int; if (!n) { const v = await perguntar('Quantos PL esse Intento Único rendeu?', '1', { tipo: 'number' }); n = Math.max(0, parseInt(v, 10) || 0); if (!n) return; }
         await salvarE({ pl: E.pl + n }); toast(`+${n} PL`); desenharAba();
       });
     } else if (ABA_ESCUDO === 'mesa') {
@@ -1402,7 +1432,7 @@ ROTAS.escudo = async id => {
       A.querySelector('#encerrar')?.addEventListener('click', async () => { await encerrarAcareacao(false); desenharAba(); });
       A.querySelector('#fim-dia').onclick = async () => {
         const n = C.dia || 1, hoje = (C.pistas || []).filter(p => !p.dia).length;
-        if (!confirm(`Encerrar o Dia ${n}? ${hoje} pista(s) de hoje vão para o Calendário e começa o Dia ${n + 1}.`)) return;
+        if (!await confirmar(`Encerrar o Dia ${n}? ${hoje} pista(s) de hoje vão para o Calendário e começa o Dia ${n + 1}.`)) return;
         await salvarC({ pistas: (C.pistas || []).map(p => p.dia ? p : { ...p, dia: n }), dia: n + 1, diasFim: { ...(C.diasFim || {}), [n]: Date.now() } });
         await postarC(`Fim do Dia ${n}. As pistas foram para o Calendário. Amanhã começa o Dia ${n + 1}.`, 'sistema'); desenharAba();
       };
@@ -1415,7 +1445,7 @@ ROTAS.escudo = async id => {
       A.querySelectorAll('[data-volta]').forEach(b => b.onclick = async () => { await fichaRef(b.dataset.volta).update({ fora: false }); });
       A.querySelectorAll('[data-solta]').forEach(b => b.onclick = async () => { await fichaRef(b.dataset.solta).update({ agarrado: false }); });
       A.querySelectorAll('[data-recomp]').forEach(b => b.onclick = async () => { await fichaRef(b.dataset.recomp).update({ desmoralizados: [] }); });
-      A.querySelectorAll('[data-tirad]').forEach(b => b.onclick = async () => { if (!confirm('Tirar este detetive da mesa?')) return; await db.doc(`bichos-casos/${id}/detetives/${b.dataset.tirad}`).delete(); });
+      A.querySelectorAll('[data-tirad]').forEach(b => b.onclick = async () => { if (!await confirmar('Tirar este detetive da mesa?')) return; await db.doc(`bichos-casos/${id}/detetives/${b.dataset.tirad}`).delete(); });
     } else if (ABA_ESCUDO === 'suspeitos') {
       const ids = (C.suspeitos || []).map(x => x.id);
       if (!SUSP_SEL || (!ids.includes(SUSP_SEL) && SUSP_SEL !== '__novo')) SUSP_SEL = ids[0] || '__novo';
@@ -1475,10 +1505,10 @@ ROTAS.escudo = async id => {
         if (ficha.id === E.pronto) await salvarE({ nome: ficha.nome, frase: ficha.frase, habs: ficha.habs, perfis: ficha.perfis, acoes: ficha.acoes, golpe: ficha.golpe, pecas: ficha.pecas, alvo: ficha.alvo });
         SUSP_SEL = ficha.id; RASC = null; toast(novo ? 'Suspeito criado e posto no Mural.' : 'Ficha salva.'); desenharAba();
       };
-      ED.querySelector('#s-culpado')?.addEventListener('click', async () => { lerForm(); if (!confirm(`Tornar ${R.nome} o Culpado? A ficha atual do Culpado é trocada pela dele.`)) return; const { novo, ...ficha } = R; await salvarE({ suspeitos: { ...(E.suspeitos || {}), [ficha.id]: ficha } }); await tornarCulpado(ficha); toast(`${ficha.nome} agora é o Culpado. Só você sabe.`); desenharAba(); });
+      ED.querySelector('#s-culpado')?.addEventListener('click', async () => { lerForm(); if (!await confirmar(`Tornar ${R.nome} o Culpado? A ficha atual do Culpado é trocada pela dele.`)) return; const { novo, ...ficha } = R; await salvarE({ suspeitos: { ...(E.suspeitos || {}), [ficha.id]: ficha } }); await tornarCulpado(ficha); toast(`${ficha.nome} agora é o Culpado. Só você sabe.`); desenharAba(); });
       ED.querySelector('#s-apagar')?.addEventListener('click', async () => {
         if (R.id === E.pronto) { toast('Esse é o Culpado. Escolha outro Culpado antes de remover.'); return; }
-        if (!confirm(`Remover ${R.nome} do caso?`)) return;
+        if (!await confirmar(`Remover ${R.nome} do caso?`)) return;
         const sus = { ...(E.suspeitos || {}) }; delete sus[R.id];
         await salvarE({ suspeitos: sus }); await salvarC({ suspeitos: (C.suspeitos || []).filter(x => x.id !== R.id) }); SUSP_SEL = null; RASC = null; desenharAba();
       });
@@ -1498,7 +1528,7 @@ ROTAS.escudo = async id => {
             <button class="btn" id="pt-ok">Esconder no local</button></div>`;
       A.querySelector('#iv-montar')?.addEventListener('click', async () => { const local = A.querySelector('#iv-local').value.trim(); if (!local) { toast('Dê um nome ao local.'); return; } await salvarC({ inv: { local, max: +A.querySelector('#iv-max').value, atual: 0, pontos: [], vigia: '', segurar: false, tempoUsado: false } }); await salvarE({ inv: {} }); desenharAba(); });
       A.querySelector('#iv-iniciar')?.addEventListener('click', async () => { if (C.fase === 'acareacao') await encerrarAcareacao(false); await salvarC({ fase: 'investigacao', aviso: '' }); await postarC(`Cena de Investigação: ${I.local}. O relógio está correndo (${I.max} rodadas).`, 'sistema'); desenharAba(); });
-      A.querySelector('#iv-descartar')?.addEventListener('click', async () => { if (!confirm('Desmontar o local e apagar os pontos?')) return; await salvarC({ inv: null }); await salvarE({ inv: {} }); desenharAba(); });
+      A.querySelector('#iv-descartar')?.addEventListener('click', async () => { if (!await confirmar('Desmontar o local e apagar os pontos?')) return; await salvarC({ inv: null }); await salvarE({ inv: {} }); desenharAba(); });
       A.querySelector('#iv-rodada')?.addEventListener('click', async () => {
         if (I.segurar) { await salvarC({ inv: { ...C.inv, segurar: false } }); await postarC('Fim da rodada: alguém ganhou tempo e o relógio segurou.', 'sistema'); desenharAba(); return; }
         const atual = Math.min(I.max, I.atual + 1); await salvarC({ inv: { ...C.inv, atual } });
@@ -1526,7 +1556,7 @@ ROTAS.escudo = async id => {
         await salvarC({ inv: { ...C.inv, pontos: C.inv.pontos.map(x => x.id === pt.id ? { ...x, achado: true, por: 'Mestre' } : x) }, pistas: [...(C.pistas || []), { id: 'p-' + pt.id, txt: `${pt.nome}: ${E.inv?.[pt.id]?.pista || ''}`, t: Date.now() }] });
         await postarC('Nova pista no Mural!', 'sistema'); desenharAba();
       });
-      A.querySelectorAll('[data-tiraponto]').forEach(b => b.onclick = async () => { if (!confirm('Remover este ponto?')) return; await salvarC({ inv: { ...C.inv, pontos: C.inv.pontos.filter(x => x.id !== b.dataset.tiraponto) } }); desenharAba(); });
+      A.querySelectorAll('[data-tiraponto]').forEach(b => b.onclick = async () => { if (!await confirmar('Remover este ponto?')) return; await salvarC({ inv: { ...C.inv, pontos: C.inv.pontos.filter(x => x.id !== b.dataset.tiraponto) } }); desenharAba(); });
     } else if (ABA_ESCUDO === 'interrog') {
       const its = ROLS.filter(r => r.tipo === 'interrogatorio');
       const pend = its.filter(r => !r.respostas), feitos = its.filter(r => r.respostas);
@@ -1585,9 +1615,9 @@ ROTAS.escudo = async id => {
       A.querySelectorAll('[data-sol]').forEach(i => i.onchange = () => salvarE({ solucao: { ...E.solucao, [i.dataset.sol]: i.value } }));
       A.querySelector('#notas-e').onchange = ev => salvarE({ notas: ev.target.value });
       A.querySelector('#add-p').onclick = async () => { const t = A.querySelector('#nova-p').value.trim(); if (!t) return; await salvarE({ pistasOcultas: [...(E.pistasOcultas || []), { id: uid8(), txt: t }] }); desenharAba(); };
-      A.querySelectorAll('[data-excluir]').forEach(b => b.onclick = async () => { if (!confirm('Excluir esta pista do Mural para sempre?')) return; await salvarC({ pistas: C.pistas.filter(x => x.id !== b.dataset.excluir) }); desenharAba(); });
+      A.querySelectorAll('[data-excluir]').forEach(b => b.onclick = async () => { if (!await confirmar('Excluir esta pista do Mural para sempre?')) return; await salvarC({ pistas: C.pistas.filter(x => x.id !== b.dataset.excluir) }); desenharAba(); });
       A.querySelectorAll('[data-esconder]').forEach(b => b.onclick = async () => { const p = C.pistas.find(x => x.id === b.dataset.esconder); await salvarC({ pistas: C.pistas.filter(x => x.id !== p.id) }); await salvarE({ pistasOcultas: [...(E.pistasOcultas || []), { id: p.id, txt: p.txt }] }); desenharAba(); });
-      A.querySelectorAll('[data-apaga]').forEach(b => b.onclick = async () => { if (!confirm('Apagar esta pista escondida?')) return; await salvarE({ pistasOcultas: E.pistasOcultas.filter(p => p.id !== b.dataset.apaga) }); desenharAba(); });
+      A.querySelectorAll('[data-apaga]').forEach(b => b.onclick = async () => { if (!await confirmar('Apagar esta pista escondida?')) return; await salvarE({ pistasOcultas: E.pistasOcultas.filter(p => p.id !== b.dataset.apaga) }); desenharAba(); });
       A.querySelectorAll('[data-rev]').forEach(b => b.onclick = async () => {
         const p = E.pistasOcultas.find(x => x.id === b.dataset.rev);
         await salvarC({ pistas: [...(C.pistas || []), { id: p.id, txt: p.txt, t: Date.now() }] });
@@ -1599,10 +1629,10 @@ ROTAS.escudo = async id => {
       const falsas = Object.entries(E.inv || {}).filter(([, v]) => v.falsa).map(([k]) => 'p-' + k);
       A.innerHTML = (faltam.length ? `<div class="caixa btns" style="align-items:center;justify-content:space-between"><span>${faltam.length} suspeito(s) pronto(s) fora do Mural: ${faltam.map(p => esc(p.nome)).join(', ')}</span><button class="btn mini" id="su-prontos">Trazer para o Mural</button></div>` : '') + muralHtml(C, true, falsas, QE) + `<div class="caixa btns" style="align-items:center;justify-content:space-between"><span>Fichas, fotos e suspeitos novos ficam na aba Suspeitos.</span><button class="btn mini" id="su-ir">Abrir fichário</button></div>`;
       A.querySelectorAll('[data-esconder]').forEach(b => b.onclick = async () => { const p = C.pistas.find(x => x.id === b.dataset.esconder); await salvarC({ pistas: C.pistas.filter(x => x.id !== p.id) }); await salvarE({ pistasOcultas: [...(E.pistasOcultas || []), { id: p.id, txt: p.txt }] }); desenharAba(); });
-      A.querySelectorAll('[data-excluir]').forEach(b => b.onclick = async () => { if (!confirm('Excluir esta pista do Mural para sempre?')) return; await salvarC({ pistas: C.pistas.filter(x => x.id !== b.dataset.excluir) }); desenharAba(); });
+      A.querySelectorAll('[data-excluir]').forEach(b => b.onclick = async () => { if (!await confirmar('Excluir esta pista do Mural para sempre?')) return; await salvarC({ pistas: C.pistas.filter(x => x.id !== b.dataset.excluir) }); desenharAba(); });
       A.querySelectorAll('[data-expor]').forEach(b => b.onclick = async () => { const p = C.pistas.find(x => x.id === b.dataset.expor); await salvarC({ pistas: C.pistas.map(x => x.id === p.id ? { ...x, falsa: !x.falsa } : x) }); if (!p.falsa) await postarC('Uma pista do Mural foi exposta como FALSA!', 'sistema'); desenharAba(); });
       A.querySelectorAll('[data-inoc]').forEach(b => b.onclick = async () => { const x = C.suspeitos.find(y => y.id === b.dataset.inoc); const v = !inocentado(x, QE); QE = { ...QE, inoc: { ...(QE.inoc || {}), [x.id]: v } }; await salvarQ(id, { inoc: { [x.id]: v } }); desenharAba(); });
-      A.querySelectorAll('[data-tirasus]').forEach(b => b.onclick = async () => { if (b.dataset.tirasus === E.pronto) { toast('Esse é o Culpado. Troque o Culpado antes de remover.'); return; } if (!confirm('Remover este suspeito do caso?')) return; await salvarC({ suspeitos: C.suspeitos.filter(s => s.id !== b.dataset.tirasus) }); desenharAba(); });
+      A.querySelectorAll('[data-tirasus]').forEach(b => b.onclick = async () => { if (b.dataset.tirasus === E.pronto) { toast('Esse é o Culpado. Troque o Culpado antes de remover.'); return; } if (!await confirmar('Remover este suspeito do caso?')) return; await salvarC({ suspeitos: C.suspeitos.filter(s => s.id !== b.dataset.tirasus) }); desenharAba(); });
       A.querySelector('#su-prontos')?.addEventListener('click', async () => { await salvarC({ suspeitos: [...(C.suspeitos || []), ...faltam.map(p => ({ id: p.id, nome: p.nome, especie: p.especie, txt: p.txt, inocente: false }))] }); desenharAba(); });
       A.querySelector('#su-ir').onclick = () => { ABA_ESCUDO = 'suspeitos'; desenharAba(); };
     }
