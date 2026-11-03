@@ -208,6 +208,17 @@ textarea { min-height: 80px; resize: vertical; }
 .placar .culp .big { color: var(--vermelho); }
 .fase { justify-self: start; display: inline-flex; align-items: center; gap: 8px; font: 400 18px var(--f-disp); padding: 4px 14px; border: 2px solid #000; border-radius: 999px; background: var(--teal); color: #04110e; }
 .fase.suspense { background: var(--ambar); }
+.fase.investigacao { background: var(--azul); color: #06121e; }
+.relogio { display: flex; gap: 5px; flex-wrap: wrap; }
+.relogio i { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #000; background: #120b06; }
+.relogio i.on { background: var(--vermelho); box-shadow: 0 0 8px rgba(228,87,77,.7); }
+.ponto { display: grid; gap: 4px; padding: 10px 12px; background: #120b06; border: 2px dashed var(--azul); border-radius: 8px; }
+.ponto b { font: 400 17px var(--f-disp); color: var(--ambar-hi); }
+.ponto p { margin: 0; font-size: 14px; color: var(--texto-dim); }
+.ponto.achado { border-style: solid; border-color: var(--teal); opacity: .7; }
+.ponto .segredo { color: var(--fita); font-size: 13.5px; }
+.pista.falsa { background: repeating-linear-gradient(-45deg, #f3e6c8 0 14px, #f0d9a8 14px 28px); }
+.pista.falsa::after { content: "FALSA"; position: absolute; right: 10px; top: 8px; font: 400 18px var(--f-disp); color: var(--vermelho); transform: rotate(8deg); border: 2px solid var(--vermelho); padding: 0 6px; }
 .fase.acareacao { background: var(--vermelho); color: #fff; animation: pulso 1.4s ease-in-out infinite; }
 @keyframes pulso { 50% { box-shadow: 0 0 18px rgba(228,87,77,.9); } }
 .feed { display: grid; gap: 8px; max-height: 70vh; overflow: auto; padding-right: 4px; }
@@ -313,7 +324,7 @@ const uid8 = () => Math.random().toString(36).slice(2, 10);
 const horaBR = t => t ? new Date(t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
 const iniciais = n => (n || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
 function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
-const FASES = { livre: 'Cena Livre', suspense: 'Suspense', acareacao: 'Acareação' };
+const FASES = { livre: 'Cena Livre', investigacao: 'Investigação', suspense: 'Suspense', acareacao: 'Acareação' };
 const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
 const dado = (v, cls = '') => `<span class="d6 ${cls}" title="${v || ''}">${Array.from({ length: 9 }, (_, i) => `<i class="${v && PIPS[v].includes(i) ? 'p' : ''}"></i>`).join('')}</span>`;
 const estTag = (k, off) => `<span class="est ${off ? 'off' : ''}" style="--ec:${B.ESTILOS[k].cor}">${B.ESTILOS[k].nome}</span>`;
@@ -618,6 +629,11 @@ function editarFicha(F, ref) {
 const ACOES_ROL = [
   { id: 'teste', nome: 'Teste', sub: 'Investigar, convencer, fugir…' },
   { id: 'espanto', nome: 'Teste de Espanto', sub: 'Um dado, sem Estilo' },
+  { id: 'vasculhar', nome: 'Vasculhar', sub: 'Investigação · Estilo do ponto', inv: true },
+  { id: 'interrogar', nome: 'Interrogar', sub: '3 perguntas · verdade, meia e mentira', foraAcar: true },
+  { id: 'ligar', nome: 'Ligar os Pontos', sub: 'Investigação · Complexo Sagaz', estilo: 'sagaz', complexo: true, inv: true },
+  { id: 'vigia', nome: 'Ficar de Vigia', sub: 'Investigação · Firme', estilo: 'firme', inv: true },
+  { id: 'tempo', nome: 'Ganhar Tempo', sub: 'Investigação · Complexo Desenrolado', estilo: 'desenrolado', complexo: true, inv: true },
   { id: 'rastro', nome: 'Seguir o Rastro', sub: 'Acareação · Ligeiro', estilo: 'ligeiro', acar: true },
   { id: 'apertar', nome: 'Apertar', sub: 'Acareação · Potente', estilo: 'potente', acar: true },
   { id: 'cena', nome: 'Fazer Cena', sub: 'Acareação · Complexo Desenrolado', estilo: 'desenrolado', complexo: true, acar: true },
@@ -626,36 +642,67 @@ const ACOES_ROL = [
   { id: 'jogar', nome: 'Se Jogar na Frente', sub: 'Acareação · Descarta tudo', acar: true, semRolar: true },
 ];
 
-async function abrirRolagem(F, CASO) {
+async function abrirRolagem(F, CASO, opt = {}) {
+  const LER = opt.ler || null;
   const e = ESP[F.especie];
   const fase = CASO?.fase || 'livre';
-  let acao = fase === 'acareacao' ? 'rastro' : 'teste';
+  let acao = LER ? 'interrogar' : fase === 'acareacao' ? 'rastro' : fase === 'investigacao' ? 'vasculhar' : 'teste';
+  const INV = CASO?.inv || null;
+  const pontosLivres = (INV?.pontos || []).filter(p => !p.achado);
   let aliados = [];
   if (CASO) { try { const s = await db.collection(`bichos-casos/${CASO.id}/detetives`).get(); const ids = s.docs.map(d => d.id).filter(x => x !== F.id); aliados = (await Promise.all(ids.map(x => db.doc('bichos-detetives/' + x).get()))).filter(x => x.exists).map(x => ({ id: x.id, ...x.data() })); } catch (er) {} }
   abrirModal(`Arriscar dados · ${F.nome}`, `
     <p class="tag" style="justify-self:start">${CASO ? `${esc(CASO.nome)} · ${FASES[fase]}` : 'Sem mesa: A rolagem fica só aqui'}</p>
-    <div class="opcoes-rol" id="r-acoes">${ACOES_ROL.filter(a => !a.acar || fase === 'acareacao').map(a => `<button data-a="${a.id}"><b>${a.nome}</b><span>${a.sub}</span></button>`).join('')}</div>
+    <div class="opcoes-rol" id="r-acoes">${ACOES_ROL.filter(a => (a.acar ? fase === 'acareacao' : a.inv ? fase === 'investigacao' : a.foraAcar ? fase !== 'acareacao' : true)).map(a => `<button data-a="${a.id}"><b>${a.nome}</b><span>${a.sub}</span></button>`).join('')}</div>
     <div id="r-corpo"></div>`, (m, fechar) => {
     const corpo = m.querySelector('#r-corpo');
     const pinta = () => {
       m.querySelectorAll('[data-a]').forEach(b => b.classList.toggle('aqui', b.dataset.a === acao));
       const A = ACOES_ROL.find(a => a.id === acao);
+      if (acao === 'interrogar' && !LER) {
+        const sus = (CASO?.suspeitos || []).filter(x => !x.inocente);
+        corpo.innerHTML = CASO ? `<p>Escolha quem interrogar e faça três perguntas. O Mestre responde com uma verdade, uma meia-verdade e uma mentira. Depois você rola para ler o bicho.</p>
+          <div class="campo"><label class="rotulo" for="i-npc">Quem</label><select id="i-npc">${sus.map(x => `<option value="${esc(x.nome)}">${esc(x.nome)} (${esc(x.especie)})</option>`).join('')}<option value="__outro">Outra testemunha…</option></select></div>
+          <div class="campo" id="i-outro-c" hidden><label class="rotulo" for="i-outro">Nome da testemunha</label><input type="text" id="i-outro" maxlength="60"></div>
+          ${[1, 2, 3].map(i => `<div class="campo"><label class="rotulo" for="i-p${i}">Pergunta ${i}</label><input type="text" id="i-p${i}" maxlength="200"></div>`).join('')}
+          <button class="btn" id="i-ok">Fazer as perguntas</button>` : '<p class="tag">Interrogatório só acontece numa mesa.</p>';
+        const sel = m.querySelector('#i-npc'); if (sel) sel.onchange = () => { m.querySelector('#i-outro-c').hidden = sel.value !== '__outro'; };
+        m.querySelector('#i-ok')?.addEventListener('click', async () => {
+          const npc = sel.value === '__outro' ? m.querySelector('#i-outro').value.trim() : sel.value;
+          const perguntas = [1, 2, 3].map(i => m.querySelector('#i-p' + i).value.trim());
+          if (!npc || perguntas.some(x => !x)) { toast('Faça as três perguntas, detetive.'); return; }
+          const b = m.querySelector('#i-ok'); b.disabled = true;
+          try {
+            const iid = 'i' + Date.now().toString(36) + uid8();
+            await db.doc(`bichos-casos/${CASO.id}/rolagens/${iid}`).set({ id: iid, uid: ME, ficha: F.id, fnome: F.nome, especie: F.especie, t: Date.now(), aplicado: true, tipo: 'interrogatorio', texto: `Interrogou ${npc}`, npc, perguntas, respostas: null, revelado: null, lido: false });
+            toast('Perguntas feitas. Agora é com o Mestre.'); fechar();
+          } catch (er) { toast('Não deu: ' + er.message); b.disabled = false; }
+        });
+        return;
+      }
       if (A.semRolar) {
         corpo.innerHTML = acao === 'respirar' ? `<p>Você recebe 1 dado na Pilha de Compostura (máximo 6).</p><button class="btn" id="r-ir">Respirar fundo</button>`
           : `<p>Escolha quem completa a Pilha de Dedução na hora. Você descarta ${e.id === 'texugo' ? 'todos os seus dados menos um (Deixa Comigo)' : 'todos os seus dados'}. Uma vez por sessão.</p>
             <div class="campo"><label class="rotulo" for="r-alvo">Quem</label><select id="r-alvo"><option value="${F.id}">${esc(F.nome)} (você)</option>${aliados.map(a => `<option value="${a.id}">${esc(a.nome)}</option>`).join('')}</select></div><button class="btn perigo" id="r-ir">Se jogar na frente</button>`;
       } else {
         const max = acao === 'espanto' ? 1 : F.pilha;
-        const est = A.estilo || '';
+        const pt = acao === 'vasculhar' ? pontosLivres[0] : null;
+        const est = A.estilo || pt?.estilo || (acao === 'interrogar' ? 'sagaz' : '');
+        const cxPonto = !!pt?.complexo;
         corpo.innerHTML = `
           <div class="campo"><span class="rotulo">Quantos dados arriscar (você tem ${F.pilha})</span><div class="btns" id="r-n">${Array.from({ length: max }, (_, i) => `<button class="btn sec mini" data-n="${i + 1}">${i + 1}</button>`).join('') || '<span class="tag">Sem dados na Pilha de Compostura.</span>'}</div></div>
           ${acao === 'espanto' ? '' : `<div class="campo"><label class="rotulo" for="r-est">Estilo</label><select id="r-est" ${A.estilo ? 'disabled' : ''}><option value="">Nenhum dos seus (sucesso em 4+)</option>${Object.entries(B.ESTILOS).map(([k, x]) => `<option value="${k}" ${k === est ? 'selected' : ''}>${x.nome}${e.estilos.includes(k) ? (F.desmoralizados || []).includes(k) ? ' · desmoralizado' : ' · seu (3+)' : ''}</option>`).join('')}</select></div>
-          <label class="chk"><input type="checkbox" id="r-cx" ${A.complexo || F.enrolado ? 'checked' : ''} ${A.complexo || F.enrolado ? 'disabled' : ''}> Teste Complexo (2 sucessos)${F.enrolado ? ' · você está Enrolado' : ''}</label>`}
+          <label class="chk"><input type="checkbox" id="r-cx" ${A.complexo || F.enrolado || cxPonto ? 'checked' : ''} ${A.complexo || F.enrolado || acao === 'vasculhar' ? 'disabled' : ''}> Teste Complexo (2 sucessos)${F.enrolado ? ' · você está Enrolado' : ''}</label>`}
+          ${acao === 'vasculhar' ? (pontosLivres.length ? `<div class="campo"><label class="rotulo" for="r-ponto">Ponto de Interesse</label><select id="r-ponto">${pontosLivres.map(p => `<option value="${p.id}">${esc(p.nome)} · ${B.ESTILOS[p.estilo]?.nome || 'Livre'}${p.complexo ? ' · Complexo' : ''}</option>`).join('')}</select></div>` : '<p class="tag">Nenhum ponto sobrando neste local.</p>') : ''}
+          ${acao === 'interrogar' && LER ? `<p class="tag">Lendo o interrogatório de ${esc(opt.npc || '?')}. Escolha Sagaz, Desenrolado ou Potente. 1 sucesso revela a mentira, 2 revelam também a verdade.</p>` : ''}
+          ${acao === 'ligar' ? ((CASO?.pistas || []).length > 1 ? `<div class="campo"><label class="rotulo" for="r-p1">Pista 1</label><select id="r-p1">${CASO.pistas.map(p => `<option value="${p.id}">${esc(p.txt.slice(0, 80))}</option>`).join('')}</select></div><div class="campo"><label class="rotulo" for="r-p2">Pista 2</label><select id="r-p2">${CASO.pistas.map((p, i) => `<option value="${p.id}" ${i === 1 ? 'selected' : ''}>${esc(p.txt.slice(0, 80))}</option>`).join('')}</select></div>` : '<p class="tag">Precisa de pelo menos duas pistas no Mural.</p>') : ''}
+          ${acao === 'tempo' && INV?.tempoUsado ? '<p class="tag">Alguém já Ganhou Tempo nesta cena.</p>' : ''}
           ${acao === 'cobertura' ? `<div class="campo"><label class="rotulo" for="r-alvo">Cobrir quem</label><select id="r-alvo">${aliados.map(a => `<option value="${a.id}">${esc(a.nome)}</option>`).join('')}</select></div>` : ''}
           ${acao === 'teste' && e.id === 'ornitorrinco' && fase !== 'acareacao' ? '<label class="chk"><input type="checkbox" id="r-disf"> Agindo disfarçado (Fachada de Bicho Bobo, 1 vez por sessão, só teste Ligeiro)</label>' : ''}
           ${acao === 'teste' ? '<div class="campo"><label class="rotulo" for="r-txt">O que você está tentando</label><input type="text" id="r-txt" maxlength="120" placeholder="Ex.: Revistar o galinheiro"></div>' : ''}
           <div id="r-res"></div>`;
         m.querySelectorAll('[data-n]').forEach(b => b.onclick = () => rolar(+b.dataset.n));
+        m.querySelector('#r-ponto')?.addEventListener('change', ev => { const q = pontosLivres.find(x => x.id === ev.target.value); if (!q) return; const se = m.querySelector('#r-est'); if (se && q.estilo) se.value = q.estilo; m.querySelector('#r-cx').checked = !!q.complexo || !!F.enrolado; });
       }
       m.querySelector('#r-ir')?.addEventListener('click', () => semRolar());
     };
@@ -694,6 +741,8 @@ async function abrirRolagem(F, CASO) {
       const est = acao === 'espanto' ? '' : (A.estilo || m.querySelector('#r-est')?.value || '');
       const seuEst = est && e.estilos.includes(est) && !(F.desmoralizados || []).includes(est);
       const dt = seuEst ? 3 : 4;
+      if (acao === 'vasculhar' && !m.querySelector('#r-ponto')) { toast('Não tem ponto para vasculhar.'); m.querySelectorAll('[data-n]').forEach(b => b.disabled = false); return; }
+      if (acao === 'ligar' && (!m.querySelector('#r-p1') || m.querySelector('#r-p1').value === m.querySelector('#r-p2').value)) { toast('Escolha duas pistas diferentes.'); m.querySelectorAll('[data-n]').forEach(b => b.disabled = false); return; }
       const complexo = acao !== 'espanto' && (!!m.querySelector('#r-cx')?.checked);
       const vals = Array.from({ length: n }, d6);
       const suc = vals.filter(v => v >= dt).length, seis = vals.filter(v => v === 6).length;
@@ -721,6 +770,18 @@ async function abrirRolagem(F, CASO) {
         if (suc && alvo) { pilha -= suc; efeitos.push({ t: e.id === 'cavalo' ? 'deducao' : 'pilha', ficha: alvo, n: suc }); }
         texto = `Deu cobertura para ${nomeAlvo}: ${suc} dado(s)${e.id === 'cavalo' ? ' direto na Dedução (Pode tirar o cavalinho da chuva, se ainda não usou)' : ''}${pato ? ' · Pato: Se usar Carência, devolva os dados' : ''}`;
       } else if (acao === 'espanto') texto = ok ? 'Passou no Teste de Espanto' : 'Levou um baita susto';
+      else if (acao === 'vasculhar') {
+        const pt = pontosLivres.find(x => x.id === m.querySelector('#r-ponto').value);
+        texto = ok ? `Vasculhou ${pt.nome} e achou algo!` : `Vasculhou ${pt.nome} e não achou nada`;
+        if (ok) efeitos.push({ t: 'ponto', id: pt.id });
+      } else if (acao === 'interrogar') {
+        texto = suc >= 2 ? `Leu ${opt.npc} como um livro aberto: verdade e mentira reveladas` : suc === 1 ? `Pegou ${opt.npc} numa mentira` : `${opt.npc} enrolou direitinho`;
+        efeitos.push({ t: 'ler', iid: LER, suc });
+      } else if (acao === 'ligar') {
+        const nomeP = id => (CASO.pistas.find(x => x.id === id)?.txt || '?').slice(0, 60);
+        texto = `Ligou os pontos entre "${nomeP(m.querySelector('#r-p1').value)}" e "${nomeP(m.querySelector('#r-p2').value)}" · ${ok ? 'o Mestre diz se batem' : 'não chegou a lugar nenhum'}`;
+      } else if (acao === 'vigia') { texto = ok ? 'Ficou de vigia: a próxima Peça desta cena não pega' : 'Ficou de vigia e cochilou'; if (ok) efeitos.push({ t: 'vigia', nome: F.nome }); }
+      else if (acao === 'tempo') { texto = ok ? 'Ganhou tempo: o relógio não avança nesta rodada' : 'Tentou enrolar e ninguém caiu'; if (ok) efeitos.push({ t: 'tempo' }); }
       else texto = (m.querySelector('#r-txt')?.value.trim() || 'Teste') + (disfarce ? (ok ? ' · disfarçado: falhas foram para o Palheiro' : ' · o disfarce falhou: Culpado +1 PL') : '');
       p.pilha = clamp(pilha, 0, 6); if (acao === 'rastro' && !F.agarrado) p.deducao = ded;
       let ganhouPf = 0; if (e.id === 'raposa' && seis) { ganhouPf = seis; p.pf = clamp(F.pf + seis, 0, 10); }
@@ -786,9 +847,19 @@ async function levarDetetive(casoId, f) {
 }
 
 /* ---------- peças comuns da mesa ---------- */
-function linhaRol(r) {
+const ROTULO_RESP = { verdade: ['Verdade', 'var(--teal)'], meia: ['Meia-verdade', 'var(--ambar)'], mentira: ['Mentira', 'var(--vermelho)'] };
+let LIDOS = new Set();
+function linhaInterrog(r, mestreTipos) {
+  const rev = r.revelado || {};
+  return `<div class="rol" style="--rc:var(--azul)"><div class="top"><b>🗣️ ${esc(r.fnome)} interroga ${esc(r.npc)}</b><span class="hora">${horaBR(r.t)}</span></div>
+    ${r.perguntas.map((q, i) => { const tp = rev[i] || (mestreTipos ? mestreTipos[i] : null); return `<div style="display:grid;gap:2px;border-top:1px dashed rgba(0,0,0,.2);padding-top:4px"><span><b>P${i + 1}:</b> ${esc(q)}</span>${r.respostas ? `<span><b>R:</b> ${esc(r.respostas[i])} ${tp ? `<span class="tag" style="color:#fff;background:${ROTULO_RESP[tp][1]}">${ROTULO_RESP[tp][0]}${rev[i] ? '' : ' (só você vê)'}</span>` : ''}</span>` : ''}</div>`; }).join('')}
+    <span class="ef">${!r.respostas ? '⏳ esperando o Mestre responder' : r.lido ? (Object.keys(rev).length ? '✔ leitura feita' : '✔ leitura falhou') : LIDOS.has(r.id) ? '⏳ leitura enviada ao Mestre' : 'Respostas dadas. Falta ler o interrogado.'}</span>
+    ${r.respostas && !r.lido && !LIDOS.has(r.id) && r.uid === ME ? `<button class="btn mini" data-ler="${r.id}" data-ficha="${r.ficha}">🎲 Ler o interrogado</button>` : ''}</div>`;
+}
+function linhaRol(r, mestreTipos) {
+  if (r.tipo === 'interrogatorio') return linhaInterrog(r, mestreTipos);
   const cls = r.tipo === 'culpado' ? 'culpado' : r.tipo === 'sistema' ? 'sistema' : (r.ok === false ? 'falhou' : '');
-  const ef = (r.efeitos || []).length ? `<span class="ef">${r.aplicado ? '✔' : '⏳ aguardando o Mestre'} · ${r.efeitos.map(x => x.t === 'culpado' ? `Culpado ${x.n > 0 ? '+' : ''}${x.n}` : x.t === 'palheiro' ? `Palheiro ${x.n > 0 ? '+' : ''}${x.n}` : x.t === 'completa' ? 'Dedução completa' : `${x.t === 'deducao' ? 'Dedução' : 'Compostura'} de aliado +${x.n}`).join(' · ')}</span>` : '';
+  const ef = (r.efeitos || []).length ? `<span class="ef">${r.aplicado ? '✔' : '⏳ aguardando o Mestre'} · ${r.efeitos.map(x => x.t === 'culpado' ? `Culpado ${x.n > 0 ? '+' : ''}${x.n}` : x.t === 'palheiro' ? `Palheiro ${x.n > 0 ? '+' : ''}${x.n}` : x.t === 'completa' ? 'Dedução completa' : x.t === 'ponto' ? 'Pista para o Mural' : x.t === 'vigia' ? 'Vigia ativa' : x.t === 'tempo' ? 'Relógio segura' : x.t === 'ler' ? 'Revelar respostas' : `${x.t === 'deducao' ? 'Dedução' : 'Compostura'} de aliado +${x.n}`).join(' · ')}</span>` : '';
   const quem = r.tipo === 'culpado' ? '🦹 O Culpado' : r.tipo === 'sistema' ? '📋 Mestre' : `${esc(r.fnome)} <span style="opacity:.7">${esc(ESP[r.especie]?.nome || '')}</span>`;
   return `<div class="rol ${cls}"><div class="top"><b>${quem}</b><span class="hora">${horaBR(r.t)}</span></div>
     ${r.dados ? `<div class="fila-dados">${r.dados.map(v => dado(v, v >= r.dt ? (v === 6 ? 'ok seis' : 'ok') : 'falha')).join('')}<span class="res">${r.ok ? 'Sucesso' : 'Falha'}</span><span class="hora">${r.suc} em ${r.dt}+${r.complexo ? ' · Complexo' : ''}${r.estilo ? ' · ' + B.ESTILOS[r.estilo].nome : ''}</span></div>` : ''}
@@ -800,9 +871,18 @@ function placar(C, extra = '') {
     <div class="culp"><span class="rotulo">Pilha do Culpado</span><span class="big">${C.culpado ?? 0}</span><div class="fila-dados">${Array.from({ length: Math.min(C.culpado || 0, 12) }, () => dado(6)).join('')}</div></div>
     <div><span class="rotulo">Palheiro</span><span class="big">${C.palheiro ?? 0}</span></div>${extra}</div>`;
 }
-const muralHtml = (C, mestre) => `
-  <div class="caixa bloco"><h3>📌 Pistas</h3><div class="mural">${(C.pistas || []).length ? C.pistas.map(p => `<div class="pista">${nl(p.txt)}${mestre ? `<div class="btns" style="margin-top:6px"><button class="btn mini sec" data-esconder="${p.id}">Esconder</button><button class="btn mini perigo" data-excluir="${p.id}">Excluir</button></div>` : ''}</div>`).join('') : '<div class="vazio">Nenhuma pista no mural ainda.</div>'}</div></div>
+const muralHtml = (C, mestre, falsas) => `
+  <div class="caixa bloco"><h3>📌 Pistas</h3><div class="mural">${(C.pistas || []).length ? C.pistas.map(p => `<div class="pista ${p.falsa ? 'falsa' : ''}">${nl(p.txt)}${mestre ? `<div class="btns" style="margin-top:6px">${(falsas || []).includes(p.id) && !p.falsa ? '<span class="tag" style="color:var(--vermelho)">Plantada (falsa)</span>' : ''}<button class="btn mini sec" data-expor="${p.id}">${p.falsa ? 'Desfazer exposição' : 'Expor como falsa'}</button><button class="btn mini sec" data-esconder="${p.id}">Esconder</button><button class="btn mini perigo" data-excluir="${p.id}">Excluir</button></div>` : ''}</div>`).join('') : '<div class="vazio">Nenhuma pista no mural ainda.</div>'}</div></div>
   <div class="caixa bloco"><h3>🕵️ Suspeitos</h3>${(C.suspeitos || []).map(s => `<div class="suspeito ${s.inocente ? 'inocente' : ''}"><b>${esc(s.nome)}</b><span class="tg">${esc(s.especie)}</span><p>${esc(s.txt)}</p>${mestre ? `<div class="btns"><button class="btn mini sec" data-inoc="${s.id}">${s.inocente ? 'Voltar a suspeito' : 'Marcar inocente'}</button><button class="btn mini perigo" data-tirasus="${s.id}">Remover</button></div>` : ''}</div>`).join('') || '<div class="vazio">Ninguém sob suspeita. Suspeito.</div>'}</div>`;
+
+const painelInv = (C, mestre, E) => {
+  const I = C.inv; if (!I) return '';
+  return `<div class="caixa bloco"><div class="btns" style="justify-content:space-between;align-items:center"><h3>🔎 ${esc(I.local)}</h3><span class="tag">Rodada ${Math.min(I.atual + 1, I.max)} de ${I.max}</span></div>
+    <div class="relogio" title="Relógio">${Array.from({ length: I.max }, (_, i) => `<i class="${i < I.atual ? 'on' : ''}"></i>`).join('')}</div>
+    ${I.vigia ? `<span class="tag">👀 ${esc(I.vigia)} está de vigia</span>` : ''}${I.segurar ? '<span class="tag">⏸ O relógio segura nesta rodada</span>' : ''}
+    ${(I.pontos || []).map(p => `<div class="ponto ${p.achado ? 'achado' : ''}"><b>${p.achado ? '✔ ' : ''}${esc(p.nome)}</b><p>${esc(p.desc)}</p><div class="btns">${p.estilo ? estTag(p.estilo) : ''}${p.complexo ? '<span class="tag">Complexo</span>' : ''}${p.achado ? `<span class="tag">Achado por ${esc(p.por || '?')}</span>` : ''}</div>
+      ${mestre ? `<p class="segredo">🔒 ${esc(E?.inv?.[p.id]?.pista || '(sem pista)')}${E?.inv?.[p.id]?.falsa ? ' · FALSA' : ''}</p><div class="btns">${p.achado ? '' : `<button class="btn mini teal" data-achar="${p.id}">Revelar agora</button>`}<button class="btn mini perigo" data-tiraponto="${p.id}">Remover</button></div>` : ''}</div>`).join('') || '<div class="vazio">Nenhum ponto de interesse ainda.</div>'}</div>`;
+};
 
 async function detetivesDoCaso(id) {
   const s = await db.collection(`bichos-casos/${id}/detetives`).get();
@@ -827,7 +907,7 @@ ROTAS.caso = async id => {
     $('#c-btns').innerHTML = `${C.mestre === ME ? `<a class="btn" href="#escudo-${id}">Escudo do Mestre</a>` : ''}${meus.filter(f => !f.fora).map(f => `<button class="btn" data-rolar="${f.id}">🎲 ${esc(f.nome)}</button>`).join('')}<button class="btn sec" id="levar">Levar detetive</button>`;
     $('#c-dets').innerHTML = DETS.length ? DETS.map(f => `<div class="det-mesa ${f.fora ? 'fora' : ''}">${avatar(f)}<div><a class="nm" href="#detetive-${f.id}" style="color:inherit;text-decoration:none">${esc(f.nome)}</a>
       <div class="st"><span>${esc(ESP[f.especie]?.nome)}</span><span>Compostura <b>${f.pilha}</b></span>${C.fase === 'acareacao' ? `<span>Dedução <b>${f.deducao || 0}</b>${f.deducaoCompleta ? ' ✔' : ''}</span>` : ''}<span>PF <b>${f.pf}</b></span>${f.galo ? `<span>Galo <b>${f.galo}</b></span>` : ''}${f.enrolado ? `<span>Enrolado <b>${f.enrolado}</b></span>` : ''}${f.agarrado ? '<span><b>Agarrado</b></span>' : ''}${f.fora ? '<span><b>Fora do caso</b></span>' : ''}</div></div></div>`).join('') : '<div class="vazio">Nenhum detetive ainda.</div>';
-    $('#c-mural').innerHTML = muralHtml(C, false);
+    $('#c-mural').innerHTML = (C.fase === 'investigacao' ? painelInv(C, false) : '') + muralHtml(C, false);
     $('#c-btns').onclick = async e => {
       const r = e.target.closest('[data-rolar]'); if (r) { abrirRolagem({ ...DETS.find(f => f.id === r.dataset.rolar) }, { id, ...C }); return; }
       if (e.target.closest('#levar')) {
@@ -837,7 +917,8 @@ ROTAS.caso = async id => {
       }
     };
   };
-  const desenharFeed = () => { $('#c-feed').innerHTML = ROLS.length ? ROLS.map(linhaRol).join('') : '<div class="vazio">Silêncio no condado.</div>'; };
+  const desenharFeed = () => { LIDOS = new Set(ROLS.filter(r => r.tipo === 'interrogar' && r.efeitos?.[0]?.iid).map(r => r.efeitos.find(x => x.t === 'ler')?.iid)); $('#c-feed').innerHTML = ROLS.length ? ROLS.map(r => linhaRol(r)).join('') : '<div class="vazio">Silêncio no condado.</div>'; };
+  $('#c-feed').addEventListener('click', e => { const b = e.target.closest('[data-ler]'); if (!b) return; const f = DETS.find(x => x.id === b.dataset.ficha); const r = ROLS.find(x => x.id === b.dataset.ler); if (!f) { toast('Esse detetive não está mais na mesa.'); return; } abrirRolagem({ ...f }, { id, ...C }, { ler: r.id, npc: r.npc }); });
   const recarregarDets = async () => { DETS = await detetivesDoCaso(id); desenhar(); };
   assinar(ref.onSnapshot(s => { if (s.exists) { C = s.data(); desenhar(); } }));
   assinar(db.collection(`bichos-casos/${id}/detetives`).onSnapshot(() => recarregarDets()));
@@ -846,13 +927,14 @@ ROTAS.caso = async id => {
 
 
 /* ---------- histórico de rolagens (todos da mesa veem) ---------- */
-const TIPOS_HIST = { todos: 'Tudo', dados: 'Só rolagens de dados', teste: 'Testes', espanto: 'Testes de Espanto', rastro: 'Seguir o Rastro', apertar: 'Apertar', cena: 'Fazer Cena', cobertura: 'Dar Cobertura', culpado: 'Ações do Culpado', sistema: 'Avisos do Mestre' };
+const TIPOS_HIST = { todos: 'Tudo', dados: 'Só rolagens de dados', teste: 'Testes', interrogatorio: 'Interrogatórios', vasculhar: 'Vasculhar', espanto: 'Testes de Espanto', rastro: 'Seguir o Rastro', apertar: 'Apertar', cena: 'Fazer Cena', cobertura: 'Dar Cobertura', culpado: 'Ações do Culpado', sistema: 'Avisos do Mestre' };
 ROTAS.historico = async id => {
   if (!ME) { app.innerHTML = precisaEntrar(); return; }
   const s0 = await db.doc('bichos-casos/' + id).get();
   if (!s0.exists) { app.innerHTML = '<div class="vazio">Esse caso foi arquivado.</div>'; return; }
   const C = s0.data(), mestre = C.mestre === ME;
-  let ROLS = [], fDet = 'todos', fTipo = 'todos';
+  let ROLS = [], fDet = 'todos', fTipo = 'todos', HIST_TIPOS = null;
+  if (mestre) { try { HIST_TIPOS = (await db.doc(`mestre/${ME}/bichos/${id}`).get()).data()?.interrog || null; } catch (e) {} }
   app.innerHTML = `<div class="cab"><div><span class="fita">Histórico</span><h2 style="margin-top:8px">${esc(C.nome)}</h2><p>Todas as rolagens e ações da mesa, da mais nova para a mais antiga.</p></div>
     <div class="btns"><a class="btn sec" href="#${mestre ? 'escudo' : 'caso'}-${id}">Voltar para a mesa</a></div></div>
     <div class="caixa hist-filtros"><div class="campo"><label class="rotulo" for="h-det">Detetive</label><select id="h-det"></select></div>
@@ -874,7 +956,7 @@ ROTAS.historico = async id => {
     for (const r of lista) {
       const d = new Date(r.t).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
       if (d !== dia) { dia = d; html += `<div class="hist-dia">${esc(d)}</div>`; }
-      html += linhaRol(r);
+      html += linhaRol(r, mestre ? HIST_TIPOS?.[r.id] : null);
     }
     $('#h-feed').innerHTML = html || '<div class="vazio">Nada com esses filtros.</div>';
   };
@@ -900,7 +982,7 @@ ROTAS.escudo = async id => {
   app.innerHTML = `<div class="cab"><div><span class="fita" style="background:repeating-linear-gradient(-45deg,var(--vermelho) 0 14px,#b23a31 14px 28px);color:#fff">Escudo do Mestre</span><h2 id="c-nome" style="margin-top:8px"></h2>
     <p>Código para os jogadores: <span class="codigo">${id}</span></p></div><div class="btns"><a class="btn sec" href="#caso-${id}">Ver como jogador</a></div></div>
     <div id="c-placar"></div>
-    <div class="mesa"><div class="bloco"><div class="abas" id="abas">${[['culpado', 'Culpado'], ['mesa', 'Mesa'], ['pistas', 'Pistas e solução'], ['mural', 'Mural']].map(([k, n]) => `<button data-aba="${k}">${n}</button>`).join('')}</div><div id="aba" class="bloco"></div></div>
+    <div class="mesa"><div class="bloco"><div class="abas" id="abas">${[['culpado', 'Culpado'], ['mesa', 'Mesa'], ['investigacao', 'Investigação'], ['interrog', 'Interrogatórios'], ['pistas', 'Pistas e solução'], ['mural', 'Mural']].map(([k, n]) => `<button data-aba="${k}">${n}</button>`).join('')}</div><div id="aba" class="bloco"></div></div>
     <div class="bloco"><div class="btns" style="justify-content:space-between;align-items:center"><h3>Rolagens</h3><a class="btn mini sec" href="#historico-${id}">Histórico completo</a></div><div class="feed" id="c-feed"></div></div></div>`;
 
   const salvarE = async p => { E = { ...E, ...p }; try { await eRef.set(E); } catch (e) { toast('Escudo não salvou: ' + e.message); } };
@@ -943,8 +1025,10 @@ ROTAS.escudo = async id => {
     if (aid === 'peca') {
       if (C.fase === 'acareacao' && E.pecasUsadas >= E.pecas) { toast(`Já usou as ${E.pecas} Peças desta Acareação.`); return; }
       await salvarE({ pecasUsadas: (E.pecasUsadas || 0) + (C.fase === 'acareacao' ? 1 : 0) });
+      if (C.fase === 'investigacao' && C.inv?.vigia) { const vig = C.inv.vigia; await salvarC({ inv: { ...C.inv, vigia: '' } }); await postarC(`Tentou pregar uma Peça, mas ${vig} estava de vigia: não pegou`); return; }
       await postarC('Pregou uma Peça: TODOS fazem Teste de Espanto!'); await salvarC({ aviso: 'Teste de Espanto para todos!' }); return;
     }
+    if (aid === 'plantar') { ABA_ESCUDO = 'investigacao'; toast('Crie o ponto na aba Investigação marcando "Pista falsa" (custa 2 PL).'); return; }
     if (aid === 'rastros') { await salvarE({ alvo: (E.alvo || 4) + 1 }); await postarC('Apagou rastros: a dedução ficou mais difícil'); return; }
     if (aid === 'tirar') return escolherAlvo('Tirar quem do caso?', async f => {
       if (C.fase === 'acareacao' && f.pilha >= (C.culpado || 0)) { toast(`${f.nome} tem ${f.pilha} dados: Precisa ter menos que a sua Pilha (${C.culpado}).`); return; }
@@ -983,13 +1067,30 @@ ROTAS.escudo = async id => {
       aplicando.add(d.id);
       await emFila(async () => { try {
         const cs = (await ref.get()).data(); let cul = cs.culpado || 0, pal = cs.palheiro || 0;
+        let inv = cs.inv ? { ...cs.inv, pontos: [...(cs.inv.pontos || [])] } : null, pistas = [...(cs.pistas || [])], mudouInv = false;
         for (const x of r.efeitos) {
           if (x.t === 'culpado') cul = Math.max(0, cul + x.n);
           else if (x.t === 'palheiro') pal = Math.max(0, pal + x.n);
           else if (x.t === 'pilha' || x.t === 'deducao') { const fs = await fichaRef(x.ficha).get(); if (fs.exists) { const v = fs.data(); await fichaRef(x.ficha).update(x.t === 'pilha' ? { pilha: clamp((v.pilha || 0) + x.n, 0, 6) } : { deducao: (v.deducao || 0) + x.n }); } }
           else if (x.t === 'completa') await fichaRef(x.ficha).update({ deducaoCompleta: true }).catch(() => {});
+          else if (x.t === 'ponto' && inv) {
+            const i = inv.pontos.findIndex(q => q.id === x.id);
+            if (i >= 0 && !inv.pontos[i].achado) {
+              inv.pontos[i] = { ...inv.pontos[i], achado: true, por: r.fnome };
+              const seg = E.inv?.[x.id]; pistas.push({ id: 'p-' + x.id, txt: `${inv.pontos[i].nome}: ${seg?.pista || '(o Mestre ainda não escreveu esta pista)'}`, t: Date.now() });
+              mudouInv = true;
+            }
+          }
+          else if (x.t === 'vigia' && inv) { inv.vigia = x.nome; mudouInv = true; }
+          else if (x.t === 'tempo' && inv) { inv.segurar = true; inv.tempoUsado = true; mudouInv = true; }
+          else if (x.t === 'ler') {
+            const tipos = E.interrog?.[x.iid]; const rev = {};
+            if (tipos) { if (x.suc >= 1) rev[tipos.indexOf('mentira')] = 'mentira'; if (x.suc >= 2) { rev[tipos.indexOf('verdade')] = 'verdade'; rev[tipos.indexOf('meia')] = 'meia'; } }
+            await db.doc(`bichos-casos/${id}/rolagens/${x.iid}`).update({ revelado: rev, lido: true });
+          }
         }
-        await ref.update({ culpado: cul, palheiro: pal }); C.culpado = cul; C.palheiro = pal;
+        const up = { culpado: cul, palheiro: pal }; if (mudouInv) { up.inv = inv; up.pistas = pistas; }
+        await ref.update(up); Object.assign(C, up);
         await db.doc(`bichos-casos/${id}/rolagens/${d.id}`).update({ aplicado: true });
       } catch (e) { aplicando.delete(d.id); console.warn(e); } });
     }
@@ -1037,6 +1138,7 @@ ROTAS.escudo = async id => {
           <div class="acoes-m">${f.fora ? `<button class="btn mini sec" data-volta="${f.id}">Voltar ao caso</button>` : `<button class="btn mini perigo" data-galo="${f.id}">Dar um Galo</button><button class="btn mini sec" data-pf="${f.id}">+1 PF (desafio)</button><button class="btn mini sec" data-espanto="${f.id}">Pedir Espanto</button>${f.agarrado ? `<button class="btn mini sec" data-solta="${f.id}">Soltar</button>` : ''}${(f.desmoralizados || []).length ? `<button class="btn mini sec" data-recomp="${f.id}">Se Recompor</button>` : ''}`}<button class="btn mini sec" data-tirad="${f.id}">Tirar da mesa</button></div></div>`).join('') || '<div class="vazio">Nenhum detetive. Passe o código para os jogadores.</div>'}</div>`;
       A.querySelectorAll('[data-fase]').forEach(b => b.onclick = async () => {
         const nova = b.dataset.fase;
+        if (nova === 'investigacao' && !C.inv) { ABA_ESCUDO = 'investigacao'; toast('Monte o local primeiro.'); desenharAba(); return; }
         if (nova === 'acareacao' && C.fase !== 'acareacao') { await salvarE({ pecasUsadas: 0 }); for (const f of DETS) await fichaRef(f.id).update({ deducao: 0, deducaoCompleta: false }); await postarC('ACAREAÇÃO! O Culpado está agindo bem debaixo do bico de vocês.', 'culpado'); }
         else if (C.fase === 'acareacao' && nova !== 'acareacao') { await encerrarAcareacao(false); }
         await salvarC({ fase: nova }); desenharAba();
@@ -1052,6 +1154,68 @@ ROTAS.escudo = async id => {
       A.querySelectorAll('[data-solta]').forEach(b => b.onclick = async () => { await fichaRef(b.dataset.solta).update({ agarrado: false }); });
       A.querySelectorAll('[data-recomp]').forEach(b => b.onclick = async () => { await fichaRef(b.dataset.recomp).update({ desmoralizados: [] }); });
       A.querySelectorAll('[data-tirad]').forEach(b => b.onclick = async () => { if (!confirm('Tirar este detetive da mesa?')) return; await db.doc(`bichos-casos/${id}/detetives/${b.dataset.tirad}`).delete(); });
+    } else if (ABA_ESCUDO === 'investigacao') {
+      const I = C.inv;
+      A.innerHTML = !I ? `<div class="caixa bloco"><h3>Montar local</h3><div class="campo"><label class="rotulo" for="iv-local">Local</label><input type="text" id="iv-local" placeholder="Ex.: O celeiro da Baronesa"></div>
+          <div class="campo"><label class="rotulo" for="iv-max">Relógio (rodadas)</label><select id="iv-max">${[3, 4, 5, 6].map(n => `<option ${n === 4 ? 'selected' : ''}>${n}</option>`).join('')}</select></div><button class="btn" id="iv-montar">Montar</button></div>`
+        : `<div class="caixa bloco"><div class="btns">${C.fase === 'investigacao' ? `<button class="btn" id="iv-rodada">Fim da rodada (relógio +1)</button><button class="btn perigo" id="iv-fim">Encerrar investigação</button>` : `<button class="btn" id="iv-iniciar">Começar a Cena de Investigação</button><button class="btn perigo" id="iv-descartar">Desmontar local</button>`}</div>
+          ${C.fase === 'investigacao' && (I.pontos || []).length && I.pontos.every(p => p.achado) ? '<p class="tag" style="color:var(--teal)">Todos os pontos achados! Ao encerrar, cada detetive ganha 1 PF (Faro Aguçado).</p>' : ''}${I.atual >= I.max ? '<p class="tag" style="color:var(--vermelho)">O relógio encheu. Hora de encerrar.</p>' : ''}</div>
+          ${painelInv(C, true, E)}
+          <div class="caixa bloco"><h3>Novo Ponto de Interesse</h3>
+            <div class="campo"><label class="rotulo" for="pt-n">Nome</label><input type="text" id="pt-n" placeholder="Ex.: O ninho vazio"></div>
+            <div class="campo"><label class="rotulo" for="pt-d">O que os detetives veem</label><input type="text" id="pt-d" placeholder="Ex.: Palha revirada e uma pena que não é de gansa."></div>
+            <div class="campo"><label class="rotulo" for="pt-p">Pista escondida (vai para o Mural quando acharem)</label><textarea id="pt-p"></textarea></div>
+            <div class="btns" style="align-items:end"><div class="campo" style="min-width:160px"><label class="rotulo" for="pt-e">Estilo sugerido</label><select id="pt-e">${Object.entries(B.ESTILOS).map(([k, x]) => `<option value="${k}">${x.nome}</option>`).join('')}</select></div>
+              <label class="chk"><input type="checkbox" id="pt-c"> Complexo</label><label class="chk"><input type="checkbox" id="pt-f"> Pista falsa (Plantar Pista Falsa, 2 PL)</label></div>
+            <button class="btn" id="pt-ok">Esconder no local</button></div>`;
+      A.querySelector('#iv-montar')?.addEventListener('click', async () => { const local = A.querySelector('#iv-local').value.trim(); if (!local) { toast('Dê um nome ao local.'); return; } await salvarC({ inv: { local, max: +A.querySelector('#iv-max').value, atual: 0, pontos: [], vigia: '', segurar: false, tempoUsado: false } }); await salvarE({ inv: {} }); desenharAba(); });
+      A.querySelector('#iv-iniciar')?.addEventListener('click', async () => { if (C.fase === 'acareacao') await encerrarAcareacao(false); await salvarC({ fase: 'investigacao', aviso: '' }); await postarC(`Cena de Investigação: ${I.local}. O relógio está correndo (${I.max} rodadas).`, 'sistema'); desenharAba(); });
+      A.querySelector('#iv-descartar')?.addEventListener('click', async () => { if (!confirm('Desmontar o local e apagar os pontos?')) return; await salvarC({ inv: null }); await salvarE({ inv: {} }); desenharAba(); });
+      A.querySelector('#iv-rodada')?.addEventListener('click', async () => {
+        if (I.segurar) { await salvarC({ inv: { ...C.inv, segurar: false } }); await postarC('Fim da rodada: alguém ganhou tempo e o relógio segurou.', 'sistema'); desenharAba(); return; }
+        const atual = Math.min(I.max, I.atual + 1); await salvarC({ inv: { ...C.inv, atual } });
+        await postarC(atual >= I.max ? 'O relógio encheu! O tempo de investigar acabou.' : `Fim da rodada: relógio ${atual}/${I.max}.`, 'sistema'); desenharAba();
+      });
+      A.querySelector('#iv-fim')?.addEventListener('click', async () => {
+        const todos = (I.pontos || []).length && I.pontos.every(p => p.achado) && I.atual < I.max;
+        if (todos) for (const f of DETS.filter(f => !f.fora)) { const x = (await fichaRef(f.id).get()).data(); await fichaRef(f.id).update({ pf: clamp((x.pf || 0) + 1, 0, 10) }); }
+        await salvarC({ fase: 'livre', inv: null }); await salvarE({ inv: {} });
+        await postarC(todos ? `Investigação em ${I.local} encerrada com tudo achado: +1 PF para cada detetive (Faro Aguçado)` : `Investigação em ${I.local} encerrada`, 'sistema'); desenharAba();
+      });
+      A.querySelector('#pt-ok')?.addEventListener('click', async () => {
+        // lê tudo antes de gravar: cada gravação redesenha a aba e limpa o formulário
+        const nome = A.querySelector('#pt-n').value.trim(); if (!nome) { toast('Dê um nome ao ponto.'); return; }
+        const falsa = A.querySelector('#pt-f').checked, pista = A.querySelector('#pt-p').value.trim(), desc = A.querySelector('#pt-d').value.trim(), estilo = A.querySelector('#pt-e').value, complexo = A.querySelector('#pt-c').checked;
+        if (falsa && !(await gastarPL(2, 'Plantar Pista Falsa'))) return;
+        const pid = uid8();
+        await salvarE({ inv: { ...(E.inv || {}), [pid]: { pista, falsa } } });
+        await salvarC({ inv: { ...C.inv, pontos: [...(C.inv.pontos || []), { id: pid, nome, desc, estilo, complexo, achado: false }] } });
+        if (falsa) toast('Pista falsa plantada. Só você sabe.');
+        desenharAba();
+      });
+      A.querySelectorAll('[data-achar]').forEach(b => b.onclick = async () => {
+        const pt = C.inv.pontos.find(x => x.id === b.dataset.achar);
+        await salvarC({ inv: { ...C.inv, pontos: C.inv.pontos.map(x => x.id === pt.id ? { ...x, achado: true, por: 'Mestre' } : x) }, pistas: [...(C.pistas || []), { id: 'p-' + pt.id, txt: `${pt.nome}: ${E.inv?.[pt.id]?.pista || ''}`, t: Date.now() }] });
+        await postarC('Nova pista no Mural!', 'sistema'); desenharAba();
+      });
+      A.querySelectorAll('[data-tiraponto]').forEach(b => b.onclick = async () => { if (!confirm('Remover este ponto?')) return; await salvarC({ inv: { ...C.inv, pontos: C.inv.pontos.filter(x => x.id !== b.dataset.tiraponto) } }); desenharAba(); });
+    } else if (ABA_ESCUDO === 'interrog') {
+      const its = ROLS.filter(r => r.tipo === 'interrogatorio');
+      const pend = its.filter(r => !r.respostas), feitos = its.filter(r => r.respostas);
+      const opts = sel => ['verdade', 'meia', 'mentira'].map(k => `<option value="${k}" ${k === sel ? 'selected' : ''}>${ROTULO_RESP[k][0]}</option>`).join('');
+      A.innerHTML = `<div class="caixa bloco"><h3>Esperando resposta</h3><p class="tag">Responda as três: uma Verdade, uma Meia-verdade e uma Mentira, na ordem que quiser.</p>
+        ${pend.map(r => `<div class="papel bloco" data-it="${r.id}"><b>${esc(r.fnome)} interroga ${esc(r.npc)}</b>${r.perguntas.map((q, i) => `<div class="campo"><span class="rotulo">P${i + 1}: ${esc(q)}</span><textarea data-resp="${i}" style="min-height:52px;background:#fffaf0;color:var(--tinta)"></textarea><select data-tipo="${i}" style="background:#fffaf0;color:var(--tinta)">${opts(['verdade', 'meia', 'mentira'][i])}</select></div>`).join('')}<button class="btn" data-responder="${r.id}">Responder</button></div>`).join('') || '<div class="vazio">Ninguém sendo interrogado agora.</div>'}</div>
+        <div class="caixa bloco"><h3>Já respondidos</h3><div class="feed cheio">${feitos.map(r => linhaRol(r, E.interrog?.[r.id])).join('') || '<div class="vazio">Nada ainda.</div>'}</div></div>`;
+      A.querySelectorAll('[data-responder]').forEach(b => b.onclick = async () => {
+        const box = A.querySelector(`[data-it="${b.dataset.responder}"]`);
+        const respostas = [0, 1, 2].map(i => box.querySelector(`[data-resp="${i}"]`).value.trim()), tipos = [0, 1, 2].map(i => box.querySelector(`[data-tipo="${i}"]`).value);
+        if (respostas.some(x => !x)) { toast('Responda as três perguntas.'); return; }
+        if (new Set(tipos).size !== 3) { toast('Precisa ser uma Verdade, uma Meia-verdade e uma Mentira.'); return; }
+        b.disabled = true;
+        await salvarE({ interrog: { ...(E.interrog || {}), [b.dataset.responder]: tipos } });
+        await db.doc(`bichos-casos/${id}/rolagens/${b.dataset.responder}`).update({ respostas });
+        toast('Respondido. Agora o detetive tenta ler o bicho.'); desenharAba();
+      });
     } else if (ABA_ESCUDO === 'pistas') {
       A.innerHTML = `<div class="papel bloco"><h3>A solução (só você vê)</h3>
         ${[['quem', 'Quem pegou os ovos'], ['porque', 'Por quê'], ['onde', 'Onde estão agora']].map(([k, n]) => `<div class="campo"><label class="rotulo" for="s-${k}">${n}</label><input type="text" id="s-${k}" data-sol="${k}" value="${esc(E.solucao?.[k])}" style="background:#fffaf0;color:var(--tinta);border-color:#c9b48e"></div>`).join('')}</div>
@@ -1074,9 +1238,11 @@ ROTAS.escudo = async id => {
       });
     } else {
       const faltam = B.PRONTOS.filter(p => !(C.suspeitos || []).some(x => x.id === p.id));
-      A.innerHTML = (faltam.length ? `<div class="caixa btns" style="align-items:center;justify-content:space-between"><span>${faltam.length} suspeito(s) pronto(s) fora do Mural: ${faltam.map(p => esc(p.nome)).join(', ')}</span><button class="btn mini" id="su-prontos">Trazer para o Mural</button></div>` : '') + muralHtml(C, true) + `<div class="caixa bloco"><h3>Novo suspeito</h3><div class="campo"><label class="rotulo" for="su-n">Nome</label><input type="text" id="su-n"></div><div class="campo"><label class="rotulo" for="su-e">Espécie</label><input type="text" id="su-e"></div><div class="campo"><label class="rotulo" for="su-t">Descrição</label><textarea id="su-t"></textarea></div><button class="btn" id="su-ok">Pôr no Mural</button></div>`;
+      const falsas = Object.entries(E.inv || {}).filter(([, v]) => v.falsa).map(([k]) => 'p-' + k);
+      A.innerHTML = (faltam.length ? `<div class="caixa btns" style="align-items:center;justify-content:space-between"><span>${faltam.length} suspeito(s) pronto(s) fora do Mural: ${faltam.map(p => esc(p.nome)).join(', ')}</span><button class="btn mini" id="su-prontos">Trazer para o Mural</button></div>` : '') + muralHtml(C, true, falsas) + `<div class="caixa bloco"><h3>Novo suspeito</h3><div class="campo"><label class="rotulo" for="su-n">Nome</label><input type="text" id="su-n"></div><div class="campo"><label class="rotulo" for="su-e">Espécie</label><input type="text" id="su-e"></div><div class="campo"><label class="rotulo" for="su-t">Descrição</label><textarea id="su-t"></textarea></div><button class="btn" id="su-ok">Pôr no Mural</button></div>`;
       A.querySelectorAll('[data-esconder]').forEach(b => b.onclick = async () => { const p = C.pistas.find(x => x.id === b.dataset.esconder); await salvarC({ pistas: C.pistas.filter(x => x.id !== p.id) }); await salvarE({ pistasOcultas: [...(E.pistasOcultas || []), { id: p.id, txt: p.txt }] }); desenharAba(); });
       A.querySelectorAll('[data-excluir]').forEach(b => b.onclick = async () => { if (!confirm('Excluir esta pista do Mural para sempre?')) return; await salvarC({ pistas: C.pistas.filter(x => x.id !== b.dataset.excluir) }); desenharAba(); });
+      A.querySelectorAll('[data-expor]').forEach(b => b.onclick = async () => { const p = C.pistas.find(x => x.id === b.dataset.expor); await salvarC({ pistas: C.pistas.map(x => x.id === p.id ? { ...x, falsa: !x.falsa } : x) }); if (!p.falsa) await postarC('Uma pista do Mural foi exposta como FALSA!', 'sistema'); desenharAba(); });
       A.querySelectorAll('[data-inoc]').forEach(b => b.onclick = async () => { await salvarC({ suspeitos: C.suspeitos.map(s => s.id === b.dataset.inoc ? { ...s, inocente: !s.inocente } : s) }); desenharAba(); });
       A.querySelectorAll('[data-tirasus]').forEach(b => b.onclick = async () => { await salvarC({ suspeitos: C.suspeitos.filter(s => s.id !== b.dataset.tirasus) }); desenharAba(); });
       A.querySelector('#su-prontos')?.addEventListener('click', async () => { await salvarC({ suspeitos: [...(C.suspeitos || []), ...faltam.map(p => ({ id: p.id, nome: p.nome, especie: p.especie, txt: p.txt, inocente: false }))] }); desenharAba(); });
@@ -1093,7 +1259,8 @@ ROTAS.escudo = async id => {
   const recarregarDets = async () => { DETS = await detetivesDoCaso(id); if (!ocupado()) desenharAba(); };
   assinar(db.collection(`bichos-casos/${id}/detetives`).onSnapshot(() => recarregarDets()));
   assinar(db.collection(`bichos-casos/${id}/rolagens`).orderBy('t', 'desc').limit(60).onSnapshot(s => {
-    ROLS = s.docs.map(d => d.data()); $('#c-feed').innerHTML = ROLS.length ? ROLS.map(linhaRol).join('') : '<div class="vazio">Silêncio no condado.</div>';
+    ROLS = s.docs.map(d => ({ id: d.id, ...d.data() })); LIDOS = new Set(); $('#c-feed').innerHTML = ROLS.length ? ROLS.map(r => linhaRol(r, E.interrog?.[r.id])).join('') : '<div class="vazio">Silêncio no condado.</div>';
+    if (ABA_ESCUDO === 'interrog' && !ocupado()) desenharAba();
     aplicarPendentes(s.docs); recarregarDets();
   }));
 };

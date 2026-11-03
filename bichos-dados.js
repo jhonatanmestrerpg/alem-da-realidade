@@ -88,6 +88,7 @@ window.BICHOS = (() => {
     { id: 'peca', nome: 'Pregar Peça', cena: 'Acareação, Cena Livre', custo: 0, txt: 'Você assusta com pegadas falsas, bilhetes anônimos e barulhos no sótão: Os detetives fazem um Teste de Espanto. A quantidade de Peças por Acareação está na ficha do Culpado. Se algum jogador der um pulo ou soltar um grito de verdade, você recebe 1 PL.' },
     { id: 'tirar', nome: 'Tirar do Caso', cena: 'Acareação, Cena Livre', custo: 0, alvo: true, txt: 'Você tira um detetive da investigação: Trancado no galinheiro, desacreditado na frente da Baronesa ou preso por engano. Numa Acareação, só funciona contra um detetive com menos dados que a sua Pilha. Em qualquer cena, também funciona por Aliciar.' },
     { id: 'rastros', nome: 'Apagar Rastros', cena: 'Acareação, Cena Livre', custo: 0, txt: 'Você varre pegadas e some com pistas. No início de uma Acareação, aumenta em 1 o tamanho da Pilha de Dedução.' },
+    { id: 'plantar', nome: 'Plantar Pista Falsa', cena: 'Cena de Investigação', custo: 2, txt: 'Você esconde no local um Ponto de Interesse falso, com uma pista que aponta para o suspeito errado. Ele parece igual a qualquer outro e vai para o Mural do mesmo jeito. Só Ligar os Pontos consegue expor a farsa.' },
     { id: 'atropelar', nome: 'Atropelar', cena: 'Acareação', custo: 4, txt: 'Ao tirar 6 em Dar um Galo, você pode deixar o detetive no caso, todo estropiado: Ele recebe 3 Tiques Nervosos e uma última chance de seguir a pista.' },
   ];
   const ACOES_UNICAS = {
@@ -113,6 +114,8 @@ window.BICHOS = (() => {
     ['Um detetive falha num Teste de Espanto.', 1],
     ['Um detetive cai numa Armadilha.', 2],
     ['Todos os detetives só Seguem o Rastro no primeiro turno.', 4],
+    ['O relógio de uma Cena de Investigação enche antes de todos os pontos serem achados.', 1],
+    ['Um detetive usa uma pista falsa para acusar alguém.', 2],
   ];
 
   /* culpados prontos: também servem de suspeitos no condado */
@@ -171,7 +174,7 @@ window.BICHOS = (() => {
       ${t('Testes Comuns e Complexos', '<p>Testes Comuns pedem um sucesso. Testes Complexos pedem dois.</p>')}
       ${t('Sacrificar e descartar', '<p><b>Sacrificar:</b> Em Cena Livre e Suspense, enquanto o Culpado ainda não se revelou, todo dado falho é sacrificado e vai da sua pilha para a Pilha do Culpado. Cada vacilo dá tempo para ele.</p><p><b>Descartar:</b> Em Acareações e Testes de Espanto, todo dado falho é descartado e vai para o Palheiro.</p>')}
       ${t('Teste de Espanto', '<p>Pegada gigante no barro, um grito no milharal, a porta do celeiro batendo sozinha: O Mestre pode pedir um Teste de Espanto. O jogador rola um único dado da Pilha de Compostura. Numa falha, o dado é descartado.</p>')}
-      ${t('Cenas', '<p><b>Cena Livre:</b> Investigação, conversa e vida no condado. <b>Suspense:</b> Algo está errado e todos sentem, mas o Culpado ainda não apareceu. <b>Acareação:</b> O Culpado age às claras, e cada detetive precisa amarrar a própria dedução antes que as provas sumam.</p>')}` },
+      ${t('Cenas', '<p><b>Cena Livre:</b> Conversa, deslocamento e vida no condado. <b>Cena de Investigação:</b> Os detetives vasculham um local com o relógio correndo. <b>Suspense:</b> Algo está errado e todos sentem, mas o Culpado ainda não apareceu. <b>Acareação:</b> O Culpado age às claras, e cada detetive precisa amarrar a própria dedução antes que as provas sumam.</p>')}` },
     { id: 'faro', titulo: 'Pontos de Faro', html: `
       <p class="lead">Pontos de Faro (PF) são a intuição de detetive borbulhando. Servem para comprar Vantagens fora da Acareação.</p>
       <p>Todo detetive começa o caso com 0 PF e acumula no máximo 10. Ninguém ganha PF de graça: o jogador precisa colocar o detetive em risco com uma atitude estúpida ou colocar em jogo a própria dignidade na mesa.</p>
@@ -210,6 +213,18 @@ window.BICHOS = (() => {
         <p><b>Se Jogar na Frente:</b> Escolha um detetive, você inclusive, que completa a Pilha de Dedução na hora. Para isso, descarte todos os seus dados. Só um detetive por Acareação e uma vez por sessão. Não vale se você for o último detetive na cena.</p>`)}
       ${t('O turno do Culpado', '<p>O Mestre gasta dados e PL em Ações e Golpes Baixos. É aqui que galos nascem e detetives saem do caso. Os jogadores devem fazer de tudo para continuar na investigação, mas ninguém se surpreenda se não der.</p>')}
       ${t('Fim da Acareação', '<ol><li>O Culpado Some no Mato no turno dele.</li><li>A Pilha do Culpado zera.</li><li>Todos os detetives completam a Pilha de Dedução.</li><li>Todos os detetives ainda presentes saem do caso.</li></ol>')}` },
+    { id: 'investigacao', titulo: 'Cena de Investigação', html: `
+      <p class="lead">Quando os detetives chegam a um local para vasculhar, o Mestre abre uma Cena de Investigação. Ela funciona como uma Cena Livre com relógio: o tempo corre, o Culpado observa e cada palpite errado custa caro.</p>
+      ${t('Montando o local', '<p>O Mestre define o <b>Local</b> (o celeiro, o moinho, a cozinha da Dona Valdirene), o <b>Relógio</b>, de 3 a 6 rodadas, e os <b>Pontos de Interesse</b>. Cada Ponto de Interesse tem uma descrição que os jogadores veem, um Estilo sugerido, uma complexidade (Comum ou Complexo) e uma pista escondida que só o Mestre conhece.</p>')}
+      ${t('Rodadas', '<p>A cada rodada, cada detetive faz uma ação de investigação, na ordem que a mesa quiser. Quando todos agiram, o relógio avança 1. Os dados falhos de todas as ações são sacrificados para o Culpado, como em qualquer Cena Livre.</p>')}
+      ${t('Ações de investigação', `<p><b>Vasculhar (Estilo do ponto):</b> Escolha um Ponto de Interesse que ainda não foi achado e teste no Estilo sugerido. Se ele for um dos seus, a dificuldade cai em 1, como sempre. Com sucesso, a pista do ponto vai para o Mural. Ponto Complexo pede dois sucessos.</p>
+        <p><b>Interrogar (Sagaz, Desenrolado ou Potente):</b> Também vale em Cena Livre. Veja a regra de Interrogatório abaixo.</p>
+        <p><b>Ligar os Pontos (Complexo Sagaz):</b> Escolha duas pistas do Mural. Com sucesso, o Mestre diz se elas apontam para o mesmo suspeito. Se uma delas for falsa, ela é exposta no Mural.</p>
+        <p><b>Ficar de Vigia (Firme):</b> Você cuida da porta e do corredor. Com sucesso, a próxima Peça que o Culpado pregar nesta cena não tem efeito.</p>
+        <p><b>Ganhar Tempo (Complexo Desenrolado):</b> Você distrai o dono do local ou enrola a Baronesa no chá. Com sucesso, o relógio não avança no fim desta rodada. Só uma vez por cena.</p>`)}
+      ${t('Interrogatório', '<p>O detetive escolhe um suspeito ou testemunha e faz <b>três perguntas</b>. O Mestre responde as três na voz do bicho: <b>uma é verdade, uma é meia-verdade e uma é mentira</b>, numa ordem que só ele sabe.</p><p>Depois de ouvir as respostas, o detetive rola um teste para ler o interrogado, em Sagaz (pegar a contradição), Desenrolado (deixar o bicho à vontade) ou Potente (botar pressão). <b>Um sucesso:</b> O Mestre revela qual resposta é a mentira. <b>Dois sucessos ou mais:</b> O Mestre revela também qual é a verdade, e a que sobra é a meia-verdade. <b>Falha:</b> O detetive fica sem saber de nada, e os dados falhos são sacrificados para o Culpado.</p><p>Cada interrogatório só pode ser lido uma vez. Para insistir, faça um interrogatório novo, com perguntas novas.</p>')}
+      ${t('Pistas falsas', '<p>O Culpado pode Plantar Pista Falsa por 2 PL: um Ponto de Interesse que leva ao suspeito errado. Ela é achada e vai para o Mural como qualquer outra. Só Ligar os Pontos expõe a farsa.</p>')}
+      ${t('Fim da cena', '<ol><li>O relógio enche: o dono do local volta, a Baronesa expulsa todo mundo ou o Culpado limpa o que sobrou. O Mestre decide se os pontos não achados somem de vez.</li><li>Todos os pontos são achados antes do relógio encher: cada detetive presente ganha 1 PF (Faro Aguçado).</li><li>O Mestre inicia uma Acareação, se a Pilha do Culpado já superar a de algum detetive.</li></ol>')}` },
     { id: 'solucao', titulo: 'Pistas e acusação', html: `
       <p class="lead">Regras novas desta adaptação, porque mistério sem solução é só fofoca.</p>
       ${t('A solução', '<p>Antes do primeiro jogo, o Mestre define em segredo três respostas: <b>Quem</b> pegou os ovos, <b>Por quê</b> e <b>Onde</b> eles estão agora.</p>')}
