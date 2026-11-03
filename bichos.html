@@ -1025,10 +1025,12 @@ ROTAS.escudo = async id => {
         await postarC('Nova pista no Mural!', 'sistema'); desenharAba();
       });
     } else {
-      A.innerHTML = muralHtml(C, true) + `<div class="caixa bloco"><h3>Novo suspeito</h3><div class="campo"><label class="rotulo" for="su-n">Nome</label><input type="text" id="su-n"></div><div class="campo"><label class="rotulo" for="su-e">Espécie</label><input type="text" id="su-e"></div><div class="campo"><label class="rotulo" for="su-t">Descrição</label><textarea id="su-t"></textarea></div><button class="btn" id="su-ok">Pôr no Mural</button></div>`;
+      const faltam = B.PRONTOS.filter(p => !(C.suspeitos || []).some(x => x.id === p.id));
+      A.innerHTML = (faltam.length ? `<div class="caixa btns" style="align-items:center;justify-content:space-between"><span>${faltam.length} suspeito(s) pronto(s) fora do Mural: ${faltam.map(p => esc(p.nome)).join(', ')}</span><button class="btn mini" id="su-prontos">Trazer para o Mural</button></div>` : '') + muralHtml(C, true) + `<div class="caixa bloco"><h3>Novo suspeito</h3><div class="campo"><label class="rotulo" for="su-n">Nome</label><input type="text" id="su-n"></div><div class="campo"><label class="rotulo" for="su-e">Espécie</label><input type="text" id="su-e"></div><div class="campo"><label class="rotulo" for="su-t">Descrição</label><textarea id="su-t"></textarea></div><button class="btn" id="su-ok">Pôr no Mural</button></div>`;
       A.querySelectorAll('[data-esconder]').forEach(b => b.onclick = async () => { const p = C.pistas.find(x => x.id === b.dataset.esconder); await salvarC({ pistas: C.pistas.filter(x => x.id !== p.id) }); await salvarE({ pistasOcultas: [...(E.pistasOcultas || []), { id: p.id, txt: p.txt }] }); desenharAba(); });
       A.querySelectorAll('[data-inoc]').forEach(b => b.onclick = async () => { await salvarC({ suspeitos: C.suspeitos.map(s => s.id === b.dataset.inoc ? { ...s, inocente: !s.inocente } : s) }); desenharAba(); });
       A.querySelectorAll('[data-tirasus]').forEach(b => b.onclick = async () => { await salvarC({ suspeitos: C.suspeitos.filter(s => s.id !== b.dataset.tirasus) }); desenharAba(); });
+      A.querySelector('#su-prontos')?.addEventListener('click', async () => { await salvarC({ suspeitos: [...(C.suspeitos || []), ...faltam.map(p => ({ id: p.id, nome: p.nome, especie: p.especie, txt: p.txt, inocente: false }))] }); desenharAba(); });
       A.querySelector('#su-ok').onclick = async () => { const n = A.querySelector('#su-n').value.trim(); if (!n) return; await salvarC({ suspeitos: [...(C.suspeitos || []), { id: uid8(), nome: n, especie: A.querySelector('#su-e').value.trim(), txt: A.querySelector('#su-t').value.trim(), inocente: false }] }); desenharAba(); };
     }
   };

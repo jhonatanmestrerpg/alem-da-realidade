@@ -129,6 +129,18 @@ window.BICHOS = (() => {
     { id: 'cobra', nome: 'Madame Serpentina', especie: 'Cobra', perfis: ['mandante', 'trambiqueiro'], dados: 3, pl: 1, pecas: 3, acoes: ['zombar', 'aliciar'], golpe: 'tanahora', alvo: 5,
       frase: 'Por que sujar as escamas se outros fazem por mim?',
       txt: 'Presidente do Clube de Chá de GansoTopolópis e dona de uma rede de informantes que vai do moinho à prefeitura. Todo mundo aponta para ela, afinal cobra come ovo. Justamente por ser óbvia demais, ninguém consegue provar nada. Ela adora isso.' },
+    { id: 'teiu', nome: 'Seu Tibúrcio', especie: 'Teiú', perfis: ['grandalhao', 'fantasma'], dados: 5, pl: 2, pecas: 2, acoes: ['agarrar', 'casca'], golpe: 'cadeovo', alvo: 5,
+      frase: 'Eu? Comer ovo? Larguei faz anos, juro pela minha cauda.',
+      txt: 'Teiú velho que mora numa toca debaixo do celeiro da Baronesa desde antes de a Baronesa nascer. Todo mundo sabe que teiú come ovo, e ele sabe que todo mundo sabe. Diz que virou vegetariano no ano passado, mas tem casca demais na toca para quem jura que só come couve.' },
+    { id: 'gata', nome: 'Condessa Mimosa', especie: 'Gata angorá', perfis: ['trambiqueiro', 'mandante'], dados: 3, pl: 2, pecas: 3, acoes: ['zombar', 'enrolar'], golpe: 'planob', alvo: 5,
+      frase: 'Sem herdeiros? Que tragédia. O título iria para a parente mais próxima. Eu, no caso.',
+      txt: 'Viúva do falecido irmão da Baronesa e, sem os ovos, a próxima na linha do título. Chegou ao condado três dias antes do crime para um chá que ninguém lembra de ter marcado. Lambe as patas com calma demais para quem diz estar de luto pelos sobrinhos.' },
+    { id: 'ganso', nome: 'Dom Gervásio', especie: 'Ganso, o pai dos ovos', perfis: ['mandante', 'fantasma'], dados: 4, pl: 2, pecas: 2, acoes: ['aliciar', 'desmoralizar'], golpe: 'tanahora', alvo: 5,
+      frase: 'São meus filhos também! Eu só queria um fim de semana com eles.',
+      txt: 'Ex-marido da Baronesa e pai dos ovos desaparecidos. Os dois se separaram na última primavera numa briga que o condado inteiro ouviu do outro lado do lago, e ele perdeu o título, o ninho e a guarda dos herdeiros antes mesmo de chocarem. Desde então ronda o lago de madrugada, alegando que ganso dorme pouco. De todos os suspeitos, é o único que quer os ovos inteiros.' },
+    { id: 'cao', nome: 'Sargento Bráulio', especie: 'Cão de guarda', perfis: ['grandalhao', 'mandante'], dados: 5, pl: 2, pecas: 1, acoes: ['agarrar', 'aliciar'], golpe: 'cheiro', alvo: 4,
+      frase: 'Eu não dormi no posto. Só fechei os olhos para escutar melhor.',
+      txt: 'Cão de guarda da propriedade da Baronesa há doze anos, nunca faltou um dia. Na noite do crime, cochilou no posto pela primeira vez na vida. Ou é isso que ele diz. Desde então anda roendo um osso importado, caríssimo, que ninguém sabe quem deu.' },
   ];
 
   /* ---------- regras (texto) ---------- */
