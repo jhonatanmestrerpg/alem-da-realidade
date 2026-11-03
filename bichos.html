@@ -288,6 +288,45 @@ textarea { min-height: 80px; resize: vertical; }
 .hab-ed { display: grid; gap: 6px; padding: 10px; border: 2px dashed var(--tabua-2); border-radius: 8px; }
 .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width: 640px) { .duas { grid-template-columns: 1fr; } }
+.abas-mesa { margin-bottom: -2px; }
+.lista-sus { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.dia { background: #120b06; border: 2px solid #000; border-radius: 10px; padding: 10px 14px; }
+.dia summary { cursor: pointer; font: 400 20px var(--f-disp); color: var(--ambar); list-style: none; display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.dia summary::-webkit-details-marker { display: none; }
+.dia summary::before { content: "▸ "; } .dia[open] summary::before { content: "▾ "; }
+.dia summary span { font: 12px var(--f-maq); color: var(--texto-dim); }
+.dia .mural { margin-top: 12px; }
+.hoje { display: flex; gap: 10px; align-items: center; font: 400 20px var(--f-disp); color: var(--teal); }
+/* quadro criminal */
+.mesa.larga { grid-template-columns: 1fr; }
+.mesa.larga .feed { max-height: 420px; }
+body.arrastando-q { user-select: none; -webkit-user-select: none; }
+.quadro-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.quadro-bar .tag { font-size: 12px; }
+.quadro-wrap { overflow: auto; border: 3px solid #000; border-radius: 10px; box-shadow: 4px 4px 0 #000; background: #3b2412; }
+.quadro { position: relative; width: 100%; min-width: 980px; aspect-ratio: 16 / 10; touch-action: none; user-select: none;
+  background: radial-gradient(circle at 20% 30%, rgba(255,255,255,.05) 0 2px, transparent 3px) 0 0 / 14px 14px, radial-gradient(circle at 70% 60%, rgba(0,0,0,.18) 0 2px, transparent 3px) 0 0 / 11px 11px, linear-gradient(135deg, #b98a55, #a77744 50%, #b48552);
+  box-shadow: inset 0 0 0 14px #6b4424, inset 0 0 0 17px #000, inset 0 0 60px rgba(0,0,0,.45); }
+.quadro:fullscreen { min-width: 0; width: 100vw; height: 100vh; aspect-ratio: auto; }
+.quadro svg.fios { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+.quadro svg.fios line { stroke: #c0161d; stroke-width: 3; stroke-linecap: round; filter: drop-shadow(1px 2px 1px rgba(0,0,0,.5)); }
+.quadro svg.fios line.hit { stroke: transparent; stroke-width: 16; pointer-events: stroke; cursor: pointer; filter: none; }
+.quadro.ligando svg.fios line.hit:hover + line, .quadro svg.fios line.hit:hover + line { stroke: #ff5a5f; }
+.q-item { position: absolute; z-index: 2; transform: translate(-50%, -50%) rotate(var(--r, 0deg)); cursor: grab; touch-action: none; }
+.q-item.arrastando { cursor: grabbing; z-index: 5; filter: drop-shadow(6px 10px 6px rgba(0,0,0,.45)); }
+.q-item::before { content: ""; position: absolute; top: -7px; left: 50%; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ff7b7b, #b3141b 60%); border: 1px solid #000; box-shadow: 1px 2px 2px rgba(0,0,0,.5); z-index: 3; }
+.q-item.sel { outline: 3px dashed #c0161d; outline-offset: 4px; }
+.q-pol { width: 112px; background: #fbf6ea; padding: 7px 7px 6px; box-shadow: 2px 4px 6px rgba(0,0,0,.45); text-align: center; color: var(--tinta); }
+.q-pol .ft { width: 98px; height: 98px; background: #3a2716 center/cover no-repeat; display: grid; place-items: center; font: 400 30px var(--f-disp); color: #c9b48e; }
+.q-pol b { display: block; font: 400 14px/1.1 var(--f-disp); margin-top: 5px; }
+.q-pol span { font: 10px var(--f-maq); color: #7a5a35; }
+.q-pol.inoc .ft { filter: grayscale(1); }
+.q-pol.inoc::after { content: "INOCENTE"; position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%) rotate(-18deg); font: 400 17px var(--f-disp); color: var(--teal); border: 3px solid var(--teal); padding: 0 6px; background: rgba(251,246,234,.75); }
+.q-pap { width: 168px; max-height: 150px; overflow: hidden; background: #f3e6c8; padding: 12px 10px 10px; box-shadow: 2px 4px 6px rgba(0,0,0,.45); font: 12.5px/1.35 var(--f-maq); color: var(--tinta); }
+.q-pap .dia-t { display: block; font-size: 10px; color: #8a6a40; margin-bottom: 3px; }
+.q-pap.falsa { background: repeating-linear-gradient(-45deg, #f3e6c8 0 12px, #efd6a0 12px 24px); }
+.q-pap.falsa::after { content: "FALSA"; position: absolute; right: 6px; bottom: 4px; font: 400 15px var(--f-disp); color: var(--vermelho); transform: rotate(-8deg); }
+.q-nota { width: 140px; min-height: 90px; background: #ffe36e; padding: 12px 10px 10px; box-shadow: 2px 4px 6px rgba(0,0,0,.4); font: italic 14px/1.3 var(--f-body); color: #3a2a00; white-space: pre-wrap; }
 .codigo { font: 15px var(--f-maq); background: #000; color: var(--fita); padding: 6px 10px; border-radius: 4px; user-select: all; word-break: break-all; }
 @media (max-width: 960px) { .mesa { grid-template-columns: 1fr; } .feed { max-height: none; } }
 
@@ -903,9 +942,9 @@ function placar(C, extra = '') {
     <div class="culp"><span class="rotulo">Pilha do Culpado</span><span class="big">${C.culpado ?? 0}</span><div class="fila-dados">${Array.from({ length: Math.min(C.culpado || 0, 12) }, () => dado(6)).join('')}</div></div>
     <div><span class="rotulo">Palheiro</span><span class="big">${C.palheiro ?? 0}</span></div>${extra}</div>`;
 }
-const muralHtml = (C, mestre, falsas) => `
-  <div class="caixa bloco"><h3>📌 Pistas</h3><div class="mural">${(C.pistas || []).length ? C.pistas.map(p => `<div class="pista ${p.falsa ? 'falsa' : ''}">${nl(p.txt)}${mestre ? `<div class="btns" style="margin-top:6px">${(falsas || []).includes(p.id) && !p.falsa ? '<span class="tag" style="color:var(--vermelho)">Plantada (falsa)</span>' : ''}<button class="btn mini sec" data-expor="${p.id}">${p.falsa ? 'Desfazer exposição' : 'Expor como falsa'}</button><button class="btn mini sec" data-esconder="${p.id}">Esconder</button><button class="btn mini perigo" data-excluir="${p.id}">Excluir</button></div>` : ''}</div>`).join('') : '<div class="vazio">Nenhuma pista no mural ainda.</div>'}</div></div>
-  <div class="caixa bloco"><h3>🕵️ Suspeitos</h3>${(C.suspeitos || []).map(s => `<div class="suspeito ${s.inocente ? 'inocente' : ''} ${C.sala?.npc === s.nome ? 'na-sala' : ''} ${s.foto ? 'com-foto' : ''}">${s.foto ? `<span class="foto-s p" style="background-image:url('${esc(s.foto)}')"></span>` : ''}<b>${esc(s.nome)}</b><span class="tg">${esc(s.especie)}</span><p>${esc(s.txt)}</p>${mestre ? `<div class="btns"><button class="btn mini sec" data-inoc="${s.id}">${s.inocente ? 'Voltar a suspeito' : 'Marcar inocente'}</button><button class="btn mini perigo" data-tirasus="${s.id}">Remover</button></div>` : ''}</div>`).join('') || '<div class="vazio">Ninguém sob suspeita. Suspeito.</div>'}</div>`;
+const muralHtml = (C, mestre, falsas, Q) => `
+  <div class="caixa bloco"><h3>📌 Pistas</h3><div class="mural">${(C.pistas || []).length ? C.pistas.map(p => `<div class="pista ${p.falsa ? 'falsa' : ''}">${mestre ? `<span class="tag">${p.dia ? 'Dia ' + p.dia : 'Hoje'}</span> ` : ''}${nl(p.txt)}${mestre ? `<div class="btns" style="margin-top:6px">${(falsas || []).includes(p.id) && !p.falsa ? '<span class="tag" style="color:var(--vermelho)">Plantada (falsa)</span>' : ''}<button class="btn mini sec" data-expor="${p.id}">${p.falsa ? 'Desfazer exposição' : 'Expor como falsa'}</button><button class="btn mini sec" data-esconder="${p.id}">Esconder</button><button class="btn mini perigo" data-excluir="${p.id}">Excluir</button></div>` : ''}</div>`).join('') : '<div class="vazio">Nenhuma pista no mural ainda.</div>'}</div></div>
+  <div class="caixa bloco"><h3>🕵️ Suspeitos</h3>${(C.suspeitos || []).map(s => `<div class="suspeito ${inocentado(s, Q) ? 'inocente' : ''} ${C.sala?.npc === s.nome ? 'na-sala' : ''} ${s.foto ? 'com-foto' : ''}">${s.foto ? `<span class="foto-s p" style="background-image:url('${esc(s.foto)}')"></span>` : ''}<b>${esc(s.nome)}</b><span class="tg">${esc(s.especie)}</span><p>${esc(s.txt)}</p>${mestre ? `<div class="btns"><button class="btn mini sec" data-inoc="${s.id}">${inocentado(s, Q) ? 'Voltar a suspeito' : 'Inocentar'}</button><button class="btn mini perigo" data-tirasus="${s.id}">Remover</button></div>` : ''}</div>`).join('') || '<div class="vazio">Ninguém sob suspeita. Suspeito.</div>'}</div>`;
 
 const painelSala = (C, meus) => {
   const S = C.sala; if (!S) return '';
@@ -922,6 +961,94 @@ const painelInv = (C, mestre, E) => {
       ${mestre ? `<p class="segredo">🔒 ${esc(E?.inv?.[p.id]?.pista || '(sem pista)')}${E?.inv?.[p.id]?.falsa ? ' · FALSA' : ''}</p><div class="btns">${p.achado ? '' : `<button class="btn mini teal" data-achar="${p.id}">Revelar agora</button>`}<button class="btn mini perigo" data-tiraponto="${p.id}">Remover</button></div>` : ''}</div>`).join('') || '<div class="vazio">Nenhum ponto de interesse ainda.</div>'}</div>`;
 };
 
+/* estado da mesa que os jogadores mexem: bichos-casos/<id>/quadro/estado
+   { inoc: { suspeitoId: true|false }, pos: { itemId: {x,y} (em %) }, fios: { 'a|b': true|null }, notas: { id: {txt}|null } } */
+const caminhoQ = id => `bichos-casos/${id}/quadro/estado`;
+const inocentado = (s, Q) => (Q?.inoc && s.id in Q.inoc) ? !!Q.inoc[s.id] : !!s.inocente;
+async function salvarQ(id, parcial) {
+  const r = db.doc(caminhoQ(id));
+  try { await r.update(parcial); }
+  catch (e) {
+    if (/não existe/.test(e.message || '')) { try { await r.set(parcial); return; } catch (e2) { e = e2; } }
+    toast(e.code === 'invalid_argument' ? 'Sem permissão para mexer no quadro: o Mestre precisa rodar o seguranca.sql de novo.' : 'Não salvou: ' + (e.message || e.code));
+  }
+}
+const todasPistas = C => (C.pistas || []);
+const cardSusp = (s, Q, acao) => `<div class="suspeito ${inocentado(s, Q) ? 'inocente' : ''} ${s.foto ? 'com-foto' : ''}">${s.foto ? `<span class="foto-s p" style="background-image:url('${esc(s.foto)}')"></span>` : ''}<b>${esc(s.nome)}</b><span class="tg">${esc(s.especie)}</span><p>${esc(s.txt)}</p>${acao}</div>`;
+const papelPista = p => `<div class="pista ${p.falsa ? 'falsa' : ''}">${nl(p.txt)}</div>`;
+
+/* quadro de cortiça: suspeitos, pistas e anotações, ligados por barbante */
+function montarQuadro(el, id, getC, getQ) {
+  let ligando = false, sel = null, arr = null, zTop = 10; const Z = {};
+  const itens = () => {
+    const C = getC(), Q = getQ() || {}, out = [];
+    const sus = C.suspeitos || [], pis = todasPistas(C), notas = Object.entries(Q.notas || {}).filter(([, v]) => v);
+    const linhasS = Math.ceil(sus.length / 8);
+    sus.forEach((x, i) => out.push({ k: 's:' + x.id, tipo: 's', x, def: { x: 7 + (i % 8) * 12.2, y: 18 + Math.floor(i / 8) * 26 } }));
+    pis.forEach((x, i) => out.push({ k: 'p:' + x.id, tipo: 'p', x, def: { x: 9 + (i % 6) * 15.5, y: Math.min(90, 22 + linhasS * 26 + Math.floor(i / 6) * 20) } }));
+    notas.forEach(([nid, v], i) => out.push({ k: 'n:' + nid, tipo: 'n', x: { id: nid, ...v }, def: { x: 88, y: 40 + i * 14 } }));
+    return out.map(it => ({ ...it, pos: Q.pos?.[it.k] || it.def, r: ((it.k.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 9) - 4) }));
+  };
+  const desenhar = () => {
+    if (arr) return;
+    const C = getC(), Q = getQ() || {}, its = itens(), at = Object.fromEntries(its.map(i => [i.k, i]));
+    const fios = Object.entries(Q.fios || {}).filter(([k, v]) => v && k.split('|').every(x => at[x]));
+    el.classList.toggle('ligando', ligando);
+    el.innerHTML = `<svg class="fios">${fios.map(([k]) => { const [ka, kb] = k.split('|'), a = at[ka].pos, b = at[kb].pos, d = `data-a="${esc(ka)}" data-b="${esc(kb)}" x1="${a.x}%" y1="${a.y}%" x2="${b.x}%" y2="${b.y}%"`; return `<line class="hit" data-fio="${esc(k)}" ${d}></line><line ${d}></line>`; }).join('')}</svg>
+      ${its.map(it => {
+        const st = `left:${it.pos.x}%;top:${it.pos.y}%;--r:${it.r}deg${Z[it.k] ? ';z-index:' + Z[it.k] : ''}`, c = `q-item ${sel === it.k ? 'sel' : ''}`;
+        if (it.tipo === 's') return `<div class="${c} q-pol ${inocentado(it.x, Q) ? 'inoc' : ''}" data-k="${it.k}" style="${st}" title="${esc(it.x.txt)}"><div class="ft" style="${it.x.foto ? `background-image:url('${esc(it.x.foto)}')` : ''}">${it.x.foto ? '' : esc(iniciais(it.x.nome))}</div><b>${esc(it.x.nome)}</b><span>${esc(it.x.especie)}</span></div>`;
+        if (it.tipo === 'p') return `<div class="${c} q-pap ${it.x.falsa ? 'falsa' : ''}" data-k="${it.k}" style="${st}" title="${esc(it.x.txt)}"><span class="dia-t">${it.x.dia ? 'Dia ' + it.x.dia : 'Hoje'}</span>${esc(it.x.txt.length > 150 ? it.x.txt.slice(0, 147) + '…' : it.x.txt)}</div>`;
+        return `<div class="${c} q-nota" data-k="${it.k}" style="${st}" title="Duplo clique para editar">${esc(it.x.txt)}</div>`;
+      }).join('')}`;
+  };
+  // arrastar
+  el.addEventListener('pointerdown', e => {
+    const it = e.target.closest('.q-item'); if (!it || e.button > 0) return;
+    if (ligando) return;
+    e.preventDefault(); const r = el.getBoundingClientRect();
+    arr = { el: it, k: it.dataset.k, r, moveu: false, dx: e.clientX, dy: e.clientY };
+    document.body.classList.add('arrastando-q'); Z[it.dataset.k] = ++zTop; it.style.zIndex = zTop; it.setPointerCapture(e.pointerId); it.classList.add('arrastando');
+  });
+  el.addEventListener('pointermove', e => {
+    if (!arr) return;
+    if (Math.abs(e.clientX - arr.dx) + Math.abs(e.clientY - arr.dy) > 3) arr.moveu = true;
+    const x = clamp((e.clientX - arr.r.left) / arr.r.width * 100, 3, 97), y = clamp((e.clientY - arr.r.top) / arr.r.height * 100, 5, 95);
+    arr.el.style.left = x + '%'; arr.el.style.top = y + '%'; arr.x = x; arr.y = y;
+    // barbantes acompanham
+    el.querySelectorAll('line').forEach(l => { if (l.dataset.a === arr.k) { l.setAttribute('x1', x + '%'); l.setAttribute('y1', y + '%'); } if (l.dataset.b === arr.k) { l.setAttribute('x2', x + '%'); l.setAttribute('y2', y + '%'); } });
+  });
+  const soltar = async () => {
+    if (!arr) return; const a = arr; arr = null; a.el.classList.remove('arrastando'); document.body.classList.remove('arrastando-q');
+    if (a.moveu && a.x != null) { const Q = getQ() || {}; Q.pos = { ...(Q.pos || {}), [a.k]: { x: +a.x.toFixed(2), y: +a.y.toFixed(2) } }; desenhar(); await salvarQ(id, { pos: { [a.k]: Q.pos[a.k] } }); }
+    else desenhar();
+  };
+  el.addEventListener('pointerup', soltar); el.addEventListener('pointercancel', soltar);
+  // ligar com barbante / cortar barbante
+  el.addEventListener('click', async e => {
+    const fio = e.target.closest('[data-fio]');
+    if (fio) { if (!confirm('Cortar este barbante?')) return; const Q = getQ() || {}; Q.fios = { ...(Q.fios || {}), [fio.dataset.fio]: null }; desenhar(); await salvarQ(id, { fios: { [fio.dataset.fio]: null } }); return; }
+    if (!ligando) return;
+    const it = e.target.closest('.q-item'); if (!it) return;
+    if (!sel) { sel = it.dataset.k; desenhar(); return; }
+    if (sel === it.dataset.k) { sel = null; desenhar(); return; }
+    const k = [sel, it.dataset.k].sort().join('|'); sel = null;
+    const Q = getQ() || {}; Q.fios = { ...(Q.fios || {}), [k]: true }; desenhar(); await salvarQ(id, { fios: { [k]: true } });
+  });
+  el.addEventListener('dblclick', async e => {
+    const it = e.target.closest('.q-item[data-k^="n:"]'); if (!it) return;
+    const nid = it.dataset.k.slice(2), Q = getQ() || {}, atual = Q.notas?.[nid]?.txt || '';
+    const txt = prompt('Anotação (deixe vazio para arrancar do quadro):', atual); if (txt === null) return;
+    Q.notas = { ...(Q.notas || {}), [nid]: txt.trim() ? { txt: txt.trim() } : null }; desenhar();
+    await salvarQ(id, { notas: { [nid]: Q.notas[nid] } });
+  });
+  return {
+    desenhar,
+    ligar(v) { ligando = v; sel = null; desenhar(); },
+    async nota() { const txt = prompt('O que escrever no papelzinho?'); if (!txt?.trim()) return; const nid = uid8(), Q = getQ() || {}; Q.notas = { ...(Q.notas || {}), [nid]: { txt: txt.trim() } }; desenhar(); await salvarQ(id, { notas: { [nid]: { txt: txt.trim() } } }); },
+  };
+}
+
 async function detetivesDoCaso(id) {
   const s = await db.collection(`bichos-casos/${id}/detetives`).get();
   const fs = await Promise.all(s.docs.map(d => db.doc('bichos-detetives/' + d.id).get()));
@@ -929,41 +1056,82 @@ async function detetivesDoCaso(id) {
 }
 
 /* ---------- visão do jogador ---------- */
+let ABA_MESA = 'mesa';
 ROTAS.caso = async id => {
   if (!ME) { app.innerHTML = precisaEntrar(); return; }
   const ref = db.doc('bichos-casos/' + id);
   const s0 = await ref.get(); if (!s0.exists) { app.innerHTML = '<div class="vazio">Esse caso foi arquivado.</div>'; return; }
   if (s0.data().mestre !== ME) { const P = await carregarPart(); if (!P.casos.includes(id)) await entrarCaso(id); }
-  let C = s0.data(), DETS = [], ROLS = [];
+  let C = s0.data(), DETS = [], ROLS = [], Q = {}, QUADRO = null;
+  const ABAS = [['mesa', 'Mesa'], ['pistas', 'Pistas'], ['suspeitos', 'Suspeitos'], ['inocentados', 'Inocentados'], ['calendario', 'Calendário'], ['quadro', 'Quadro']];
   app.innerHTML = `<div class="cab"><div><span class="fita">Mesa</span><h2 id="c-nome" style="margin-top:8px"></h2><p id="c-sub"></p></div><div class="btns" id="c-btns"></div></div>
-    <div id="c-placar"></div><div class="mesa"><div class="bloco"><div class="caixa bloco"><h3>Detetives na mesa</h3><div class="bloco" id="c-dets"></div></div><div id="c-mural" class="bloco"></div></div>
+    <div id="c-placar"></div><div class="mesa"><div class="bloco"><div class="abas abas-mesa" id="c-abas">${ABAS.map(([k, n]) => `<button data-aba="${k}">${n}</button>`).join('')}</div><div id="c-aba" class="bloco"></div></div>
     <div class="bloco"><div class="btns" style="justify-content:space-between;align-items:center"><h3>Rolagens</h3><a class="btn mini sec" href="#historico-${id}">Histórico completo</a></div><div class="feed" id="c-feed"></div></div></div>`;
-  const desenhar = () => {
-    $('#c-nome').textContent = C.nome; $('#c-sub').textContent = `Mestre: ${C.mestreNome || '?'}${C.aviso ? ' · ' + C.aviso : ''}`;
+  const desenharTopo = () => {
+    $('#c-nome').textContent = C.nome; $('#c-sub').textContent = `Mestre: ${C.mestreNome || '?'} · Dia ${C.dia || 1}${C.aviso ? ' · ' + C.aviso : ''}`;
     $('#c-placar').innerHTML = placar(C);
     const meus = DETS.filter(f => f.dono === ME);
     $('#c-btns').innerHTML = `${C.mestre === ME ? `<a class="btn" href="#escudo-${id}">Escudo do Mestre</a>` : ''}${meus.filter(f => !f.fora).map(f => `<button class="btn" data-rolar="${f.id}">🎲 ${esc(f.nome)}</button>`).join('')}<button class="btn sec" id="levar">Levar detetive</button>`;
-    $('#c-dets').innerHTML = DETS.length ? DETS.map(f => `<div class="det-mesa ${f.fora ? 'fora' : ''}">${avatar(f)}<div><a class="nm" href="#detetive-${f.id}" style="color:inherit;text-decoration:none">${esc(f.nome)}</a>
-      <div class="st"><span>${esc(ESP[f.especie]?.nome)}</span><span>Compostura <b>${f.pilha}</b></span>${C.fase === 'acareacao' ? `<span>Dedução <b>${f.deducao || 0}</b>${f.deducaoCompleta ? ' ✔' : ''}</span>` : ''}<span>PF <b>${f.pf}</b></span>${f.galo ? `<span>Galo <b>${f.galo}</b></span>` : ''}${f.enrolado ? `<span>Enrolado <b>${f.enrolado}</b></span>` : ''}${f.agarrado ? '<span><b>Agarrado</b></span>' : ''}${f.fora ? '<span><b>Fora do caso</b></span>' : ''}</div></div></div>`).join('') : '<div class="vazio">Nenhum detetive ainda.</div>';
-    $('#c-mural').innerHTML = painelSala(C, meus) + (C.fase === 'investigacao' ? painelInv(C, false) : '') + muralHtml(C, false);
-    $('#c-mural').onclick = e => { const b = e.target.closest('[data-sala]'); if (!b) return; abrirRolagem({ ...DETS.find(f => f.id === b.dataset.sala) }, { id, ...C }, { interrogar: C.sala.npc }); };
-    $('#c-btns').onclick = async e => {
-      const r = e.target.closest('[data-rolar]'); if (r) { abrirRolagem({ ...DETS.find(f => f.id === r.dataset.rolar) }, { id, ...C }); return; }
-      if (e.target.closest('#levar')) {
-        const s = await db.collection('bichos-detetives').where('dono', '==', ME).get();
-        const l = s.docs.map(d => ({ id: d.id, ...d.data() })).filter(f => !DETS.some(x => x.id === f.id));
-        escolherDetetive('Levar qual detetive?', l, async f => { try { await levarDetetive(id, f); toast(`${f.nome} chegou na cena do crime.`); recarregarDets(); } catch (er) { toast('Não deu: ' + er.message); } });
-      }
-    };
+    const nSus = (C.suspeitos || []).filter(x => !inocentado(x, Q)).length, nIno = (C.suspeitos || []).length - nSus, nHoje = todasPistas(C).filter(p => !p.dia).length;
+    $$('#c-abas button').forEach(b => { b.classList.toggle('aqui', b.dataset.aba === ABA_MESA); const n = { suspeitos: nSus, inocentados: nIno, pistas: nHoje }[b.dataset.aba]; b.textContent = ABAS.find(x => x[0] === b.dataset.aba)[1] + (n != null ? ` (${n})` : ''); });
   };
+  const desenharAba = () => {
+    const A = $('#c-aba'); const meus = DETS.filter(f => f.dono === ME);
+    if (ABA_MESA !== 'quadro') QUADRO = null;
+    $('.mesa')?.classList.toggle('larga', ABA_MESA === 'quadro');
+    if (ABA_MESA === 'mesa') {
+      A.innerHTML = `<div class="caixa bloco"><h3>Detetives na mesa</h3><div class="bloco">${DETS.length ? DETS.map(f => `<div class="det-mesa ${f.fora ? 'fora' : ''}">${avatar(f)}<div><a class="nm" href="#detetive-${f.id}" style="color:inherit;text-decoration:none">${esc(f.nome)}</a>
+        <div class="st"><span>${esc(ESP[f.especie]?.nome)}</span><span>Compostura <b>${f.pilha}</b></span>${C.fase === 'acareacao' ? `<span>Dedução <b>${f.deducao || 0}</b>${f.deducaoCompleta ? ' ✔' : ''}</span>` : ''}<span>PF <b>${f.pf}</b></span>${f.galo ? `<span>Galo <b>${f.galo}</b></span>` : ''}${f.enrolado ? `<span>Enrolado <b>${f.enrolado}</b></span>` : ''}${f.agarrado ? '<span><b>Agarrado</b></span>' : ''}${f.fora ? '<span><b>Fora do caso</b></span>' : ''}</div></div></div>`).join('') : '<div class="vazio">Nenhum detetive ainda.</div>'}</div></div>
+        ${painelSala(C, meus)}${C.fase === 'investigacao' ? painelInv(C, false) : ''}`;
+    } else if (ABA_MESA === 'pistas') {
+      const hoje = todasPistas(C).filter(p => !p.dia);
+      A.innerHTML = `<div class="caixa bloco"><div class="hoje">📌 Pistas do Dia ${C.dia || 1}</div><div class="mural">${hoje.length ? hoje.map(papelPista).join('') : '<div class="vazio">Nenhuma pista hoje. Ainda.</div>'}</div><p class="tag">Pistas de dias anteriores ficam no Calendário.</p></div>`;
+    } else if (ABA_MESA === 'suspeitos' || ABA_MESA === 'inocentados') {
+      const ino = ABA_MESA === 'inocentados';
+      const l = (C.suspeitos || []).filter(x => inocentado(x, Q) === ino);
+      A.innerHTML = `<div class="caixa bloco"><h3>${ino ? '😇 Inocentados' : '🕵️ Suspeitos'}</h3><p class="tag">${ino ? 'Bichos que a equipe tirou da lista. Dá para voltar atrás.' : 'Quem a equipe ainda acha que pode ter levado os ovos.'}</p>
+        <div class="lista-sus">${l.map(x => cardSusp(x, Q, `<div class="btns"><button class="btn mini ${ino ? 'perigo' : 'teal'}" data-inoc="${x.id}">${ino ? 'Voltar a suspeito' : 'Inocentar'}</button></div>`)).join('') || `<div class="vazio">${ino ? 'Ninguém inocentado. Todo mundo deve.' : 'Ninguém sob suspeita. Suspeito.'}</div>`}</div></div>`;
+    } else if (ABA_MESA === 'calendario') {
+      const dias = {}; todasPistas(C).filter(p => p.dia).forEach(p => (dias[p.dia] = dias[p.dia] || []).push(p));
+      const ns = Object.keys(dias).map(Number).concat(Object.keys(C.diasFim || {}).map(Number)).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => b - a);
+      A.innerHTML = `<div class="caixa bloco"><div class="hoje">📅 Hoje é o Dia ${C.dia || 1}</div><p class="tag">Cada dia é uma sessão. Quando o Mestre encerra o dia, as pistas dele vêm para cá.</p>
+        ${ns.map(n => `<details class="dia" ${n === ns[0] ? 'open' : ''}><summary>Dia ${n}<span>${(dias[n] || []).length} pista(s)${C.diasFim?.[n] ? ' · encerrado em ' + new Date(C.diasFim[n]).toLocaleDateString('pt-BR') : ''}</span></summary><div class="mural">${(dias[n] || []).map(papelPista).join('') || '<div class="vazio">Nenhuma pista neste dia.</div>'}</div></details>`).join('') || '<div class="vazio">Nenhum dia encerrado ainda.</div>'}</div>`;
+    } else if (ABA_MESA === 'quadro') {
+      if (!QUADRO) {
+        A.innerHTML = `<div class="caixa bloco"><div class="quadro-bar"><button class="btn mini" id="q-ligar">🧶 Ligar com barbante</button><button class="btn mini sec" id="q-nota">📝 Anotação</button><button class="btn mini sec" id="q-cheia">⛶ Tela cheia</button>
+          <span class="tag" id="q-dica">Arraste fotos e papéis. Para ligar, ative o barbante e clique em dois itens. Clique num barbante para cortar.</span></div>
+          <div class="quadro-wrap"><div class="quadro" id="q-quadro"></div></div><p class="tag">O quadro é da equipe toda: o que um detetive mexe, os outros veem.</p></div>`;
+        QUADRO = montarQuadro($('#q-quadro'), id, () => C, () => Q);
+        let lig = false;
+        $('#q-ligar').onclick = () => { lig = !lig; QUADRO.ligar(lig); $('#q-ligar').textContent = lig ? '✋ Parar de ligar' : '🧶 Ligar com barbante'; $('#q-ligar').classList.toggle('perigo', lig); };
+        $('#q-nota').onclick = () => QUADRO.nota();
+        $('#q-cheia').onclick = () => { const q = $('#q-quadro'); (q.requestFullscreen || q.webkitRequestFullscreen)?.call(q); };
+      }
+      QUADRO.desenhar();
+    }
+  };
+  $('#c-abas').onclick = e => { const b = e.target.closest('[data-aba]'); if (b) { ABA_MESA = b.dataset.aba; desenharTopo(); desenharAba(); } };
+  $('#c-aba').addEventListener('click', async e => {
+    const s = e.target.closest('[data-sala]'); if (s) { abrirRolagem({ ...DETS.find(f => f.id === s.dataset.sala) }, { id, ...C }, { interrogar: C.sala.npc }); return; }
+    const i = e.target.closest('[data-inoc]'); if (i) { const x = C.suspeitos.find(y => y.id === i.dataset.inoc); const v = !inocentado(x, Q); Q = { ...Q, inoc: { ...(Q.inoc || {}), [x.id]: v } }; desenharTopo(); desenharAba(); await salvarQ(id, { inoc: { [x.id]: v } }); }
+  });
+  $('#c-btns').onclick = async e => {
+    const r = e.target.closest('[data-rolar]'); if (r) { abrirRolagem({ ...DETS.find(f => f.id === r.dataset.rolar) }, { id, ...C }); return; }
+    if (e.target.closest('#levar')) {
+      const s = await db.collection('bichos-detetives').where('dono', '==', ME).get();
+      const l = s.docs.map(d => ({ id: d.id, ...d.data() })).filter(f => !DETS.some(x => x.id === f.id));
+      escolherDetetive('Levar qual detetive?', l, async f => { try { await levarDetetive(id, f); toast(`${f.nome} chegou na cena do crime.`); recarregarDets(); } catch (er) { toast('Não deu: ' + er.message); } });
+    }
+  };
+  const desenhar = () => { desenharTopo(); desenharAba(); };
   const desenharFeed = () => { LIDOS = new Set(ROLS.filter(r => r.tipo === 'interrogar' && r.efeitos?.[0]?.iid).map(r => r.efeitos.find(x => x.t === 'ler')?.iid)); $('#c-feed').innerHTML = ROLS.length ? ROLS.map(r => linhaRol(r)).join('') : '<div class="vazio">Silêncio no condado.</div>'; };
   $('#c-feed').addEventListener('click', e => { const b = e.target.closest('[data-ler]'); if (!b) return; const f = DETS.find(x => x.id === b.dataset.ficha); const r = ROLS.find(x => x.id === b.dataset.ler); if (!f) { toast('Esse detetive não está mais na mesa.'); return; } abrirRolagem({ ...f }, { id, ...C }, { ler: r.id, npc: r.npc }); });
-  const recarregarDets = async () => { DETS = await detetivesDoCaso(id); desenhar(); };
+  const recarregarDets = async () => { DETS = await detetivesDoCaso(id); if (ABA_MESA === 'mesa') desenhar(); else desenharTopo(); };
   assinar(ref.onSnapshot(s => { if (s.exists) { C = s.data(); desenhar(); } }));
+  assinar(db.doc(caminhoQ(id)).onSnapshot(s => { Q = s.exists ? (s.data() || {}) : {}; desenhar(); }));
   assinar(db.collection(`bichos-casos/${id}/detetives`).onSnapshot(() => recarregarDets()));
   assinar(db.collection(`bichos-casos/${id}/rolagens`).orderBy('t', 'desc').limit(60).onSnapshot(s => { ROLS = s.docs.map(d => d.data()); desenharFeed(); recarregarDets(); }));
 };
-
 
 /* ---------- histórico de rolagens (todos da mesa veem) ---------- */
 const TIPOS_HIST = { todos: 'Tudo', dados: 'Só rolagens de dados', teste: 'Testes', interrogatorio: 'Interrogatórios', vasculhar: 'Vasculhar', espanto: 'Testes de Espanto', rastro: 'Seguir o Rastro', apertar: 'Apertar', cena: 'Fazer Cena', cobertura: 'Dar Cobertura', culpado: 'Ações do Culpado', sistema: 'Avisos do Mestre' };
@@ -1012,7 +1180,7 @@ ROTAS.escudo = async id => {
   const s0 = await ref.get();
   if (!s0.exists) { app.innerHTML = '<div class="vazio">Esse caso foi arquivado.</div>'; return; }
   if (s0.data().mestre !== ME) { location.hash = 'caso-' + id; return; }
-  let C = s0.data(), E = (await eRef.get()).data() || escudoDe(B.PRONTOS[0]), DETS = [], ROLS = [];
+  let C = s0.data(), E = (await eRef.get()).data() || escudoDe(B.PRONTOS[0]), DETS = [], ROLS = [], QE = {};
   const aplicando = new Set();
   // gravações no caso passam numa fila: update é ler-mesclar-gravar, e duas ao mesmo tempo se atropelam
   let fila = Promise.resolve();
@@ -1178,6 +1346,7 @@ ROTAS.escudo = async id => {
       });
     } else if (ABA_ESCUDO === 'mesa') {
       A.innerHTML = `<div class="caixa bloco"><span class="rotulo">Cena</span><div class="btns">${Object.entries(FASES).map(([k, n]) => `<button class="btn ${C.fase === k ? '' : 'sec'} mini" data-fase="${k}">${n}</button>`).join('')}${C.fase === 'acareacao' ? '<button class="btn perigo mini" id="encerrar">Encerrar Acareação</button>' : ''}</div>
+        <div class="btns" style="align-items:center"><span class="hoje" style="font-size:18px">📅 Dia ${C.dia || 1}</span><button class="btn mini" id="fim-dia">Encerrar o Dia ${C.dia || 1} (fim da sessão)</button></div>
         <div class="campo"><label class="rotulo" for="aviso">Aviso para a mesa</label><input type="text" id="aviso" value="${esc(C.aviso)}" placeholder="Ex.: Todos rolam Espanto!"></div>
         <div class="btns" style="align-items:center"><span class="rotulo">Tamanho da Pilha de Dedução (secreto)</span><span class="big" style="font:400 26px var(--f-disp)">${E.alvo}</span><div class="ctrl"><button data-alvo="-1">−</button><button data-alvo="1">+</button></div></div>
         ${C.fase !== 'acareacao' && DETS.some(f => !f.fora && f.pilha < (C.culpado || 0)) ? '<p class="tag">A Pilha do Culpado já supera a de algum detetive: dá para começar uma Acareação.</p>' : ''}</div>
@@ -1192,6 +1361,12 @@ ROTAS.escudo = async id => {
         await salvarC({ fase: nova }); desenharAba();
       });
       A.querySelector('#encerrar')?.addEventListener('click', async () => { await encerrarAcareacao(false); desenharAba(); });
+      A.querySelector('#fim-dia').onclick = async () => {
+        const n = C.dia || 1, hoje = (C.pistas || []).filter(p => !p.dia).length;
+        if (!confirm(`Encerrar o Dia ${n}? ${hoje} pista(s) de hoje vão para o Calendário e começa o Dia ${n + 1}.`)) return;
+        await salvarC({ pistas: (C.pistas || []).map(p => p.dia ? p : { ...p, dia: n }), dia: n + 1, diasFim: { ...(C.diasFim || {}), [n]: Date.now() } });
+        await postarC(`Fim do Dia ${n}. As pistas foram para o Calendário. Amanhã começa o Dia ${n + 1}.`, 'sistema'); desenharAba();
+      };
       A.querySelector('#aviso').onchange = ev => salvarC({ aviso: ev.target.value.trim() });
       A.querySelectorAll('[data-alvo]').forEach(b => b.onclick = async () => { await salvarE({ alvo: clamp(E.alvo + +b.dataset.alvo, 1, 6) }); desenharAba(); });
       const F_ = x => DETS.find(f => f.id === x);
@@ -1383,11 +1558,11 @@ ROTAS.escudo = async id => {
     } else {
       const faltam = B.PRONTOS.filter(p => !(C.suspeitos || []).some(x => x.id === p.id));
       const falsas = Object.entries(E.inv || {}).filter(([, v]) => v.falsa).map(([k]) => 'p-' + k);
-      A.innerHTML = (faltam.length ? `<div class="caixa btns" style="align-items:center;justify-content:space-between"><span>${faltam.length} suspeito(s) pronto(s) fora do Mural: ${faltam.map(p => esc(p.nome)).join(', ')}</span><button class="btn mini" id="su-prontos">Trazer para o Mural</button></div>` : '') + muralHtml(C, true, falsas) + `<div class="caixa btns" style="align-items:center;justify-content:space-between"><span>Fichas, fotos e suspeitos novos ficam na aba Suspeitos.</span><button class="btn mini" id="su-ir">Abrir fichário</button></div>`;
+      A.innerHTML = (faltam.length ? `<div class="caixa btns" style="align-items:center;justify-content:space-between"><span>${faltam.length} suspeito(s) pronto(s) fora do Mural: ${faltam.map(p => esc(p.nome)).join(', ')}</span><button class="btn mini" id="su-prontos">Trazer para o Mural</button></div>` : '') + muralHtml(C, true, falsas, QE) + `<div class="caixa btns" style="align-items:center;justify-content:space-between"><span>Fichas, fotos e suspeitos novos ficam na aba Suspeitos.</span><button class="btn mini" id="su-ir">Abrir fichário</button></div>`;
       A.querySelectorAll('[data-esconder]').forEach(b => b.onclick = async () => { const p = C.pistas.find(x => x.id === b.dataset.esconder); await salvarC({ pistas: C.pistas.filter(x => x.id !== p.id) }); await salvarE({ pistasOcultas: [...(E.pistasOcultas || []), { id: p.id, txt: p.txt }] }); desenharAba(); });
       A.querySelectorAll('[data-excluir]').forEach(b => b.onclick = async () => { if (!confirm('Excluir esta pista do Mural para sempre?')) return; await salvarC({ pistas: C.pistas.filter(x => x.id !== b.dataset.excluir) }); desenharAba(); });
       A.querySelectorAll('[data-expor]').forEach(b => b.onclick = async () => { const p = C.pistas.find(x => x.id === b.dataset.expor); await salvarC({ pistas: C.pistas.map(x => x.id === p.id ? { ...x, falsa: !x.falsa } : x) }); if (!p.falsa) await postarC('Uma pista do Mural foi exposta como FALSA!', 'sistema'); desenharAba(); });
-      A.querySelectorAll('[data-inoc]').forEach(b => b.onclick = async () => { await salvarC({ suspeitos: C.suspeitos.map(s => s.id === b.dataset.inoc ? { ...s, inocente: !s.inocente } : s) }); desenharAba(); });
+      A.querySelectorAll('[data-inoc]').forEach(b => b.onclick = async () => { const x = C.suspeitos.find(y => y.id === b.dataset.inoc); const v = !inocentado(x, QE); QE = { ...QE, inoc: { ...(QE.inoc || {}), [x.id]: v } }; await salvarQ(id, { inoc: { [x.id]: v } }); desenharAba(); });
       A.querySelectorAll('[data-tirasus]').forEach(b => b.onclick = async () => { if (b.dataset.tirasus === E.pronto) { toast('Esse é o Culpado. Troque o Culpado antes de remover.'); return; } if (!confirm('Remover este suspeito do caso?')) return; await salvarC({ suspeitos: C.suspeitos.filter(s => s.id !== b.dataset.tirasus) }); desenharAba(); });
       A.querySelector('#su-prontos')?.addEventListener('click', async () => { await salvarC({ suspeitos: [...(C.suspeitos || []), ...faltam.map(p => ({ id: p.id, nome: p.nome, especie: p.especie, txt: p.txt, inocente: false }))] }); desenharAba(); });
       A.querySelector('#su-ir').onclick = () => { ABA_ESCUDO = 'suspeitos'; desenharAba(); };
@@ -1399,6 +1574,7 @@ ROTAS.escudo = async id => {
   const ocupado = () => document.activeElement?.matches('input, textarea, select') && $('#aba').contains(document.activeElement);
   desenhar(); desenharAba();
   assinar(ref.onSnapshot(s => { if (!s.exists) return; C = s.data(); desenhar(); if (!ocupado()) desenharAba(); }));
+  assinar(db.doc(caminhoQ(id)).onSnapshot(s => { QE = s.exists ? (s.data() || {}) : {}; if (ABA_ESCUDO === 'mural' && !ocupado()) desenharAba(); }));
   assinar(eRef.onSnapshot(s => { if (!s.exists) return; E = s.data(); desenhar(); if (!ocupado()) desenharAba(); }));
   const recarregarDets = async () => { DETS = await detetivesDoCaso(id); if (!ocupado()) desenharAba(); };
   assinar(db.collection(`bichos-casos/${id}/detetives`).onSnapshot(() => recarregarDets()));

@@ -55,6 +55,10 @@ begin
       return coalesce(velho->>'por', d->>'por') = u
           or exists (select 1 from public.docs f where f.path = 'bichos-detetives/' || s[4] and f.dados->>'dono' = u);
     end if;
+    -- quadro da equipe (suspeitos inocentados, quadro criminal): qualquer membro do caso
+    if s[3] = 'quadro' then
+      return exists (select 1 from public.docs m where m.path = 'bichos-casos/' || s[2] || '/membros/' || u);
+    end if;
     return false;
   end if;
 
