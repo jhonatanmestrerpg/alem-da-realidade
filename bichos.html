@@ -303,11 +303,19 @@ textarea { min-height: 80px; resize: vertical; }
 body.arrastando-q { user-select: none; -webkit-user-select: none; }
 .quadro-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .quadro-bar .tag { font-size: 12px; }
-.quadro-wrap { overflow: auto; border: 3px solid #000; border-radius: 10px; box-shadow: 4px 4px 0 #000; background: #3b2412; }
-.quadro { position: relative; width: 100%; min-width: 980px; aspect-ratio: 16 / 10; touch-action: none; user-select: none;
+.quadro-wrap { overflow: auto; border: 3px solid #000; border-radius: 10px; box-shadow: 4px 4px 0 #000; background: #2a190c; max-height: 78vh; -webkit-overflow-scrolling: touch; }
+.quadro-wrap:fullscreen, .quadro-wrap.tela-cheia { max-height: none; width: 100vw; height: 100vh; height: 100dvh; border: 0; border-radius: 0; }
+.quadro-wrap.tela-cheia { position: fixed; inset: 0; z-index: 40; }
+body.quadro-cheio { overflow: hidden; }
+.quadro-palco { position: relative; margin: 0 auto; }
+.quadro-zoom { display: inline-flex; gap: 4px; align-items: center; }
+.quadro-zoom span { font: 12px var(--f-maq); color: var(--texto-dim); min-width: 42px; text-align: center; }
+.quadro-wrap:fullscreen .q-fs-bar, .quadro-wrap.tela-cheia .q-fs-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(14px, env(safe-area-inset-bottom)); z-index: 41; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.q-fs-bar #q-sair { font-size: 15px; padding: 8px 16px; }
+.q-fs-bar { display: none; }
+.quadro { position: absolute; left: 0; top: 0; width: 1600px; height: 1000px; transform-origin: 0 0; user-select: none;
   background: radial-gradient(circle at 20% 30%, rgba(255,255,255,.05) 0 2px, transparent 3px) 0 0 / 14px 14px, radial-gradient(circle at 70% 60%, rgba(0,0,0,.18) 0 2px, transparent 3px) 0 0 / 11px 11px, linear-gradient(135deg, #b98a55, #a77744 50%, #b48552);
   box-shadow: inset 0 0 0 14px #6b4424, inset 0 0 0 17px #000, inset 0 0 60px rgba(0,0,0,.45); }
-.quadro:fullscreen { min-width: 0; width: 100vw; height: 100vh; aspect-ratio: auto; }
 .quadro svg.fios { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
 .quadro svg.fios line { stroke: #c0161d; stroke-width: 3; stroke-linecap: round; filter: drop-shadow(1px 2px 1px rgba(0,0,0,.5)); }
 .quadro svg.fios line.hit { stroke: transparent; stroke-width: 16; pointer-events: stroke; cursor: pointer; filter: none; }
@@ -999,7 +1007,7 @@ function montarQuadro(el, id, getC, getQ) {
         const st = `left:${it.pos.x}%;top:${it.pos.y}%;--r:${it.r}deg${Z[it.k] ? ';z-index:' + Z[it.k] : ''}`, c = `q-item ${sel === it.k ? 'sel' : ''}`;
         if (it.tipo === 's') return `<div class="${c} q-pol ${inocentado(it.x, Q) ? 'inoc' : ''}" data-k="${it.k}" style="${st}" title="${esc(it.x.txt)}"><div class="ft" style="${it.x.foto ? `background-image:url('${esc(it.x.foto)}')` : ''}">${it.x.foto ? '' : esc(iniciais(it.x.nome))}</div><b>${esc(it.x.nome)}</b><span>${esc(it.x.especie)}</span></div>`;
         if (it.tipo === 'p') return `<div class="${c} q-pap ${it.x.falsa ? 'falsa' : ''}" data-k="${it.k}" style="${st}" title="${esc(it.x.txt)}"><span class="dia-t">${it.x.dia ? 'Dia ' + it.x.dia : 'Hoje'}</span>${esc(it.x.txt.length > 150 ? it.x.txt.slice(0, 147) + '…' : it.x.txt)}</div>`;
-        return `<div class="${c} q-nota" data-k="${it.k}" style="${st}" title="Duplo clique para editar">${esc(it.x.txt)}</div>`;
+        return `<div class="${c} q-nota" data-k="${it.k}" style="${st}" title="Toque para ler ou editar">${esc(it.x.txt)}</div>`;
       }).join('')}`;
   };
   // arrastar
@@ -1021,7 +1029,18 @@ function montarQuadro(el, id, getC, getQ) {
   const soltar = async () => {
     if (!arr) return; const a = arr; arr = null; a.el.classList.remove('arrastando'); document.body.classList.remove('arrastando-q');
     if (a.moveu && a.x != null) { const Q = getQ() || {}; Q.pos = { ...(Q.pos || {}), [a.k]: { x: +a.x.toFixed(2), y: +a.y.toFixed(2) } }; desenhar(); await salvarQ(id, { pos: { [a.k]: Q.pos[a.k] } }); }
-    else desenhar();
+    else { desenhar(); abrirItem(a.k); }
+  };
+  const abrirItem = k => {
+    const C = getC(), Q = getQ() || {}, [t, iid] = [k.slice(0, 1), k.slice(2)];
+    if (t === 's') { const x = (C.suspeitos || []).find(y => y.id === iid); if (!x) return; abrirModal(x.nome, `<div class="btns" style="align-items:center"><span class="foto-s g" style="${x.foto ? `background-image:url('${esc(x.foto)}')` : ''}">${x.foto ? '' : esc(iniciais(x.nome))}</span><div><span class="tag">${esc(x.especie)}</span>${inocentado(x, Q) ? ' <span class="tag" style="color:var(--teal)">Inocentado</span>' : ''}</div></div><p>${nl(x.txt)}</p>`); return; }
+    if (t === 'p') { const x = todasPistas(C).find(y => y.id === iid); if (!x) return; abrirModal(x.dia ? `Pista do Dia ${x.dia}` : 'Pista de hoje', `<div class="pista ${x.falsa ? 'falsa' : ''}" style="font-size:16px">${nl(x.txt)}</div>`); return; }
+    const atual = Q.notas?.[iid]?.txt || '';
+    abrirModal('Anotação', `<textarea id="nt-t" style="min-height:120px">${esc(atual)}</textarea><div class="btns"><button class="btn" id="nt-ok">Salvar</button><button class="btn perigo" id="nt-del">Arrancar do quadro</button></div>`, (m, fechar) => {
+      const gravar = async v => { const Q2 = getQ() || {}; Q2.notas = { ...(Q2.notas || {}), [iid]: v }; fechar(); desenhar(); await salvarQ(id, { notas: { [iid]: v } }); };
+      m.querySelector('#nt-ok').onclick = () => { const v = m.querySelector('#nt-t').value.trim(); gravar(v ? { txt: v } : null); };
+      m.querySelector('#nt-del').onclick = () => gravar(null);
+    });
   };
   el.addEventListener('pointerup', soltar); el.addEventListener('pointercancel', soltar);
   // ligar com barbante / cortar barbante
@@ -1034,13 +1053,6 @@ function montarQuadro(el, id, getC, getQ) {
     if (sel === it.dataset.k) { sel = null; desenhar(); return; }
     const k = [sel, it.dataset.k].sort().join('|'); sel = null;
     const Q = getQ() || {}; Q.fios = { ...(Q.fios || {}), [k]: true }; desenhar(); await salvarQ(id, { fios: { [k]: true } });
-  });
-  el.addEventListener('dblclick', async e => {
-    const it = e.target.closest('.q-item[data-k^="n:"]'); if (!it) return;
-    const nid = it.dataset.k.slice(2), Q = getQ() || {}, atual = Q.notas?.[nid]?.txt || '';
-    const txt = prompt('Anotação (deixe vazio para arrancar do quadro):', atual); if (txt === null) return;
-    Q.notas = { ...(Q.notas || {}), [nid]: txt.trim() ? { txt: txt.trim() } : null }; desenhar();
-    await salvarQ(id, { notas: { [nid]: Q.notas[nid] } });
   });
   return {
     desenhar,
@@ -1098,14 +1110,29 @@ ROTAS.caso = async id => {
         ${ns.map(n => `<details class="dia" ${n === ns[0] ? 'open' : ''}><summary>Dia ${n}<span>${(dias[n] || []).length} pista(s)${C.diasFim?.[n] ? ' · encerrado em ' + new Date(C.diasFim[n]).toLocaleDateString('pt-BR') : ''}</span></summary><div class="mural">${(dias[n] || []).map(papelPista).join('') || '<div class="vazio">Nenhuma pista neste dia.</div>'}</div></details>`).join('') || '<div class="vazio">Nenhum dia encerrado ainda.</div>'}</div>`;
     } else if (ABA_MESA === 'quadro') {
       if (!QUADRO) {
-        A.innerHTML = `<div class="caixa bloco"><div class="quadro-bar"><button class="btn mini" id="q-ligar">🧶 Ligar com barbante</button><button class="btn mini sec" id="q-nota">📝 Anotação</button><button class="btn mini sec" id="q-cheia">⛶ Tela cheia</button>
-          <span class="tag" id="q-dica">Arraste fotos e papéis. Para ligar, ative o barbante e clique em dois itens. Clique num barbante para cortar.</span></div>
-          <div class="quadro-wrap"><div class="quadro" id="q-quadro"></div></div><p class="tag">O quadro é da equipe toda: o que um detetive mexe, os outros veem.</p></div>`;
+        A.innerHTML = `<div class="caixa bloco"><div class="quadro-bar"><button class="btn mini" id="q-ligar">🧶 Ligar com barbante</button><button class="btn mini sec" id="q-nota">📝 Anotação</button><button class="btn mini sec" id="q-cheia">⛶ Tela cheia</button><span class="quadro-zoom"><button class="btn mini sec" data-zoom="-1" aria-label="Diminuir">−</button><span id="q-zv">100%</span><button class="btn mini sec" data-zoom="1" aria-label="Aumentar">+</button><button class="btn mini sec" data-zoom="0">Ajustar</button></span>
+          <span class="tag" id="q-dica">Arraste fotos e papéis. Toque num item para ler. Para ligar, ative o barbante e toque em dois itens. Toque num barbante para cortar.</span></div>
+          <div class="quadro-wrap" id="q-wrap"><div class="quadro-palco" id="q-palco"><div class="quadro" id="q-quadro"></div></div><div class="q-fs-bar"><button class="btn mini" data-zoom="-1">−</button><button class="btn mini" data-zoom="1">+</button><button class="btn mini" data-zoom="0">Ajustar</button><button class="btn mini perigo" id="q-sair">✕ Sair do quadro</button></div></div><p class="tag">O quadro é da equipe toda: o que um detetive mexe, os outros veem.</p></div>`;
         QUADRO = montarQuadro($('#q-quadro'), id, () => C, () => Q);
         let lig = false;
         $('#q-ligar').onclick = () => { lig = !lig; QUADRO.ligar(lig); $('#q-ligar').textContent = lig ? '✋ Parar de ligar' : '🧶 Ligar com barbante'; $('#q-ligar').classList.toggle('perigo', lig); };
         $('#q-nota').onclick = () => QUADRO.nota();
-        $('#q-cheia').onclick = () => { const q = $('#q-quadro'); (q.requestFullscreen || q.webkitRequestFullscreen)?.call(q); };
+        // o quadro é uma tela fixa de 1600x1000 que escala por inteiro: no celular fica igual ao computador, só menor
+        let zoom = null, manual = false;
+        const wrap = $('#q-wrap'), palco = $('#q-palco'), qd = $('#q-quadro');
+        const caber = () => { const cheio = document.fullscreenElement === wrap || wrap.classList.contains('tela-cheia'); const w = wrap.clientWidth - 6, h = (cheio ? wrap.clientHeight - 60 : Infinity) - 6; return Math.max(.2, Math.min(w / 1600, h / 1000, 1.4)); };
+        const aplicar = z => { zoom = Math.max(.2, Math.min(2, z)); qd.style.transform = `scale(${zoom})`; palco.style.width = 1600 * zoom + 'px'; palco.style.height = 1000 * zoom + 'px'; $('#q-zv').textContent = Math.round(zoom * 100) + '%'; };
+        const inicial = () => Math.max(caber(), (document.fullscreenElement === wrap || wrap.classList.contains('tela-cheia')) ? .45 : .55);
+        aplicar(inicial());
+        A.querySelectorAll('[data-zoom]').forEach(b => b.onclick = () => { const d = +b.dataset.zoom; manual = d !== 0; aplicar(d ? zoom * (d > 0 ? 1.25 : 0.8) : caber()); });
+        const reajustar = () => { if (!manual && $('#q-wrap')) aplicar(inicial()); };
+        addEventListener('resize', reajustar); document.addEventListener('fullscreenchange', () => { manual = false; setTimeout(reajustar, 50); });
+        assinar(() => removeEventListener('resize', reajustar));
+        // tela cheia de verdade quando o navegador deixa; no iPhone (sem a API para elementos) imita com position: fixed
+        const pseudo = v => { wrap.classList.toggle('tela-cheia', v); document.body.classList.toggle('quadro-cheio', v); manual = false; setTimeout(reajustar, 30); };
+        $('#q-cheia').onclick = async () => { const f = wrap.requestFullscreen || wrap.webkitRequestFullscreen; if (f) { try { await f.call(wrap); return; } catch (e) {} } pseudo(true); };
+        $('#q-sair').onclick = () => { if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document); pseudo(false); };
+        assinar(() => { document.body.classList.remove('quadro-cheio'); if (document.fullscreenElement) document.exitFullscreen?.(); });
       }
       QUADRO.desenhar();
     }

@@ -845,7 +845,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261103033000';
+const BUILD = '20261103034000';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
