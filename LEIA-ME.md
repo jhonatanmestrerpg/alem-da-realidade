@@ -10,8 +10,8 @@ Site estático (HTML, CSS e JS puros). O banco, o login e as imagens ficam no pr
 | `banco.js` | Ponte com o Supabase: documentos JSON, consultas e tempo real |
 | `config.js` | URL do projeto e chave publishable |
 | `schema.sql` | Tabelas, regras de acesso (RLS), bucket de imagens e tempo real |
-| `deu-a-louca-nos-bichos/` | Site próprio de *Deu a Louca nos Bichos* (ver o LEIA-ME de dentro da pasta). Usa este mesmo banco e login |
-| `bichos.html` | Endereço antigo dos Bichos: redireciona para `deu-a-louca-nos-bichos/` |
+| `deu-a-louca-nos-bichos/` | Só redireciona: *Deu a Louca nos Bichos* mudou para https://brutal-rpg.onrender.com/bichos/ (repositório `brutal`) |
+| `bichos.html` | Endereço antigo dos Bichos: redireciona para o site do Brutal |
 | `dados/` | Livro do A.R.RPG em JSON, bestiário com fichas de combate, rituais |
 | `img/criaturas/` | As 111 imagens do bestiário |
 
