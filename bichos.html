@@ -318,7 +318,7 @@ body.quadro-cheio { overflow: hidden; }
   box-shadow: inset 0 0 0 14px #6b4424, inset 0 0 0 17px #000, inset 0 0 60px rgba(0,0,0,.45); }
 .quadro svg.fios { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
 .quadro svg.fios line { stroke: #c0161d; stroke-width: 3; stroke-linecap: round; filter: drop-shadow(1px 2px 1px rgba(0,0,0,.5)); }
-.quadro svg.fios line.hit { stroke: transparent; stroke-width: 16; pointer-events: stroke; cursor: pointer; filter: none; }
+.quadro svg.fios line.hit { stroke: transparent; stroke-width: 34; pointer-events: stroke; cursor: pointer; filter: none; }
 .quadro.ligando svg.fios line.hit:hover + line, .quadro svg.fios line.hit:hover + line { stroke: #ff5a5f; }
 .q-item { position: absolute; z-index: 2; transform: translate(-50%, -50%) rotate(var(--r, 0deg)); cursor: grab; touch-action: none; }
 .q-item.arrastando { cursor: grabbing; z-index: 5; filter: drop-shadow(6px 10px 6px rgba(0,0,0,.45)); }
@@ -335,6 +335,8 @@ body.quadro-cheio { overflow: hidden; }
 .q-pap.falsa { background: repeating-linear-gradient(-45deg, #f3e6c8 0 12px, #efd6a0 12px 24px); }
 .q-pap.falsa::after { content: "FALSA"; position: absolute; right: 6px; bottom: 4px; font: 400 15px var(--f-disp); color: var(--vermelho); transform: rotate(-8deg); }
 .q-nota { width: 140px; min-height: 90px; background: #ffe36e; padding: 12px 10px 10px; box-shadow: 2px 4px 6px rgba(0,0,0,.4); font: italic 14px/1.3 var(--f-body); color: #3a2a00; white-space: pre-wrap; }
+.fios-lista { display: grid; gap: 6px; border-top: 2px dashed var(--tabua-2); padding-top: 10px; }
+.fios-lista .linha { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 10px; background: #120b06; border-left: 4px solid #c0161d; border-radius: 4px; font-size: 14px; }
 .codigo { font: 15px var(--f-maq); background: #000; color: var(--fita); padding: 6px 10px; border-radius: 4px; user-select: all; word-break: break-all; }
 @media (max-width: 960px) { .mesa { grid-template-columns: 1fr; } .feed { max-height: none; } }
 
@@ -1031,15 +1033,25 @@ function montarQuadro(el, id, getC, getQ) {
     if (a.moveu && a.x != null) { const Q = getQ() || {}; Q.pos = { ...(Q.pos || {}), [a.k]: { x: +a.x.toFixed(2), y: +a.y.toFixed(2) } }; desenhar(); await salvarQ(id, { pos: { [a.k]: Q.pos[a.k] } }); }
     else { desenhar(); abrirItem(a.k); }
   };
+  const rotulo = k => { const C = getC(), Q = getQ() || {}, t = k[0], i = k.slice(2); if (t === 's') return '🖼️ ' + ((C.suspeitos || []).find(x => x.id === i)?.nome || '?'); if (t === 'p') { const x = todasPistas(C).find(y => y.id === i)?.txt || '?'; return '📄 ' + (x.length > 50 ? x.slice(0, 48) + '…' : x); } const n = Q.notas?.[i]?.txt || '?'; return '📝 ' + (n.length > 50 ? n.slice(0, 48) + '…' : n); };
+  const fiosDe = k => Object.entries((getQ() || {}).fios || {}).filter(([f, v]) => v && f.split('|').includes(k)).map(([f]) => f);
+  const cortar = async lista => { const Q = getQ() || {}, p = Object.fromEntries(lista.map(f => [f, null])); Q.fios = { ...(Q.fios || {}), ...p }; desenhar(); await salvarQ(id, { fios: p }); };
+  const blocoFios = k => { const l = fiosDe(k); return `<div class="fios-lista"><span class="rotulo">🧶 Barbantes (${l.length})</span>${l.map(f => `<div class="linha"><span>${esc(rotulo(f.split('|').find(x => x !== k)))}</span><button class="btn mini perigo" data-cortar="${esc(f)}">✂️ Cortar</button></div>`).join('') || '<span class="tag">Nada ligado aqui. Use "Ligar com barbante".</span>'}${l.length > 1 ? '<button class="btn mini perigo" data-cortar-todos style="justify-self:start">✂️ Cortar todos</button>' : ''}</div>`; };
+  const ligarCortes = (m, k, reabrir) => {
+    m.querySelectorAll('[data-cortar]').forEach(b => b.onclick = async () => { await cortar([b.dataset.cortar]); reabrir(); });
+    m.querySelector('[data-cortar-todos]')?.addEventListener('click', async () => { if (!confirm('Cortar todos os barbantes deste item?')) return; await cortar(fiosDe(k)); reabrir(); });
+  };
   const abrirItem = k => {
     const C = getC(), Q = getQ() || {}, [t, iid] = [k.slice(0, 1), k.slice(2)];
-    if (t === 's') { const x = (C.suspeitos || []).find(y => y.id === iid); if (!x) return; abrirModal(x.nome, `<div class="btns" style="align-items:center"><span class="foto-s g" style="${x.foto ? `background-image:url('${esc(x.foto)}')` : ''}">${x.foto ? '' : esc(iniciais(x.nome))}</span><div><span class="tag">${esc(x.especie)}</span>${inocentado(x, Q) ? ' <span class="tag" style="color:var(--teal)">Inocentado</span>' : ''}</div></div><p>${nl(x.txt)}</p>`); return; }
-    if (t === 'p') { const x = todasPistas(C).find(y => y.id === iid); if (!x) return; abrirModal(x.dia ? `Pista do Dia ${x.dia}` : 'Pista de hoje', `<div class="pista ${x.falsa ? 'falsa' : ''}" style="font-size:16px">${nl(x.txt)}</div>`); return; }
+    const reabrir = () => abrirItem(k);
+    if (t === 's') { const x = (C.suspeitos || []).find(y => y.id === iid); if (!x) return; abrirModal(x.nome, `<div class="btns" style="align-items:center"><span class="foto-s g" style="${x.foto ? `background-image:url('${esc(x.foto)}')` : ''}">${x.foto ? '' : esc(iniciais(x.nome))}</span><div><span class="tag">${esc(x.especie)}</span>${inocentado(x, Q) ? ' <span class="tag" style="color:var(--teal)">Inocentado</span>' : ''}</div></div><p>${nl(x.txt)}</p>${blocoFios(k)}`, m => ligarCortes(m, k, reabrir)); return; }
+    if (t === 'p') { const x = todasPistas(C).find(y => y.id === iid); if (!x) return; abrirModal(x.dia ? `Pista do Dia ${x.dia}` : 'Pista de hoje', `<div class="pista ${x.falsa ? 'falsa' : ''}" style="font-size:16px">${nl(x.txt)}</div>${blocoFios(k)}`, m => ligarCortes(m, k, reabrir)); return; }
     const atual = Q.notas?.[iid]?.txt || '';
-    abrirModal('Anotação', `<textarea id="nt-t" style="min-height:120px">${esc(atual)}</textarea><div class="btns"><button class="btn" id="nt-ok">Salvar</button><button class="btn perigo" id="nt-del">Arrancar do quadro</button></div>`, (m, fechar) => {
+    abrirModal('Anotação', `<textarea id="nt-t" style="min-height:120px">${esc(atual)}</textarea><div class="btns"><button class="btn" id="nt-ok">Salvar</button><button class="btn perigo" id="nt-del">Arrancar do quadro</button></div>${blocoFios(k)}`, (m, fechar) => {
+      ligarCortes(m, k, reabrir);
       const gravar = async v => { const Q2 = getQ() || {}; Q2.notas = { ...(Q2.notas || {}), [iid]: v }; fechar(); desenhar(); await salvarQ(id, { notas: { [iid]: v } }); };
       m.querySelector('#nt-ok').onclick = () => { const v = m.querySelector('#nt-t').value.trim(); gravar(v ? { txt: v } : null); };
-      m.querySelector('#nt-del').onclick = () => gravar(null);
+      m.querySelector('#nt-del').onclick = async () => { const l = fiosDe(k); if (l.length) await cortar(l); gravar(null); };
     });
   };
   el.addEventListener('pointerup', soltar); el.addEventListener('pointercancel', soltar);
@@ -1111,7 +1123,7 @@ ROTAS.caso = async id => {
     } else if (ABA_MESA === 'quadro') {
       if (!QUADRO) {
         A.innerHTML = `<div class="caixa bloco"><div class="quadro-bar"><button class="btn mini" id="q-ligar">🧶 Ligar com barbante</button><button class="btn mini sec" id="q-nota">📝 Anotação</button><button class="btn mini sec" id="q-cheia">⛶ Tela cheia</button><span class="quadro-zoom"><button class="btn mini sec" data-zoom="-1" aria-label="Diminuir">−</button><span id="q-zv">100%</span><button class="btn mini sec" data-zoom="1" aria-label="Aumentar">+</button><button class="btn mini sec" data-zoom="0">Ajustar</button></span>
-          <span class="tag" id="q-dica">Arraste fotos e papéis. Toque num item para ler. Para ligar, ative o barbante e toque em dois itens. Toque num barbante para cortar.</span></div>
+          <span class="tag" id="q-dica">Arraste fotos e papéis. Toque num item para ler e ver ou cortar os barbantes dele. Para ligar, ative o barbante e toque em dois itens.</span></div>
           <div class="quadro-wrap" id="q-wrap"><div class="quadro-palco" id="q-palco"><div class="quadro" id="q-quadro"></div></div><div class="q-fs-bar"><button class="btn mini" data-zoom="-1">−</button><button class="btn mini" data-zoom="1">+</button><button class="btn mini" data-zoom="0">Ajustar</button><button class="btn mini perigo" id="q-sair">✕ Sair do quadro</button></div></div><p class="tag">O quadro é da equipe toda: o que um detetive mexe, os outros veem.</p></div>`;
         QUADRO = montarQuadro($('#q-quadro'), id, () => C, () => Q);
         let lig = false;
