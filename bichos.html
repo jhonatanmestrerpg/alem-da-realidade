@@ -313,6 +313,8 @@ body.quadro-cheio { overflow: hidden; }
 .quadro-wrap:fullscreen .q-fs-bar, .quadro-wrap.tela-cheia .q-fs-bar { position: fixed; right: max(10px, env(safe-area-inset-right)); top: max(10px, env(safe-area-inset-top)); background: rgba(18,11,6,.85); padding: 6px; border-radius: 10px; border: 2px solid #000; z-index: 41; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 .q-fs-bar { flex-wrap: nowrap !important; } .q-fs-bar .btn { min-width: 38px; padding: 6px 9px; font-size: 15px; } .q-fs-bar #q-sair { padding: 6px 12px; }
 .q-fs-bar { display: none; }
+.q-fs-bar.recolhida > :not([data-recolher]) { display: none; }
+.q-fs-bar [data-recolher] { font-size: 17px; }
 .quadro { position: absolute; left: 0; top: 0; width: 1600px; height: 1000px; transform-origin: 0 0; user-select: none;
   background: radial-gradient(circle at 20% 30%, rgba(255,255,255,.05) 0 2px, transparent 3px) 0 0 / 14px 14px, radial-gradient(circle at 70% 60%, rgba(0,0,0,.18) 0 2px, transparent 3px) 0 0 / 11px 11px, linear-gradient(135deg, #b98a55, #a77744 50%, #b48552);
   box-shadow: inset 0 0 0 14px #6b4424, inset 0 0 0 17px #000, inset 0 0 60px rgba(0,0,0,.45); }
@@ -323,6 +325,7 @@ body.quadro-cheio { overflow: hidden; }
 .q-item { position: absolute; z-index: 2; transform: translate(-50%, -50%) rotate(var(--r, 0deg)); cursor: grab; touch-action: none; }
 .q-item.arrastando { cursor: grabbing; z-index: 5; filter: drop-shadow(6px 10px 6px rgba(0,0,0,.45)); }
 .q-item::before { content: ""; position: absolute; top: -7px; left: 50%; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ff7b7b, #b3141b 60%); border: 1px solid #000; box-shadow: 1px 2px 2px rgba(0,0,0,.5); z-index: 3; }
+.q-item.solto::before { background: radial-gradient(circle at 35% 35%, #7a7a7a, #111 60%); }
 .q-item.sel { outline: 3px dashed #c0161d; outline-offset: 4px; }
 .q-pol { width: 112px; background: #fbf6ea; padding: 7px 7px 6px; box-shadow: 2px 4px 6px rgba(0,0,0,.45); text-align: center; color: var(--tinta); }
 .q-pol .ft { width: 98px; height: 98px; background: #3a2716 center/cover no-repeat; display: grid; place-items: center; font: 400 30px var(--f-disp); color: #c9b48e; }
@@ -1033,10 +1036,11 @@ function montarQuadro(el, id, getC, getQ) {
     if (arr) return;
     const C = getC(), Q = getQ() || {}, its = itens(), at = Object.fromEntries(its.map(i => [i.k, i]));
     const fios = Object.entries(Q.fios || {}).filter(([k, v]) => v && k.split('|').every(x => at[x]));
+    const ligados = new Set(fios.flatMap(([k]) => k.split('|')));
     el.classList.toggle('ligando', ligando);
     el.innerHTML = `<svg class="fios">${fios.map(([k]) => { const [ka, kb] = k.split('|'), a = at[ka].pos, b = at[kb].pos, d = `data-a="${esc(ka)}" data-b="${esc(kb)}" x1="${a.x}%" y1="${a.y}%" x2="${b.x}%" y2="${b.y}%"`; return `<line class="hit" data-fio="${esc(k)}" ${d}></line><line ${d}></line>`; }).join('')}</svg>
       ${its.map(it => {
-        const st = `left:${it.pos.x}%;top:${it.pos.y}%;--r:${it.r}deg${Z[it.k] ? ';z-index:' + Z[it.k] : ''}`, c = `q-item ${sel === it.k ? 'sel' : ''}`;
+        const st = `left:${it.pos.x}%;top:${it.pos.y}%;--r:${it.r}deg${Z[it.k] ? ';z-index:' + Z[it.k] : ''}`, c = `q-item ${sel === it.k ? 'sel' : ''} ${ligados.has(it.k) ? '' : 'solto'}`;
         if (it.tipo === 's') return `<div class="${c} q-pol ${inocentado(it.x, Q) ? 'inoc' : ''}" data-k="${it.k}" style="${st}" title="${esc(it.x.txt)}"><div class="ft" style="${it.x.foto ? `background-image:url('${esc(it.x.foto)}')` : ''}">${it.x.foto ? '' : esc(iniciais(it.x.nome))}</div><b>${esc(it.x.nome)}</b><span>${esc(it.x.especie)}</span></div>`;
         if (it.tipo === 'p') return `<div class="${c} q-pap ${it.x.falsa ? 'falsa' : ''}" data-k="${it.k}" style="${st}" title="${esc(it.x.txt)}"><span class="dia-t">${it.x.dia ? 'Dia ' + it.x.dia : 'Hoje'}</span>${esc(it.x.txt.length > 150 ? it.x.txt.slice(0, 147) + '…' : it.x.txt)}</div>`;
         return `<div class="${c} q-nota" data-k="${it.k}" style="${st}" title="Toque para ler ou editar">${esc(it.x.txt)}</div>`;
@@ -1154,7 +1158,7 @@ ROTAS.caso = async id => {
       if (!QUADRO) {
         A.innerHTML = `<div class="caixa bloco"><div class="quadro-bar"><button class="btn mini" id="q-ligar" data-ligar>🧶 Ligar com barbante</button><button class="btn mini sec" id="q-nota" data-nota>📝 Anotação</button><button class="btn mini sec" id="q-cheia">⛶ Tela cheia</button><span class="quadro-zoom"><button class="btn mini sec" data-zoom="-1" aria-label="Diminuir">−</button><span id="q-zv">100%</span><button class="btn mini sec" data-zoom="1" aria-label="Aumentar">+</button><button class="btn mini sec" data-zoom="0">Ajustar</button></span>
           <span class="tag" id="q-dica">Arraste fotos e papéis. Toque num item para ler e ver ou cortar os barbantes dele. Para ligar, ative o barbante e toque em dois itens.</span></div>
-          <div class="quadro-wrap" id="q-wrap"><div class="quadro-palco" id="q-palco"><div class="quadro" id="q-quadro"></div></div><div class="q-fs-bar"><button class="btn mini" data-ligar title="Ligar com barbante" aria-label="Ligar com barbante">🧶</button><button class="btn mini sec" data-nota title="Anotação" aria-label="Anotação">📝</button><button class="btn mini sec" data-zoom="-1" aria-label="Diminuir">−</button><button class="btn mini sec" data-zoom="1" aria-label="Aumentar">+</button><button class="btn mini sec" data-zoom="0" title="Ver o quadro inteiro" aria-label="Ajustar">⤢</button><button class="btn mini perigo" id="q-sair">✕ Sair</button></div></div><p class="tag">O quadro é da equipe toda: o que um detetive mexe, os outros veem.</p></div>`;
+          <div class="quadro-wrap" id="q-wrap"><div class="quadro-palco" id="q-palco"><div class="quadro" id="q-quadro"></div></div><div class="q-fs-bar" id="q-fs-bar"><button class="btn mini sec" data-recolher title="Recolher o painel" aria-label="Recolher o painel">»</button><button class="btn mini" data-ligar title="Ligar com barbante" aria-label="Ligar com barbante">🧶</button><button class="btn mini sec" data-nota title="Anotação" aria-label="Anotação">📝</button><button class="btn mini sec" data-zoom="-1" aria-label="Diminuir">−</button><button class="btn mini sec" data-zoom="1" aria-label="Aumentar">+</button><button class="btn mini sec" data-zoom="0" title="Ver o quadro inteiro" aria-label="Ajustar">⤢</button><button class="btn mini perigo" id="q-sair">✕ Sair</button></div></div><p class="tag">O quadro é da equipe toda: o que um detetive mexe, os outros veem.</p></div>`;
         QUADRO = montarQuadro($('#q-quadro'), id, () => C, () => Q);
         let lig = false;
         A.querySelectorAll('[data-ligar]').forEach(b => b.onclick = () => { lig = !lig; QUADRO.ligar(lig); A.querySelectorAll('[data-ligar]').forEach(x => { x.textContent = x.id ? (lig ? '✋ Parar de ligar' : '🧶 Ligar com barbante') : (lig ? '✋' : '🧶'); x.classList.toggle('perigo', lig); }); });
@@ -1172,6 +1176,12 @@ ROTAS.caso = async id => {
         assinar(() => removeEventListener('resize', reajustar));
         // tela cheia de verdade quando o navegador deixa; no iPhone (sem a API para elementos) imita com position: fixed
         const pseudo = v => { wrap.classList.toggle('tela-cheia', v); document.body.classList.toggle('quadro-cheio', v); manual = false; setTimeout(reajustar, 30); };
+        const barra = $('#q-fs-bar'), rec = barra.querySelector('[data-recolher]');
+        const recolher = v => { barra.classList.toggle('recolhida', v); rec.textContent = v ? '☰' : '»'; rec.title = rec.ariaLabel = v ? 'Abrir o painel' : 'Recolher o painel'; try { localStorage.setItem('bichos-painel', v ? '1' : ''); } catch (e) {} };
+        try { recolher(!!localStorage.getItem('bichos-painel')); } catch (e) {}
+        rec.onclick = () => recolher(!barra.classList.contains('recolhida'));
+        // a tela cheia do Android termina de abrir depois do evento: reajusta sempre que o tamanho do quadro muda
+        if (window.ResizeObserver) { const ro = new ResizeObserver(() => reajustar()); ro.observe(wrap); assinar(() => ro.disconnect()); }
         $('#q-cheia').onclick = async () => { const f = wrap.requestFullscreen || wrap.webkitRequestFullscreen; if (f) { try { await f.call(wrap); return; } catch (e) {} } pseudo(true); };
         $('#q-sair').onclick = () => { if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document); pseudo(false); };
         assinar(() => { document.body.classList.remove('quadro-cheio'); if (document.fullscreenElement) document.exitFullscreen?.(); });
