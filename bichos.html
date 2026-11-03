@@ -27,6 +27,7 @@
   --f-body: 'Nunito', system-ui, sans-serif;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { background: var(--madeira); }
 body { margin: 0; color: var(--texto); font: 16px/1.55 var(--f-body); min-height: 100vh;
   background: radial-gradient(70vmax 50vmax at 50% -10%, rgba(242,182,50,.16), transparent 60%),
@@ -266,6 +267,11 @@ textarea { min-height: 80px; resize: vertical; }
 .hist-resumo .det-mesa { grid-template-columns: auto 1fr; }
 .hist-dia { font: 400 18px var(--f-disp); color: var(--ambar); margin: 10px 0 2px; }
 .feed.cheio { max-height: none; }
+.sala { display: grid; gap: 8px; padding: 14px; border: 3px solid #000; border-radius: 10px; background: linear-gradient(180deg, #1d2a3a, #121a24); box-shadow: 0 0 0 3px var(--azul) inset, 4px 4px 0 #000; }
+.sala b.t { font: 400 22px var(--f-disp); color: var(--azul); }
+.sala .quem { font-size: 15px; }
+.suspeito.na-sala { border-style: solid; border-color: var(--azul); box-shadow: 0 0 14px rgba(90,168,232,.35); }
+.suspeito.na-sala b::after { content: " · 🗣️ na sala de interrogatório"; color: var(--azul); font-size: 13px; }
 .codigo { font: 15px var(--f-maq); background: #000; color: var(--fita); padding: 6px 10px; border-radius: 4px; user-select: all; word-break: break-all; }
 @media (max-width: 960px) { .mesa { grid-template-columns: 1fr; } .feed { max-height: none; } }
 
@@ -646,7 +652,7 @@ async function abrirRolagem(F, CASO, opt = {}) {
   const LER = opt.ler || null;
   const e = ESP[F.especie];
   const fase = CASO?.fase || 'livre';
-  let acao = LER ? 'interrogar' : fase === 'acareacao' ? 'rastro' : fase === 'investigacao' ? 'vasculhar' : 'teste';
+  let acao = (LER || opt.interrogar) ? 'interrogar' : fase === 'acareacao' ? 'rastro' : fase === 'investigacao' ? 'vasculhar' : 'teste';
   const INV = CASO?.inv || null;
   const pontosLivres = (INV?.pontos || []).filter(p => !p.achado);
   let aliados = [];
@@ -667,6 +673,8 @@ async function abrirRolagem(F, CASO, opt = {}) {
           ${[1, 2, 3].map(i => `<div class="campo"><label class="rotulo" for="i-p${i}">Pergunta ${i}</label><input type="text" id="i-p${i}" maxlength="200"></div>`).join('')}
           <button class="btn" id="i-ok">Fazer as perguntas</button>` : '<p class="tag">Interrogatório só acontece numa mesa.</p>';
         const sel = m.querySelector('#i-npc'); if (sel) sel.onchange = () => { m.querySelector('#i-outro-c').hidden = sel.value !== '__outro'; };
+        const alvoSala = opt.interrogar || CASO?.sala?.npc;
+        if (sel && alvoSala) { if ([...sel.options].some(o => o.value === alvoSala)) sel.value = alvoSala; else { sel.value = '__outro'; m.querySelector('#i-outro').value = alvoSala; m.querySelector('#i-outro-c').hidden = false; } }
         m.querySelector('#i-ok')?.addEventListener('click', async () => {
           const npc = sel.value === '__outro' ? m.querySelector('#i-outro').value.trim() : sel.value;
           const perguntas = [1, 2, 3].map(i => m.querySelector('#i-p' + i).value.trim());
@@ -873,8 +881,14 @@ function placar(C, extra = '') {
 }
 const muralHtml = (C, mestre, falsas) => `
   <div class="caixa bloco"><h3>📌 Pistas</h3><div class="mural">${(C.pistas || []).length ? C.pistas.map(p => `<div class="pista ${p.falsa ? 'falsa' : ''}">${nl(p.txt)}${mestre ? `<div class="btns" style="margin-top:6px">${(falsas || []).includes(p.id) && !p.falsa ? '<span class="tag" style="color:var(--vermelho)">Plantada (falsa)</span>' : ''}<button class="btn mini sec" data-expor="${p.id}">${p.falsa ? 'Desfazer exposição' : 'Expor como falsa'}</button><button class="btn mini sec" data-esconder="${p.id}">Esconder</button><button class="btn mini perigo" data-excluir="${p.id}">Excluir</button></div>` : ''}</div>`).join('') : '<div class="vazio">Nenhuma pista no mural ainda.</div>'}</div></div>
-  <div class="caixa bloco"><h3>🕵️ Suspeitos</h3>${(C.suspeitos || []).map(s => `<div class="suspeito ${s.inocente ? 'inocente' : ''}"><b>${esc(s.nome)}</b><span class="tg">${esc(s.especie)}</span><p>${esc(s.txt)}</p>${mestre ? `<div class="btns"><button class="btn mini sec" data-inoc="${s.id}">${s.inocente ? 'Voltar a suspeito' : 'Marcar inocente'}</button><button class="btn mini perigo" data-tirasus="${s.id}">Remover</button></div>` : ''}</div>`).join('') || '<div class="vazio">Ninguém sob suspeita. Suspeito.</div>'}</div>`;
+  <div class="caixa bloco"><h3>🕵️ Suspeitos</h3>${(C.suspeitos || []).map(s => `<div class="suspeito ${s.inocente ? 'inocente' : ''} ${C.sala?.npc === s.nome ? 'na-sala' : ''}"><b>${esc(s.nome)}</b><span class="tg">${esc(s.especie)}</span><p>${esc(s.txt)}</p>${mestre ? `<div class="btns"><button class="btn mini sec" data-inoc="${s.id}">${s.inocente ? 'Voltar a suspeito' : 'Marcar inocente'}</button><button class="btn mini perigo" data-tirasus="${s.id}">Remover</button></div>` : ''}</div>`).join('') || '<div class="vazio">Ninguém sob suspeita. Suspeito.</div>'}</div>`;
 
+const painelSala = (C, meus) => {
+  const S = C.sala; if (!S) return '';
+  const podem = meus.filter(f => !f.fora && (!S.ficha || S.ficha === f.id));
+  return `<div class="sala"><b class="t">🗣️ Sala de interrogatório</b><span class="quem"><b>${esc(S.npc)}</b> está sentado na cadeira${S.ficha ? `, à espera de <b>${esc(S.fnome)}</b>` : ', à espera de qualquer detetive'}.</span>
+    ${podem.length ? `<div class="btns">${podem.map(f => `<button class="btn mini" data-sala="${f.id}">Interrogar como ${esc(f.nome)}</button>`).join('')}</div>` : ''}</div>`;
+};
 const painelInv = (C, mestre, E) => {
   const I = C.inv; if (!I) return '';
   return `<div class="caixa bloco"><div class="btns" style="justify-content:space-between;align-items:center"><h3>🔎 ${esc(I.local)}</h3><span class="tag">Rodada ${Math.min(I.atual + 1, I.max)} de ${I.max}</span></div>
@@ -907,7 +921,8 @@ ROTAS.caso = async id => {
     $('#c-btns').innerHTML = `${C.mestre === ME ? `<a class="btn" href="#escudo-${id}">Escudo do Mestre</a>` : ''}${meus.filter(f => !f.fora).map(f => `<button class="btn" data-rolar="${f.id}">🎲 ${esc(f.nome)}</button>`).join('')}<button class="btn sec" id="levar">Levar detetive</button>`;
     $('#c-dets').innerHTML = DETS.length ? DETS.map(f => `<div class="det-mesa ${f.fora ? 'fora' : ''}">${avatar(f)}<div><a class="nm" href="#detetive-${f.id}" style="color:inherit;text-decoration:none">${esc(f.nome)}</a>
       <div class="st"><span>${esc(ESP[f.especie]?.nome)}</span><span>Compostura <b>${f.pilha}</b></span>${C.fase === 'acareacao' ? `<span>Dedução <b>${f.deducao || 0}</b>${f.deducaoCompleta ? ' ✔' : ''}</span>` : ''}<span>PF <b>${f.pf}</b></span>${f.galo ? `<span>Galo <b>${f.galo}</b></span>` : ''}${f.enrolado ? `<span>Enrolado <b>${f.enrolado}</b></span>` : ''}${f.agarrado ? '<span><b>Agarrado</b></span>' : ''}${f.fora ? '<span><b>Fora do caso</b></span>' : ''}</div></div></div>`).join('') : '<div class="vazio">Nenhum detetive ainda.</div>';
-    $('#c-mural').innerHTML = (C.fase === 'investigacao' ? painelInv(C, false) : '') + muralHtml(C, false);
+    $('#c-mural').innerHTML = painelSala(C, meus) + (C.fase === 'investigacao' ? painelInv(C, false) : '') + muralHtml(C, false);
+    $('#c-mural').onclick = e => { const b = e.target.closest('[data-sala]'); if (!b) return; abrirRolagem({ ...DETS.find(f => f.id === b.dataset.sala) }, { id, ...C }, { interrogar: C.sala.npc }); };
     $('#c-btns').onclick = async e => {
       const r = e.target.closest('[data-rolar]'); if (r) { abrirRolagem({ ...DETS.find(f => f.id === r.dataset.rolar) }, { id, ...C }); return; }
       if (e.target.closest('#levar')) {
@@ -1203,9 +1218,39 @@ ROTAS.escudo = async id => {
       const its = ROLS.filter(r => r.tipo === 'interrogatorio');
       const pend = its.filter(r => !r.respostas), feitos = its.filter(r => r.respostas);
       const opts = sel => ['verdade', 'meia', 'mentira'].map(k => `<option value="${k}" ${k === sel ? 'selected' : ''}>${ROTULO_RESP[k][0]}</option>`).join('');
-      A.innerHTML = `<div class="caixa bloco"><h3>Esperando resposta</h3><p class="tag">Responda as três: uma Verdade, uma Meia-verdade e uma Mentira, na ordem que quiser.</p>
+      const S = C.sala, vivos = DETS.filter(f => !f.fora);
+      const salaHtml = `<div class="caixa bloco"><h3>🗣️ Sala de interrogatório</h3>
+        ${S ? `<div class="sala"><span class="quem"><b>${esc(S.npc)}</b> está na sala${S.ficha ? `, à espera de <b>${esc(S.fnome)}</b>` : ', aberta a qualquer detetive'}.</span><div class="btns"><button class="btn mini perigo" id="sala-sair">Liberar ${esc(S.npc)}</button></div></div>` : '<p class="tag">Ninguém na sala. Escolha quem vai sentar na cadeira.</p>'}
+        <div class="campo"><label class="rotulo" for="sala-npc">Suspeito ou testemunha</label><select id="sala-npc">${(C.suspeitos || []).map(x => `<option value="${esc(x.nome)}">${esc(x.nome)} (${esc(x.especie)})${x.inocente ? ' · inocente' : ''}</option>`).join('')}<option value="__outro">Outra testemunha…</option></select></div>
+        <div class="campo" id="sala-outro-c" hidden><label class="rotulo" for="sala-outro">Nome</label><input type="text" id="sala-outro" maxlength="60"></div>
+        <div class="campo"><label class="rotulo" for="sala-det">Quem interroga</label><select id="sala-det"><option value="">Qualquer detetive</option>${vivos.map(f => `<option value="${f.id}">${esc(f.nome)}</option>`).join('')}</select></div>
+        <div class="btns"><button class="btn" id="sala-ok">Levar para a sala</button></div>
+        <details><summary class="rotulo" style="cursor:pointer">Já perguntaram em voz alta? Registrar o interrogatório inteiro</summary>
+          <p class="tag">Escolha um detetive acima. Ele recebe o botão de ler o interrogado.</p>
+          ${[0, 1, 2].map(i => `<div class="campo"><label class="rotulo" for="rv-p${i}">Pergunta ${i + 1}</label><input type="text" id="rv-p${i}" maxlength="200"><textarea id="rv-r${i}" style="min-height:48px" placeholder="Resposta"></textarea><select id="rv-t${i}">${opts(['verdade', 'meia', 'mentira'][i])}</select></div>`).join('')}
+          <button class="btn sec" id="rv-ok">Registrar interrogatório</button></details></div>`;
+      A.innerHTML = salaHtml + `<div class="caixa bloco"><h3>Esperando resposta</h3><p class="tag">Responda as três: uma Verdade, uma Meia-verdade e uma Mentira, na ordem que quiser.</p>
         ${pend.map(r => `<div class="papel bloco" data-it="${r.id}"><b>${esc(r.fnome)} interroga ${esc(r.npc)}</b>${r.perguntas.map((q, i) => `<div class="campo"><span class="rotulo">P${i + 1}: ${esc(q)}</span><textarea data-resp="${i}" style="min-height:52px;background:#fffaf0;color:var(--tinta)"></textarea><select data-tipo="${i}" style="background:#fffaf0;color:var(--tinta)">${opts(['verdade', 'meia', 'mentira'][i])}</select></div>`).join('')}<button class="btn" data-responder="${r.id}">Responder</button></div>`).join('') || '<div class="vazio">Ninguém sendo interrogado agora.</div>'}</div>
         <div class="caixa bloco"><h3>Já respondidos</h3><div class="feed cheio">${feitos.map(r => linhaRol(r, E.interrog?.[r.id])).join('') || '<div class="vazio">Nada ainda.</div>'}</div></div>`;
+      const sn = A.querySelector('#sala-npc'); sn.onchange = () => { A.querySelector('#sala-outro-c').hidden = sn.value !== '__outro'; };
+      const lerSala = () => { const npc = sn.value === '__outro' ? A.querySelector('#sala-outro').value.trim() : sn.value; const f = DETS.find(x => x.id === A.querySelector('#sala-det').value) || null; return { npc, f }; };
+      A.querySelector('#sala-ok').onclick = async () => {
+        const { npc, f } = lerSala(); if (!npc) { toast('Quem vai sentar na cadeira?'); return; }
+        await salvarC({ sala: { npc, ficha: f?.id || null, fnome: f?.nome || '' } });
+        await postarC(`${npc} foi levado para a sala de interrogatório${f ? `. ${f.nome} vai fazer as perguntas` : ''}.`, 'sistema'); desenharAba();
+      };
+      A.querySelector('#sala-sair')?.addEventListener('click', async () => { const n = C.sala.npc; await salvarC({ sala: null }); await postarC(`${n} foi liberado da sala de interrogatório.`, 'sistema'); desenharAba(); });
+      A.querySelector('#rv-ok').onclick = async () => {
+        const { npc, f } = lerSala();
+        const perguntas = [0, 1, 2].map(i => A.querySelector('#rv-p' + i).value.trim()), respostas = [0, 1, 2].map(i => A.querySelector('#rv-r' + i).value.trim()), tipos = [0, 1, 2].map(i => A.querySelector('#rv-t' + i).value);
+        if (!npc || !f) { toast('Escolha o suspeito e o detetive que interrogou.'); return; }
+        if (perguntas.some(x => !x) || respostas.some(x => !x)) { toast('Preencha as três perguntas e as três respostas.'); return; }
+        if (new Set(tipos).size !== 3) { toast('Precisa ser uma Verdade, uma Meia-verdade e uma Mentira.'); return; }
+        const iid = 'i' + Date.now().toString(36) + uid8();
+        await salvarE({ interrog: { ...(E.interrog || {}), [iid]: tipos } });
+        await db.doc(`bichos-casos/${id}/rolagens/${iid}`).set({ id: iid, uid: f.dono, ficha: f.id, fnome: f.nome, especie: f.especie, t: Date.now(), aplicado: true, tipo: 'interrogatorio', texto: `Interrogou ${npc}`, npc, perguntas, respostas, revelado: null, lido: false });
+        toast(`Registrado. ${f.nome} já pode ler o interrogado.`); desenharAba();
+      };
       A.querySelectorAll('[data-responder]').forEach(b => b.onclick = async () => {
         const box = A.querySelector(`[data-it="${b.dataset.responder}"]`);
         const respostas = [0, 1, 2].map(i => box.querySelector(`[data-resp="${i}"]`).value.trim()), tipos = [0, 1, 2].map(i => box.querySelector(`[data-tipo="${i}"]`).value);
