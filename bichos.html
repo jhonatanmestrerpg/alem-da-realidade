@@ -272,6 +272,22 @@ textarea { min-height: 80px; resize: vertical; }
 .sala .quem { font-size: 15px; }
 .suspeito.na-sala { border-style: solid; border-color: var(--azul); box-shadow: 0 0 14px rgba(90,168,232,.35); }
 .suspeito.na-sala b::after { content: " · 🗣️ na sala de interrogatório"; color: var(--azul); font-size: 13px; }
+.susp-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.susp-card { display: grid; gap: 6px; justify-items: center; text-align: center; padding: 12px 8px; background: #120b06; border: 2px solid #000; border-radius: 10px; color: var(--texto); cursor: pointer; box-shadow: 3px 3px 0 #000; }
+.susp-card:hover, .susp-card.aqui { border-color: var(--ambar); }
+.susp-card.culpado { box-shadow: 0 0 0 2px var(--vermelho), 3px 3px 0 #000; }
+.susp-card b { font: 400 16px var(--f-disp); color: var(--ambar-hi); }
+.susp-card span { font: 11px var(--f-maq); color: var(--texto-dim); }
+.susp-card .foto-s { font: 400 28px var(--f-disp); color: var(--texto-faint); }
+.foto-s { width: 84px; height: 84px; border-radius: 12px; border: 3px solid #000; background: var(--tabua-2) center/cover no-repeat; display: grid; place-items: center; font: 400 30px var(--f-disp); color: var(--texto-faint); box-shadow: 2px 2px 0 #000; flex: none; }
+.foto-s.g { width: 140px; height: 140px; font-size: 48px; }
+.foto-s.p { width: 72px; height: 72px; font-size: 24px; border-radius: 10px; }
+.suspeito.com-foto { grid-template-columns: auto 1fr; column-gap: 12px; }
+.suspeito.com-foto > :not(.foto-s) { grid-column: 2; }
+.suspeito.com-foto .foto-s { grid-row: 1 / span 4; }
+.hab-ed { display: grid; gap: 6px; padding: 10px; border: 2px dashed var(--tabua-2); border-radius: 8px; }
+.duas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 640px) { .duas { grid-template-columns: 1fr; } }
 .codigo { font: 15px var(--f-maq); background: #000; color: var(--fita); padding: 6px 10px; border-radius: 4px; user-select: all; word-break: break-all; }
 @media (max-width: 960px) { .mesa { grid-template-columns: 1fr; } .feed { max-height: none; } }
 
@@ -843,7 +859,15 @@ ROTAS.mesas = async () => {
     };
   });
 };
-const escudoDe = pr => ({ pronto: pr.id, nome: pr.nome, perfis: [...pr.perfis], pl: pr.pl, pecas: pr.pecas, pecasUsadas: 0, acoes: [...pr.acoes], golpe: pr.golpe, alvo: pr.alvo, cena: 0,
+/* ficha secreta de suspeito: fica no escudo do mestre (mestre/<uid>/bichos/<caso>.suspeitos) */
+const FICHA_VAZIA = { especie: '', frase: '', txt: '', segredo: '', foto: '', perfis: ['trambiqueiro', 'mandante'], dados: 4, pl: 2, pecas: 2, acoes: [], golpe: 'planob', alvo: 4, habs: [] };
+function fichaSusp(E, C, id) {
+  if (E?.suspeitos?.[id]) return { ...FICHA_VAZIA, ...E.suspeitos[id], id };
+  const pr = PRONTO[id], pub = (C?.suspeitos || []).find(x => x.id === id) || {};
+  if (pr) return { ...FICHA_VAZIA, ...JSON.parse(JSON.stringify(pr)), foto: pub.foto || '', segredo: '', id };
+  return { ...FICHA_VAZIA, nome: pub.nome || 'Suspeito', especie: pub.especie || '', txt: pub.txt || '', foto: pub.foto || '', id };
+}
+const escudoDe = pr => ({ pronto: pr.id, nome: pr.nome, frase: pr.frase || '', habs: JSON.parse(JSON.stringify(pr.habs || [])), perfis: [...pr.perfis], pl: pr.pl, pecas: pr.pecas, pecasUsadas: 0, acoes: [...pr.acoes], golpe: pr.golpe, alvo: pr.alvo, cena: 0,
   solucao: { quem: pr.nome, porque: '', onde: '' }, pistasOcultas: [], notas: '' });
 async function entrarCaso(id) {
   await db.doc(`bichos-casos/${id}/membros/${ME}`).set({ uid: ME, nome: MEU_NOME, entrou: Date.now() });
@@ -881,7 +905,7 @@ function placar(C, extra = '') {
 }
 const muralHtml = (C, mestre, falsas) => `
   <div class="caixa bloco"><h3>📌 Pistas</h3><div class="mural">${(C.pistas || []).length ? C.pistas.map(p => `<div class="pista ${p.falsa ? 'falsa' : ''}">${nl(p.txt)}${mestre ? `<div class="btns" style="margin-top:6px">${(falsas || []).includes(p.id) && !p.falsa ? '<span class="tag" style="color:var(--vermelho)">Plantada (falsa)</span>' : ''}<button class="btn mini sec" data-expor="${p.id}">${p.falsa ? 'Desfazer exposição' : 'Expor como falsa'}</button><button class="btn mini sec" data-esconder="${p.id}">Esconder</button><button class="btn mini perigo" data-excluir="${p.id}">Excluir</button></div>` : ''}</div>`).join('') : '<div class="vazio">Nenhuma pista no mural ainda.</div>'}</div></div>
-  <div class="caixa bloco"><h3>🕵️ Suspeitos</h3>${(C.suspeitos || []).map(s => `<div class="suspeito ${s.inocente ? 'inocente' : ''} ${C.sala?.npc === s.nome ? 'na-sala' : ''}"><b>${esc(s.nome)}</b><span class="tg">${esc(s.especie)}</span><p>${esc(s.txt)}</p>${mestre ? `<div class="btns"><button class="btn mini sec" data-inoc="${s.id}">${s.inocente ? 'Voltar a suspeito' : 'Marcar inocente'}</button><button class="btn mini perigo" data-tirasus="${s.id}">Remover</button></div>` : ''}</div>`).join('') || '<div class="vazio">Ninguém sob suspeita. Suspeito.</div>'}</div>`;
+  <div class="caixa bloco"><h3>🕵️ Suspeitos</h3>${(C.suspeitos || []).map(s => `<div class="suspeito ${s.inocente ? 'inocente' : ''} ${C.sala?.npc === s.nome ? 'na-sala' : ''} ${s.foto ? 'com-foto' : ''}">${s.foto ? `<span class="foto-s p" style="background-image:url('${esc(s.foto)}')"></span>` : ''}<b>${esc(s.nome)}</b><span class="tg">${esc(s.especie)}</span><p>${esc(s.txt)}</p>${mestre ? `<div class="btns"><button class="btn mini sec" data-inoc="${s.id}">${s.inocente ? 'Voltar a suspeito' : 'Marcar inocente'}</button><button class="btn mini perigo" data-tirasus="${s.id}">Remover</button></div>` : ''}</div>`).join('') || '<div class="vazio">Ninguém sob suspeita. Suspeito.</div>'}</div>`;
 
 const painelSala = (C, meus) => {
   const S = C.sala; if (!S) return '';
@@ -981,7 +1005,7 @@ ROTAS.historico = async id => {
 };
 
 /* ---------- escudo do mestre ---------- */
-let ABA_ESCUDO = 'culpado';
+let ABA_ESCUDO = 'culpado', SUSP_SEL = null, RASC = null;
 ROTAS.escudo = async id => {
   if (!ME) { app.innerHTML = precisaEntrar(); return; }
   const ref = db.doc('bichos-casos/' + id), eRef = db.doc(`mestre/${ME}/bichos/${id}`);
@@ -997,7 +1021,7 @@ ROTAS.escudo = async id => {
   app.innerHTML = `<div class="cab"><div><span class="fita" style="background:repeating-linear-gradient(-45deg,var(--vermelho) 0 14px,#b23a31 14px 28px);color:#fff">Escudo do Mestre</span><h2 id="c-nome" style="margin-top:8px"></h2>
     <p>Código para os jogadores: <span class="codigo">${id}</span></p></div><div class="btns"><a class="btn sec" href="#caso-${id}">Ver como jogador</a></div></div>
     <div id="c-placar"></div>
-    <div class="mesa"><div class="bloco"><div class="abas" id="abas">${[['culpado', 'Culpado'], ['mesa', 'Mesa'], ['investigacao', 'Investigação'], ['interrog', 'Interrogatórios'], ['pistas', 'Pistas e solução'], ['mural', 'Mural']].map(([k, n]) => `<button data-aba="${k}">${n}</button>`).join('')}</div><div id="aba" class="bloco"></div></div>
+    <div class="mesa"><div class="bloco"><div class="abas" id="abas">${[['culpado', 'Culpado'], ['suspeitos', 'Suspeitos'], ['mesa', 'Mesa'], ['investigacao', 'Investigação'], ['interrog', 'Interrogatórios'], ['pistas', 'Pistas e solução'], ['mural', 'Mural']].map(([k, n]) => `<button data-aba="${k}">${n}</button>`).join('')}</div><div id="aba" class="bloco"></div></div>
     <div class="bloco"><div class="btns" style="justify-content:space-between;align-items:center"><h3>Rolagens</h3><a class="btn mini sec" href="#historico-${id}">Histórico completo</a></div><div class="feed" id="c-feed"></div></div></div>`;
 
   const salvarE = async p => { E = { ...E, ...p }; try { await eRef.set(E); } catch (e) { toast('Escudo não salvou: ' + e.message); } };
@@ -1005,6 +1029,12 @@ ROTAS.escudo = async id => {
   const postarC = (texto, tipo = 'culpado') => db.collection(`bichos-casos/${id}/rolagens`).add({ uid: ME, tipo, texto, t: Date.now(), aplicado: true }).catch(e => toast('Feed: ' + e.message));
   const gastarPL = async (n, oque) => { if (n && E.pl < n) { toast(`Faltam PL: ${oque} custa ${n}.`); return false; } if (n) await salvarE({ pl: E.pl - n }); return true; };
   const fichaRef = fid => db.doc('bichos-detetives/' + fid);
+  const mantem = ['solucao', 'pistasOcultas', 'notas', 'inv', 'interrog', 'suspeitos', 'reveladas'];
+  async function tornarCulpado(fc) {
+    const base = escudoDe(fc), keep = Object.fromEntries(mantem.filter(k => E[k] !== undefined).map(k => [k, E[k]]));
+    await salvarE({ ...base, ...keep, solucao: { ...(E.solucao || {}), quem: fc.nome } });
+    await salvarC({ culpado: fc.dados });
+  }
   const escolherAlvo = (titulo, cb) => escolherDetetive(titulo, DETS.filter(f => !f.fora), cb);
 
   async function darGalo(f, { atropelar = false } = {}) {
@@ -1115,11 +1145,12 @@ ROTAS.escudo = async id => {
     $$('#abas button').forEach(b => b.classList.toggle('aqui', b.dataset.aba === ABA_ESCUDO));
     const A = $('#aba');
     if (ABA_ESCUDO === 'culpado') {
-      const pr = PRONTO[E.pronto];
+      const fc = fichaSusp(E, C, E.pronto), habsC = E.habs || fc.habs || [];
+      const lista = (C.suspeitos || []).some(x => x.id === E.pronto) ? C.suspeitos : [...(C.suspeitos || []), { id: E.pronto, nome: E.nome }];
       A.innerHTML = `<div class="caixa bloco">
-        <div class="btns" style="justify-content:space-between;align-items:center"><div><h3>${esc(E.nome)}</h3><span class="tag">${E.perfis.map(p => B.PERFIS[p].nome).join(' + ')}</span></div>
-          <select id="e-pr" style="width:auto">${B.PRONTOS.map(p => `<option value="${p.id}" ${p.id === E.pronto ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select></div>
-        ${pr ? `<p style="margin:0"><i>"${esc(pr.frase)}"</i></p>` : ''}
+        <div class="btns" style="justify-content:space-between;align-items:center"><div class="btns" style="align-items:center"><span class="foto-s p" style="${fc.foto ? `background-image:url('${esc(fc.foto)}')` : ''}">${fc.foto ? '' : esc(iniciais(E.nome))}</span><div><h3>${esc(E.nome)}</h3><span class="tag">${E.perfis.map(p => B.PERFIS[p].nome).join(' + ')}</span></div></div>
+          <div class="campo"><label class="rotulo" for="e-pr">O Culpado é</label><select id="e-pr" style="width:auto">${lista.map(p => `<option value="${p.id}" ${p.id === E.pronto ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select></div></div>
+        ${E.frase || fc.frase ? `<p style="margin:0"><i>"${esc(E.frase || fc.frase)}"</i></p>` : ''}
         <div class="placar">
           <div><span class="rotulo">Pontos de Lorota</span><span class="big">${E.pl}</span><div class="ctrl"><button data-pl="-1">−</button><button data-pl="1">+</button></div></div>
           <div class="culp"><span class="rotulo">Pilha do Culpado</span><span class="big">${C.culpado || 0}</span><div class="ctrl"><button data-cul="-1">−</button><button data-cul="1">+</button></div></div>
@@ -1128,9 +1159,11 @@ ROTAS.escudo = async id => {
         </div></div>
         <div class="caixa bloco"><h3>Ações Gerais</h3><div class="lista-acoes">${B.ACOES_GERAIS.map(a => cardAcao(a)).join('')}</div></div>
         <div class="caixa bloco"><h3>Ações Únicas</h3><div class="lista-acoes">${E.acoes.map(k => cardAcao(B.ACOES_UNICAS[k])).join('')}</div></div>
+        <div class="caixa bloco"><h3>Habilidades exclusivas</h3><div class="lista-acoes">${habsC.map((h, i) => `<div class="acao-c" style="border-left-color:var(--ambar)"><div class="top"><b>${esc(h.nome)}</b><button class="btn mini perigo" data-hab="${i}">Usar</button></div><span class="meta">Cena: ${esc(h.cena || 'Sem restrição')} · Custo: ${h.custo ? h.custo + ' PL' : 'Sem custo'}</span>${h.frase ? `<p><i>"${esc(h.frase)}"</i></p>` : ''}<p>${esc(h.txt)}</p></div>`).join('') || '<div class="vazio">Sem habilidades exclusivas. Crie na aba Suspeitos.</div>'}</div></div>
         <div class="caixa bloco"><h3>Golpe Baixo</h3>${(() => { const g = B.GOLPES[E.golpe]; return `<div class="acao-c"><div class="top"><b>${esc(g.nome)}</b><button class="btn mini perigo" data-golpe>Usar</button></div><span class="meta">Cena: ${esc(g.cena)} · Custo: ${esc(g.custo)} PL · Recarga: ${esc(g.recarga)}</span><p>${esc(g.txt)}</p></div>`; })()}</div>
         <div class="caixa bloco"><h3>Intentos (ganhar PL)</h3><div class="intentos">${[...B.INTENTOS, ...E.perfis.map(p => [B.PERFIS[p].intento + ' (Intento Único)', 0])].map(([t, n], i) => `<button data-int="${n}" data-i="${i}">${esc(t)}<span>${n ? '+' + n : '+?'}</span></button>`).join('')}</div></div>`;
-      A.querySelector('#e-pr').onchange = async ev => { const pr = PRONTO[ev.target.value]; if (!confirm(`Trocar o Culpado para ${pr.nome}? PL, ações e golpe voltam ao padrão dele.`)) { ev.target.value = E.pronto; return; } await salvarE({ ...escudoDe(pr), solucao: { ...E.solucao, quem: pr.nome }, pistasOcultas: E.pistasOcultas, notas: E.notas }); await salvarC({ culpado: pr.dados }); desenharAba(); };
+      A.querySelector('#e-pr').onchange = async ev => { const pr = fichaSusp(E, C, ev.target.value); if (!confirm(`Trocar o Culpado para ${pr.nome}? PL, ações, golpe e habilidades vêm da ficha dele.`)) { ev.target.value = E.pronto; return; } await tornarCulpado(pr); desenharAba(); };
+      A.querySelectorAll('[data-hab]').forEach(b => b.onclick = async () => { const h = habsC[+b.dataset.hab]; if (!(await gastarPL(h.custo || 0, h.nome))) return; await postarC(`${h.nome}!${h.frase ? ` "${h.frase}"` : ''}`); desenharAba(); });
       A.querySelectorAll('[data-pl]').forEach(b => b.onclick = async () => { await salvarE({ pl: Math.max(0, E.pl + +b.dataset.pl) }); desenharAba(); });
       A.querySelectorAll('[data-cul]').forEach(b => b.onclick = async () => { await salvarC({ culpado: Math.max(0, (C.culpado || 0) + +b.dataset.cul) }); desenharAba(); });
       A.querySelectorAll('[data-pal]').forEach(b => b.onclick = async () => { await salvarC({ palheiro: Math.max(0, (C.palheiro || 0) + +b.dataset.pal) }); desenharAba(); });
@@ -1169,6 +1202,72 @@ ROTAS.escudo = async id => {
       A.querySelectorAll('[data-solta]').forEach(b => b.onclick = async () => { await fichaRef(b.dataset.solta).update({ agarrado: false }); });
       A.querySelectorAll('[data-recomp]').forEach(b => b.onclick = async () => { await fichaRef(b.dataset.recomp).update({ desmoralizados: [] }); });
       A.querySelectorAll('[data-tirad]').forEach(b => b.onclick = async () => { if (!confirm('Tirar este detetive da mesa?')) return; await db.doc(`bichos-casos/${id}/detetives/${b.dataset.tirad}`).delete(); });
+    } else if (ABA_ESCUDO === 'suspeitos') {
+      const ids = (C.suspeitos || []).map(x => x.id);
+      if (!SUSP_SEL || (!ids.includes(SUSP_SEL) && SUSP_SEL !== '__novo')) SUSP_SEL = ids[0] || '__novo';
+      if (!RASC || RASC.id !== (SUSP_SEL === '__novo' ? RASC?.id : SUSP_SEL) || (SUSP_SEL === '__novo' && !RASC.novo)) RASC = SUSP_SEL === '__novo' ? { ...JSON.parse(JSON.stringify(FICHA_VAZIA)), id: uid8(), nome: '', novo: true } : JSON.parse(JSON.stringify(fichaSusp(E, C, SUSP_SEL)));
+      const R = RASC, acoesPossiveis = [...new Set(R.perfis.flatMap(p => B.PERFIS[p].acoes))];
+      const fotoBg = f => f ? `background-image:url('${esc(f)}')` : '';
+      A.innerHTML = `<div class="caixa bloco"><div class="btns" style="justify-content:space-between;align-items:center"><h3>Fichário de suspeitos</h3><button class="btn mini" id="s-novo">+ Novo suspeito</button></div>
+        <p class="tag">Fichas, segredos e habilidades só você vê. Nome, espécie, descrição e foto aparecem no Mural para os jogadores.</p>
+        <div class="susp-grade">${(C.suspeitos || []).map(x => { const f = fichaSusp(E, C, x.id); return `<button class="susp-card ${x.id === SUSP_SEL ? 'aqui' : ''} ${x.id === E.pronto ? 'culpado' : ''}" data-s="${x.id}"><span class="foto-s" style="${fotoBg(f.foto)}">${f.foto ? '' : esc(iniciais(f.nome))}</span><b>${esc(f.nome)}</b><span>${esc(f.especie)}${x.id === E.pronto ? ' · CULPADO' : ''}${x.inocente ? ' · inocente' : ''}</span></button>`; }).join('')}</div></div>
+        <div class="caixa bloco" id="s-ed">
+          <div class="btns" style="align-items:center"><span class="foto-s g" id="s-foto-v" style="${fotoBg(R.foto)}">${R.foto ? '' : '📷'}</span>
+            <div class="bloco" style="flex:1;min-width:220px"><div class="campo"><label class="rotulo" for="s-foto-a">Foto (arquivo, ou Ctrl+V aqui)</label><input type="file" id="s-foto-a" accept="image/*"></div>
+            <div class="campo"><label class="rotulo" for="s-foto">Ou link da foto</label><input type="text" inputmode="url" id="s-foto" value="${esc(R.foto)}"></div></div></div>
+          <div class="duas"><div class="campo"><label class="rotulo" for="s-nome">Nome</label><input type="text" id="s-nome" data-c="nome" value="${esc(R.nome)}"></div><div class="campo"><label class="rotulo" for="s-esp">Espécie</label><input type="text" id="s-esp" data-c="especie" value="${esc(R.especie)}"></div></div>
+          <div class="campo"><label class="rotulo" for="s-frase">Frase</label><input type="text" id="s-frase" data-c="frase" value="${esc(R.frase)}"></div>
+          <div class="campo"><label class="rotulo" for="s-txt">Descrição pública (aparece no Mural)</label><textarea id="s-txt" data-c="txt">${esc(R.txt)}</textarea></div>
+          <div class="campo"><label class="rotulo" for="s-seg">Segredos (só você vê): álibi, motivo, o que esconde</label><textarea id="s-seg" data-c="segredo">${esc(R.segredo)}</textarea></div>
+          <h3>Ficha de Culpado</h3>
+          <div class="duas">${[0, 1].map(i => `<div class="campo"><label class="rotulo" for="s-pf${i}">${i ? 'Perfil secundário' : 'Perfil principal'}</label><select id="s-pf${i}" data-perfil="${i}">${Object.entries(B.PERFIS).map(([k, x]) => `<option value="${k}" ${R.perfis[i] === k ? 'selected' : ''}>${x.nome}</option>`).join('')}</select></div>`).join('')}</div>
+          <div class="placar">${[['dados', 'Dados iniciais', 1, 12], ['pl', 'PL iniciais', 0, 10], ['pecas', 'Peças por Acareação', 0, 6], ['alvo', 'Pilha de Dedução', 1, 6]].map(([k, n, a, b]) => `<div><span class="rotulo">${n}</span><input type="number" min="${a}" max="${b}" data-n="${k}" value="${R[k]}"></div>`).join('')}</div>
+          <div class="campo"><span class="rotulo">Ações Únicas (escolha duas dos Perfis)</span><div class="btns">${acoesPossiveis.map(a => `<label class="chk"><input type="checkbox" data-acao-u="${a}" ${R.acoes.includes(a) ? 'checked' : ''}> ${B.ACOES_UNICAS[a].nome}</label>`).join('')}</div></div>
+          <div class="campo"><label class="rotulo" for="s-golpe">Golpe Baixo</label><select id="s-golpe" data-c="golpe">${Object.values(B.GOLPES).map(g => `<option value="${g.id}" ${R.golpe === g.id ? 'selected' : ''}>${g.nome}</option>`).join('')}</select></div>
+          <h3>Habilidades exclusivas</h3>
+          ${R.habs.map((h, i) => `<div class="hab-ed"><div class="duas"><div class="campo"><label class="rotulo">Nome</label><input type="text" data-h="${i}:nome" value="${esc(h.nome)}"></div><div class="campo"><label class="rotulo">Frase</label><input type="text" data-h="${i}:frase" value="${esc(h.frase)}"></div></div>
+            <div class="duas"><div class="campo"><label class="rotulo">Cena</label><input type="text" data-h="${i}:cena" value="${esc(h.cena)}"></div><div class="campo"><label class="rotulo">Custo (PL)</label><input type="number" min="0" max="10" data-h="${i}:custo" value="${+h.custo || 0}"></div></div>
+            <div class="campo"><label class="rotulo">Efeito (com teste: nada automático)</label><textarea data-h="${i}:txt">${esc(h.txt)}</textarea></div><button class="btn mini perigo" data-hdel="${i}" style="justify-self:start">Remover habilidade</button></div>`).join('')}
+          <button class="btn mini sec" id="s-hadd" style="justify-self:start">+ Habilidade</button>
+          <div class="btns"><button class="btn" id="s-salvar">${R.novo ? 'Criar suspeito' : 'Salvar ficha'}</button>${R.novo ? '' : `${R.id !== E.pronto ? '<button class="btn sec" id="s-culpado">Tornar o Culpado</button>' : ''}<button class="btn perigo" id="s-apagar">Remover do caso</button>`}</div>
+        </div>`;
+      const ED = A.querySelector('#s-ed');
+      const lerForm = () => {
+        ED.querySelectorAll('[data-c]').forEach(i => { R[i.dataset.c] = i.value; });
+        R.foto = ED.querySelector('#s-foto').value.trim();
+        ED.querySelectorAll('[data-n]').forEach(i => { R[i.dataset.n] = Math.max(+i.min, Math.min(+i.max, parseInt(i.value, 10) || 0)); });
+        R.perfis = [0, 1].map(i => ED.querySelector('#s-pf' + i).value);
+        const poss = new Set(R.perfis.flatMap(p => B.PERFIS[p].acoes));
+        R.acoes = [...ED.querySelectorAll('[data-acao-u]:checked')].map(c => c.dataset.acaoU).filter(a => poss.has(a));
+        ED.querySelectorAll('[data-h]').forEach(i => { const [k, c] = i.dataset.h.split(':'); R.habs[+k][c] = c === 'custo' ? (parseInt(i.value, 10) || 0) : i.value; });
+      };
+      A.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { SUSP_SEL = b.dataset.s; RASC = null; desenharAba(); });
+      A.querySelector('#s-novo').onclick = () => { SUSP_SEL = '__novo'; RASC = null; desenharAba(); };
+      ED.querySelectorAll('[data-perfil]').forEach(sel => sel.onchange = () => { lerForm(); desenharAba(); });
+      ED.querySelector('#s-hadd').onclick = () => { lerForm(); R.habs.push({ nome: '', frase: '', cena: 'Acareação', custo: 2, txt: '' }); desenharAba(); };
+      ED.querySelectorAll('[data-hdel]').forEach(b => b.onclick = () => { lerForm(); R.habs.splice(+b.dataset.hdel, 1); desenharAba(); });
+      const subirFoto = async f => { const v = ED.querySelector('#s-foto-v'); v.textContent = '⏳'; const url = await enviarImagem(f); if (url) { lerForm(); R.foto = url; desenharAba(); toast('Foto enviada. Salve a ficha.'); } else v.textContent = '📷'; };
+      ED.querySelector('#s-foto-a').onchange = ev => { const f = ev.target.files[0]; if (f) subirFoto(f); };
+      ED.addEventListener('paste', ev => { const f = [...(ev.clipboardData?.files || [])].find(x => x.type.startsWith('image/')); if (f) { ev.preventDefault(); subirFoto(f); } });
+      ED.querySelector('#s-salvar').onclick = async () => {
+        lerForm();
+        if (!R.nome.trim()) { toast('Todo suspeito tem nome.'); return; }
+        if (R.acoes.length !== 2) { toast('Escolha duas Ações Únicas.'); return; }
+        const { novo, ...ficha } = R; ficha.nome = ficha.nome.trim();
+        await salvarE({ suspeitos: { ...(E.suspeitos || {}), [ficha.id]: ficha } });
+        const pub = { id: ficha.id, nome: ficha.nome, especie: ficha.especie, txt: ficha.txt, foto: ficha.foto };
+        const atual = C.suspeitos || [];
+        await salvarC({ suspeitos: atual.some(x => x.id === ficha.id) ? atual.map(x => x.id === ficha.id ? { ...x, ...pub } : x) : [...atual, { ...pub, inocente: false }] });
+        if (ficha.id === E.pronto) await salvarE({ nome: ficha.nome, frase: ficha.frase, habs: ficha.habs, perfis: ficha.perfis, acoes: ficha.acoes, golpe: ficha.golpe, pecas: ficha.pecas, alvo: ficha.alvo });
+        SUSP_SEL = ficha.id; RASC = null; toast(novo ? 'Suspeito criado e posto no Mural.' : 'Ficha salva.'); desenharAba();
+      };
+      ED.querySelector('#s-culpado')?.addEventListener('click', async () => { lerForm(); if (!confirm(`Tornar ${R.nome} o Culpado? A ficha atual do Culpado é trocada pela dele.`)) return; const { novo, ...ficha } = R; await salvarE({ suspeitos: { ...(E.suspeitos || {}), [ficha.id]: ficha } }); await tornarCulpado(ficha); toast(`${ficha.nome} agora é o Culpado. Só você sabe.`); desenharAba(); });
+      ED.querySelector('#s-apagar')?.addEventListener('click', async () => {
+        if (R.id === E.pronto) { toast('Esse é o Culpado. Escolha outro Culpado antes de remover.'); return; }
+        if (!confirm(`Remover ${R.nome} do caso?`)) return;
+        const sus = { ...(E.suspeitos || {}) }; delete sus[R.id];
+        await salvarE({ suspeitos: sus }); await salvarC({ suspeitos: (C.suspeitos || []).filter(x => x.id !== R.id) }); SUSP_SEL = null; RASC = null; desenharAba();
+      });
     } else if (ABA_ESCUDO === 'investigacao') {
       const I = C.inv;
       A.innerHTML = !I ? `<div class="caixa bloco"><h3>Montar local</h3><div class="campo"><label class="rotulo" for="iv-local">Local</label><input type="text" id="iv-local" placeholder="Ex.: O celeiro da Baronesa"></div>
@@ -1284,14 +1383,14 @@ ROTAS.escudo = async id => {
     } else {
       const faltam = B.PRONTOS.filter(p => !(C.suspeitos || []).some(x => x.id === p.id));
       const falsas = Object.entries(E.inv || {}).filter(([, v]) => v.falsa).map(([k]) => 'p-' + k);
-      A.innerHTML = (faltam.length ? `<div class="caixa btns" style="align-items:center;justify-content:space-between"><span>${faltam.length} suspeito(s) pronto(s) fora do Mural: ${faltam.map(p => esc(p.nome)).join(', ')}</span><button class="btn mini" id="su-prontos">Trazer para o Mural</button></div>` : '') + muralHtml(C, true, falsas) + `<div class="caixa bloco"><h3>Novo suspeito</h3><div class="campo"><label class="rotulo" for="su-n">Nome</label><input type="text" id="su-n"></div><div class="campo"><label class="rotulo" for="su-e">Espécie</label><input type="text" id="su-e"></div><div class="campo"><label class="rotulo" for="su-t">Descrição</label><textarea id="su-t"></textarea></div><button class="btn" id="su-ok">Pôr no Mural</button></div>`;
+      A.innerHTML = (faltam.length ? `<div class="caixa btns" style="align-items:center;justify-content:space-between"><span>${faltam.length} suspeito(s) pronto(s) fora do Mural: ${faltam.map(p => esc(p.nome)).join(', ')}</span><button class="btn mini" id="su-prontos">Trazer para o Mural</button></div>` : '') + muralHtml(C, true, falsas) + `<div class="caixa btns" style="align-items:center;justify-content:space-between"><span>Fichas, fotos e suspeitos novos ficam na aba Suspeitos.</span><button class="btn mini" id="su-ir">Abrir fichário</button></div>`;
       A.querySelectorAll('[data-esconder]').forEach(b => b.onclick = async () => { const p = C.pistas.find(x => x.id === b.dataset.esconder); await salvarC({ pistas: C.pistas.filter(x => x.id !== p.id) }); await salvarE({ pistasOcultas: [...(E.pistasOcultas || []), { id: p.id, txt: p.txt }] }); desenharAba(); });
       A.querySelectorAll('[data-excluir]').forEach(b => b.onclick = async () => { if (!confirm('Excluir esta pista do Mural para sempre?')) return; await salvarC({ pistas: C.pistas.filter(x => x.id !== b.dataset.excluir) }); desenharAba(); });
       A.querySelectorAll('[data-expor]').forEach(b => b.onclick = async () => { const p = C.pistas.find(x => x.id === b.dataset.expor); await salvarC({ pistas: C.pistas.map(x => x.id === p.id ? { ...x, falsa: !x.falsa } : x) }); if (!p.falsa) await postarC('Uma pista do Mural foi exposta como FALSA!', 'sistema'); desenharAba(); });
       A.querySelectorAll('[data-inoc]').forEach(b => b.onclick = async () => { await salvarC({ suspeitos: C.suspeitos.map(s => s.id === b.dataset.inoc ? { ...s, inocente: !s.inocente } : s) }); desenharAba(); });
-      A.querySelectorAll('[data-tirasus]').forEach(b => b.onclick = async () => { await salvarC({ suspeitos: C.suspeitos.filter(s => s.id !== b.dataset.tirasus) }); desenharAba(); });
+      A.querySelectorAll('[data-tirasus]').forEach(b => b.onclick = async () => { if (b.dataset.tirasus === E.pronto) { toast('Esse é o Culpado. Troque o Culpado antes de remover.'); return; } if (!confirm('Remover este suspeito do caso?')) return; await salvarC({ suspeitos: C.suspeitos.filter(s => s.id !== b.dataset.tirasus) }); desenharAba(); });
       A.querySelector('#su-prontos')?.addEventListener('click', async () => { await salvarC({ suspeitos: [...(C.suspeitos || []), ...faltam.map(p => ({ id: p.id, nome: p.nome, especie: p.especie, txt: p.txt, inocente: false }))] }); desenharAba(); });
-      A.querySelector('#su-ok').onclick = async () => { const n = A.querySelector('#su-n').value.trim(); if (!n) return; await salvarC({ suspeitos: [...(C.suspeitos || []), { id: uid8(), nome: n, especie: A.querySelector('#su-e').value.trim(), txt: A.querySelector('#su-t').value.trim(), inocente: false }] }); desenharAba(); };
+      A.querySelector('#su-ir').onclick = () => { ABA_ESCUDO = 'suspeitos'; desenharAba(); };
     }
   };
   const cardAcao = a => `<div class="acao-c"><div class="top"><b>${esc(a.nome)}</b><button class="btn mini perigo" data-acao="${a.id}" ${a.id === 'atropelar' ? 'disabled' : ''}>Usar</button></div><span class="meta">Cena: ${esc(a.cena)} · Custo: ${a.custo ? a.custo + ' PL' : 'Sem custo'}</span><p>${esc(a.txt)}</p></div>`;

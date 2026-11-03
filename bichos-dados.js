@@ -121,27 +121,51 @@ window.BICHOS = (() => {
   /* culpados prontos: também servem de suspeitos no condado */
   const PRONTOS = [
     { id: 'javali', nome: 'Seu Bartolomeu', especie: 'Javali', perfis: ['grandalhao', 'trambiqueiro'], dados: 6, pl: 3, pecas: 1, acoes: ['desmoralizar', 'agarrar'], golpe: 'cheiro', alvo: 5,
+      habs: [
+        { nome: 'Focinhada na Lama', frase: 'Rastro? Que rastro? Aqui é tudo lama.', cena: 'Acareação', custo: 3, txt: 'Logo depois que um detetive Seguir o Rastro, role um dado da sua Pilha. Em 4 ou mais, ele perde 1 dado da Pilha de Dedução para o Palheiro. O dado rolado também vai para o Palheiro.' },
+        { nome: 'Dono da Terra', frase: 'Fora da minha propriedade!', cena: 'Cena de Investigação', custo: 2, txt: 'Escolha um detetive dentro das terras do javali. Ele faz um Teste Complexo Firme. Numa falha, não pode Vasculhar pelo resto da cena.' } ],
       frase: 'Ovo? Que ovo? Eu só como trufa!',
       txt: 'Dono da fazenda de trufas do outro lado do lago, Seu Bartolomeu briga com a Baronesa há dez anos por causa de uma cerca torta. Dois metros de javali, uma pá enferrujada no ombro e pouquíssima paciência para bisbilhoteiro. Jura que estava dormindo na madrugada do crime, mas tem lama fresca no casco.' },
     { id: 'fantasma', nome: 'O Fantasma do Moinho', especie: 'Desconhecida', perfis: ['fantasma', 'mandante'], dados: 4, pl: 2, pecas: 3, acoes: ['casca', 'aliciar'], golpe: 'cadeovo', alvo: 4,
+      habs: [
+        { nome: 'Corrente Arrastada', frase: 'Clanc... clanc... clanc...', cena: 'Cena Livre, Cena de Investigação', custo: 2, txt: 'Até o fim da cena, cada Teste de Espanto que um detetive falhar também avança em 1 o relógio da investigação.' },
+        { nome: 'Debaixo do Lençol', frase: 'Pegou só o pano, detetive.', cena: 'Acareação', custo: 4, txt: 'Quando um detetive acertar um Apertar, role um dado da sua Pilha. Em 4 ou mais, ele agarrou só o lençol e você não descarta dado nenhum. O dado rolado vai para o Palheiro.' } ],
       frase: 'Devolvaaam meu ninhooo...',
       txt: 'Diz a lenda que, nas noites de lua cheia, um vulto de lençol arrasta correntes pelo moinho abandonado e geme por um ninho perdido há cem anos. Desde o sumiço dos ovos, três testemunhas juram ter visto o vulto voando baixo sobre o celeiro da Baronesa. Quem está debaixo do lençol é segredo do Mestre.' },
     { id: 'doninha', nome: 'Dona Valdirene', especie: 'Doninha', perfis: ['trambiqueiro', 'fantasma'], dados: 3, pl: 1, pecas: 4, acoes: ['casca', 'enrolar'], golpe: 'planob', alvo: 4,
+      habs: [
+        { nome: 'Bolo de Cortesia', frase: 'Prova um pedacinho, querido.', cena: 'Cena Livre', custo: 2, txt: 'Ofereça bolo a um detetive. Se ele aceitar, ganha 1 dado na Pilha de Compostura e um Dado de Encrenca Aliciado de valor 1. Se recusar, faz um teste Desenrolado para não ofender: numa falha, você recebe 1 PL.' },
+        { nome: 'Agenda Perfeita', frase: 'Às três eu estava batendo claras. Tenho testemunhas.', cena: 'Interrogatório', custo: 3, txt: 'Num interrogatório da Dona Valdirene, o detetive precisa de um sucesso a mais para ler cada resposta: dois para achar a mentira e três para achar a verdade.' } ],
       frase: 'Para um bom bolo, é preciso quebrar alguns ovos, querida.',
       txt: 'Confeiteira oficial do condado, Dona Valdirene recebeu a maior encomenda da vida dela: O pão de ló gigante do Festival do Trigo. Curiosamente, o fornecedor de ovos dela cancelou a entrega na semana do crime. Sorriso doce, avental impecável e uma agenda cheia de horários que não batem.' },
     { id: 'cobra', nome: 'Madame Serpentina', especie: 'Cobra', perfis: ['mandante', 'trambiqueiro'], dados: 3, pl: 1, pecas: 3, acoes: ['zombar', 'aliciar'], golpe: 'tanahora', alvo: 5,
+      habs: [
+        { nome: 'Rede de Informantes', frase: 'Eu soube antes de vocês decidirem.', cena: 'Cena de Investigação', custo: 3, txt: 'Escolha um Ponto de Interesse que ainda não foi achado e role um dado da sua Pilha. Em 4 ou mais, ele vira Complexo, porque alguém avisou a Madame e ela mandou esconder melhor. O dado rolado vai para o Palheiro.' },
+        { nome: 'Olhar Hipnótico', frase: 'Olhe nos meus olhos...', cena: 'Acareação', custo: 0, txt: 'Ao Aliciar, role um dado da sua Pilha. Em 4 ou mais, o Dado de Encrenca Aliciado começa em 2 em vez de 1. O dado rolado vai para o Palheiro.' } ],
       frase: 'Por que sujar as escamas se outros fazem por mim?',
       txt: 'Presidente do Clube de Chá de GansoTopolópis e dona de uma rede de informantes que vai do moinho à prefeitura. Todo mundo aponta para ela, afinal cobra come ovo. Justamente por ser óbvia demais, ninguém consegue provar nada. Ela adora isso.' },
     { id: 'teiu', nome: 'Seu Tibúrcio', especie: 'Teiú', perfis: ['grandalhao', 'fantasma'], dados: 5, pl: 2, pecas: 2, acoes: ['agarrar', 'casca'], golpe: 'cadeovo', alvo: 5,
+      habs: [
+        { nome: 'Couro Grosso', frase: 'Pode bater, que eu tenho escama.', cena: 'Acareação', custo: 3, txt: 'Quando um detetive acertar um Apertar, role um dado da sua Pilha. Em 5 ou mais, você não descarta dado nenhum. O dado rolado volta para a sua Pilha.' },
+        { nome: 'Toca Secreta', frase: 'Esse celeiro tem mais buraco que queijo.', cena: 'Acareação', custo: 2, txt: 'Ao Sumir no Mato, role um dado da sua Pilha. Em 4 ou mais, você foge pelos túneis e recebe 2 dados em vez de 1.' } ],
       frase: 'Eu? Comer ovo? Larguei faz anos, juro pela minha cauda.',
       txt: 'Teiú velho que mora numa toca debaixo do celeiro da Baronesa desde antes de a Baronesa nascer. Todo mundo sabe que teiú come ovo, e ele sabe que todo mundo sabe. Diz que virou vegetariano no ano passado, mas tem casca demais na toca para quem jura que só come couve.' },
     { id: 'gata', nome: 'Condessa Mimosa', especie: 'Gata angorá', perfis: ['trambiqueiro', 'mandante'], dados: 3, pl: 2, pecas: 3, acoes: ['zombar', 'enrolar'], golpe: 'planob', alvo: 5,
+      habs: [
+        { nome: 'Sete Vidas', frase: 'Ainda me restam seis.', cena: 'Acareação', custo: 5, txt: 'Uma vez por caso, quando a Pilha do Culpado zerar, role um dado do Palheiro. Em 4 ou mais, a Condessa volta com 2 dados tirados do Palheiro e a Acareação continua.' },
+        { nome: 'Lambida de Desdém', frase: 'Que esforço adorável.', cena: 'Sem restrição', custo: 1, txt: 'Depois que um detetive anunciar um teste, ele faz antes um teste Firme de um dado. Numa falha, o teste anunciado vira Complexo. O dado falho é descartado no Palheiro.' } ],
       frase: 'Sem herdeiros? Que tragédia. O título iria para a parente mais próxima. Eu, no caso.',
       txt: 'Viúva do falecido irmão da Baronesa e, sem os ovos, a próxima na linha do título. Chegou ao condado três dias antes do crime para um chá que ninguém lembra de ter marcado. Lambe as patas com calma demais para quem diz estar de luto pelos sobrinhos.' },
     { id: 'ganso', nome: 'Dom Gervásio', especie: 'Ganso, o pai dos ovos', perfis: ['mandante', 'fantasma'], dados: 4, pl: 2, pecas: 2, acoes: ['aliciar', 'desmoralizar'], golpe: 'tanahora', alvo: 5,
+      habs: [
+        { nome: 'Pai Desesperado', frase: 'Vocês têm filhos? Têm?!', cena: 'Cena Livre', custo: 2, txt: 'Dom Gervásio desaba em lágrimas na frente de um detetive. O detetive faz um teste Firme. Numa falha, fica com dó e perde 1 PF.' },
+        { nome: 'Asas Abertas', frase: 'HOOONK!', cena: 'Acareação', custo: 3, txt: 'No seu turno, você Dá um Galo em dois detetives em vez de um, rolando um dado da sua Pilha para cada.' } ],
       frase: 'São meus filhos também! Eu só queria um fim de semana com eles.',
       txt: 'Ex-marido da Baronesa e pai dos ovos desaparecidos. Os dois se separaram na última primavera numa briga que o condado inteiro ouviu do outro lado do lago, e ele perdeu o título, o ninho e a guarda dos herdeiros antes mesmo de chocarem. Desde então ronda o lago de madrugada, alegando que ganso dorme pouco. De todos os suspeitos, é o único que quer os ovos inteiros.' },
     { id: 'cao', nome: 'Sargento Bráulio', especie: 'Cão de guarda', perfis: ['grandalhao', 'mandante'], dados: 5, pl: 2, pecas: 1, acoes: ['agarrar', 'aliciar'], golpe: 'cheiro', alvo: 4,
+      habs: [
+        { nome: 'Faro de Cão', frase: 'Cheguei primeiro. Sempre chego.', cena: 'Cena de Investigação', custo: 2, txt: 'Escolha um Ponto de Interesse que ainda não foi achado e role um dado da sua Pilha. Em 4 ou mais, o Sargento chegou antes e sumiu com a prova: o ponto é marcado como achado e a pista não vai para o Mural. O dado rolado vai para o Palheiro.' },
+        { nome: 'Mordida Firme', frase: 'Daqui você não sai.', cena: 'Acareação', custo: 2, txt: 'Quando Agarrar, só um Teste Complexo Potente solta o detetive, em vez de qualquer Teste Complexo.' } ],
       frase: 'Eu não dormi no posto. Só fechei os olhos para escutar melhor.',
       txt: 'Cão de guarda da propriedade da Baronesa há doze anos, nunca faltou um dia. Na noite do crime, cochilou no posto pela primeira vez na vida. Ou é isso que ele diz. Desde então anda roendo um osso importado, caríssimo, que ninguém sabe quem deu.' },
   ];
