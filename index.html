@@ -856,14 +856,17 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261104012102';
+const BUILD = '20261104012619';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
-  const v = await versaoAtual(); if (!v || v === BUILD || document.querySelector('.aviso-versao')) return;
+  // o CDN da hospedagem guarda versao.txt e index.html por até 5 min, cada um no seu ritmo: só avisa se o arquivo for MAIS NOVO
+  // que esta página, e não insiste no mesmo número se o recarregar já foi tentado e o servidor ainda entrega a página antiga
+  const v = await versaoAtual(); if (!v || !/^\d+$/.test(v) || +v <= +BUILD || document.querySelector('.aviso-versao')) return;
+  try { if (sessionStorage.getItem('adr-ver-tentou') === v) return; } catch (e) {}
   const d = document.createElement('div'); d.className = 'aviso-versao';
   d.innerHTML = '<span>O site foi atualizado.</span><button class="btn mini">Atualizar agora</button>';
-  d.querySelector('button').onclick = () => { location.href = location.pathname + '?v=' + encodeURIComponent(v) + location.hash; }; document.body.appendChild(d);
+  d.querySelector('button').onclick = () => { try { sessionStorage.setItem('adr-ver-tentou', v); } catch (e) {} location.href = location.pathname + '?v=' + encodeURIComponent(v) + location.hash; }; document.body.appendChild(d);
 }
 if (/[?&]v=/.test(location.search)) history.replaceState(null, '', location.pathname + location.hash);
 checarVersao(); setInterval(checarVersao, 120000);
