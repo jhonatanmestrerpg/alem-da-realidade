@@ -162,6 +162,7 @@ input[type=text], input[type=number], input[type=search], select, textarea {
 textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ouro); }
 .campo { display: grid; gap: 5px; min-width: 0; }
+.pip.vp { background: var(--sangue); border-color: var(--sangue); } .tag-vamp { color: #ff9aa2; border-color: color-mix(in srgb, var(--sangue) 70%, transparent); }
 .rec-palco { margin: 0 auto; background: #07080c; overflow: hidden; touch-action: none; max-width: 100%; border: 1px solid var(--linha); }
 .rec-palco canvas { display: block; cursor: grab; touch-action: none; } .rec-palco canvas:active { cursor: grabbing; }
 .rec-ctrl { display: flex; align-items: center; gap: 10px; justify-content: center; } .rec-ctrl input { flex: 1; max-width: 220px; accent-color: var(--ouro); padding: 0; }
@@ -864,7 +865,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261104025657';
+const BUILD = '20261104025834';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1198,7 +1199,7 @@ function dadosPericia(f, nome) {
   const alem = vb && pontos + 1 > patente(nivelDe(f)).limite ? 1 : 0;
   const bm = typeof bonusMec === 'function' ? bonusMec(f).pericias : 0;
   const vd = vampDados(f, nome), vtx = vampTeste(f, nome);
-  return { pontos, vt, vb, alem, atr, dados: Math.max(1, pontos + vt + vb + alem + bm + vd), mod: (atrEf(f)[atr] || 0) + vtx, extraVamp: vtx };
+  return { pontos, vt, vb, alem, atr, vd, dados: Math.max(1, pontos + vt + vb + alem + bm + vd), mod: (atrEf(f)[atr] || 0) + vtx, extraVamp: vtx };
 }
 
 /* =================================================================
@@ -1244,6 +1245,8 @@ const vampForma = f => f?.vampiro?.tipo === 'carnical' && !!f.vampiro.forma;
 const atrEf = f => { const A = { ...(f?.atributos || {}) }, V = vampDe(f); if (V?.atr) for (const k in V.atr) A[k] = (A[k] || 0) + V.atr[k]; return A; };
 // dados extras e bônus fixos de teste vindos do vampiro
 const vampDados = (f, nome) => vampDe(f)?.dados?.[nome] || 0;
+// perícias que o tipo de vampiro mexe (aparecem na lista mesmo sem treino)
+const periciasVamp = f => { const V = vampDe(f); return V ? [...new Set([...Object.keys(V.dados || {}), ...Object.keys(V.testes || {}), ...(vampForma(f) ? Object.keys(VAMP_TIPOS.carnical.forma.testes) : [])])] : []; };
 const vampTeste = (f, nome) => (vampDe(f)?.testes?.[nome] || 0) + (vampForma(f) ? VAMP_TIPOS.carnical.forma.testes[nome] || 0 : 0);
 
 // ataques naturais que o vampiro ganha (entram na aba Combate como armas, sem ocupar o inventário)
@@ -2034,7 +2037,7 @@ ROTAS.agente = async id => {
     if (aba === 'campanha') { const ms = mecsFicha(); return ms.length ? `<div class="grade-mecs">${ms.map(m => htmlMecanica(m, F, { pode: podeEditar && mecVale(m, F), mestre: ehMestre })).join('')}</div>` : '<div class="vazio">Nenhuma mecânica da campanha para este agente.</div>'; }
     const barra = `<div class="caixa barra-teste"><div class="campo"><label class="rotulo" for="dt">DT do teste</label><input type="number" id="dt" value="${window._dt ?? 20}"></div><div class="campo"><label class="rotulo" for="bonus">Bônus extra</label><input type="number" id="bonus" value="${window._bonus ?? 0}"></div><span class="dim" style="font-size:13px; margin-left:auto">${esc(K.pat.nome)}: limite <b class="mono" style="color:var(--ouro)">${K.pat.limite}</b> por perícia</span></div>`;
     if (aba === 'pericias') {
-      const nomes = mostrarTodas || editando || vetorAtivo(F) ? SIS.pericias.map(p => p.nome) : [...new Set([...(F.pericias || []).filter(p => p.pontos > 0).map(p => p.nome), ...periciasVontade(F.vontade, F.vontadeEscolha)])];
+      const nomes = mostrarTodas || editando || vetorAtivo(F) ? SIS.pericias.map(p => p.nome) : [...new Set([...(F.pericias || []).filter(p => p.pontos > 0).map(p => p.nome), ...periciasVontade(F.vontade, F.vontadeEscolha), ...periciasVamp(F)])];
       const PP = pontosPericia(F), nPat = patentesAlcancadas(nivelDe(F));
       const avisoPts = PP.livres > 0 ? `<div class="aviso aviso-pts"><b>${PP.livres} ponto(s) de perícia para distribuir.</b> ${nPat > 1 ? `Você alcançou ${esc(K.pat.nome)} e ganhou de novo os pontos da classe. ` : ''}${podeEditar ? (editando ? 'Use o + nas perícias.' : '<button class="btn mini" id="dist-pts">Distribuir agora</button>') : ''}</div>`
         : PP.livres < 0 ? `<div class="aviso" style="border-color:var(--sangue)">Esta ficha usa ${-PP.livres} ponto(s) de perícia a mais do que o permitido.</div>` : '';
@@ -2045,8 +2048,9 @@ ROTAS.agente = async id => {
         <input type="search" id="busca-per" placeholder="Buscar perícia (procura em todas)" value="${esc(window._buscaPer || '')}" autocomplete="off" style="max-width:340px">
         <div class="vazio" id="busca-per-nada" ${!bq || SIS.pericias.some(p => vis(p.nome)) ? 'hidden' : ''}>Nenhuma perícia com esse nome.</div>
         <div class="grade-per" data-base="${esc(JSON.stringify(nomes))}">${SIS.pericias.map(p => p.nome).map(n => { const P = dadosPericia(F, n);
-          return `<div class="per ${P.pontos + P.vt ? '' : 'zero'}" data-pnome="${esc(n)}" ${vis(n) ? '' : 'hidden'}><div class="topo-p"><b>${esc(n)}</b><div class="pips">${Array.from({ length: Math.max(K.pat.limite, P.pontos) }, (_, k) => `<span class="pip ${k < P.pontos ? 'on' : ''}"></span>`).join('')}${P.vt ? '<span class="pip vt" title="+1 da Vontade"></span>' : ''}</div></div>
+          return ` <div class="per ${P.pontos + P.vt + P.vd + P.extraVamp ? '' : 'zero'}" data-pnome="${esc(n)}" ${vis(n) ? '' : 'hidden'}><div class="topo-p"><b>${esc(n)}</b><div class="pips">${Array.from({ length: Math.max(K.pat.limite, P.pontos) }, (_, k) => `<span class="pip ${k < P.pontos ? 'on' : ''}"></span>`).join('')}${P.vt ? '<span class="pip vt" title="+1 da Vontade"></span>' : ''}${P.vd ? Array.from({ length: P.vd }, () => '<span class="pip vp" title="+1 do Vampiro"></span>').join('') : ''}</div></div>
           <div class="mono dim" style="font-size:12px" data-pline="${esc(id + '|p|' + n)}">${(G => `${G.dados}d20 + ${G.mod} (${SIGLA[G.atr]}${G.extraVamp ? ` +${G.extraVamp} vampiro` : ''})`)(comAtributo(F, P, UI_ARMA['giro|' + id + '|p|' + n]))}</div>
+          ${P.vd || P.extraVamp ? `<div style="display:flex; gap:4px; flex-wrap:wrap">${P.vd ? `<span class="tag tag-vamp">Vampiro +${P.vd}</span>` : ''}${P.extraVamp ? `<span class="tag tag-vamp">+${P.extraVamp} no teste</span>` : ''}</div>` : ''}
           ${P.vb ? `<div style="display:flex; gap:4px; flex-wrap:wrap"><span class="tag tag-vetor">Vetor +1</span>${P.alem ? '<span class="tag tag-vetor">Além do limite +1 dado</span>' : ''}</div>` : ''}
           <div class="edit-only" style="display:flex; gap:6px; align-items:center"><button class="vbtn" data-pp="${esc(n)}" data-d="-1">−</button><button class="vbtn" data-pp="${esc(n)}" data-d="1">+</button>
             <select data-patr="${esc(n)}" style="width:auto; padding:4px">${ATR.map(([k, , s]) => `<option value="${k}" ${P.atr === k ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
@@ -4148,7 +4152,7 @@ ROTAS.escudo = async id => {
       let det = '<div class="vazio-det">Selecione alguém na ordem de iniciativa</div>';
       if (x0 && x0.tipo === 'agente' && I0.f) { const f = I0.f, K = I0.K, a = I0.a, ab = est0.aba;
         const armas = (f.equipamentos || []).filter(it => it.dano);
-        const pers = [...new Set([...(f.pericias || []).filter(p => p.pontos > 0).map(p => p.nome), ...periciasVontade(f.vontade, f.vontadeEscolha)])];
+        const pers = [...new Set([...(f.pericias || []).filter(p => p.pontos > 0).map(p => p.nome), ...periciasVontade(f.vontade, f.vontadeEscolha), ...periciasVamp(f)])];
         let cx = '';
         if (ab === 'atributos') cx = `<div class="attr-linha">${ATR.map(([k, , s2]) => `<span><b>${f.atributos?.[k] ?? 0}</b>${s2}</span>`).join('')}</div>
           <div class="mini-stats"><div><div class="rotulo">Mov</div><div class="n">${K.mov}m</div></div><div><div class="rotulo">RD</div><div class="n">${K.rd}</div></div><div><div class="rotulo">Carga</div><div class="n">${fmtKg(K.carga)}/${fmtKg(K.cc)}</div></div></div>
