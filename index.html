@@ -844,7 +844,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261103081000';
+const BUILD = '20261104011656';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -869,8 +869,19 @@ function nomearCampos(raiz = document) {
     if (!c.id) c.id = 'cp-' + (++nCampo); l.htmlFor = c.id;
   });
 }
+// rascunho do chat e da rolagem da mesa sobrevive se a página recarregar
+function ligarRascunhos() {
+  document.querySelectorAll('.chat-txt, #dados-expr').forEach(el => {
+    if (el.dataset.rasc) return; el.dataset.rasc = '1';
+    const k = 'adr-rasc|' + location.hash.split('?')[0] + '|' + (el.id || 'chat');
+    const salvar = () => { try { el.value ? localStorage.setItem(k, el.value) : localStorage.removeItem(k); } catch (e) {} };
+    if (!el.value) { try { el.value = localStorage.getItem(k) || ''; } catch (e) {} }
+    el.addEventListener('input', salvar); el.addEventListener('blur', salvar);
+    el.form?.addEventListener('submit', () => setTimeout(salvar, 0));
+  });
+}
 let filaNomear = false;
-new MutationObserver(() => { if (filaNomear) return; filaNomear = true; requestAnimationFrame(() => { filaNomear = false; nomearCampos(); }); }).observe(document.documentElement, { childList: true, subtree: true });
+new MutationObserver(() => { if (filaNomear) return; filaNomear = true; requestAnimationFrame(() => { filaNomear = false; nomearCampos(); ligarRascunhos(); }); }).observe(document.documentElement, { childList: true, subtree: true });
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
 /* ---------- dados estáticos do sistema ---------- */
@@ -1582,7 +1593,7 @@ ROTAS.agente = async id => {
   if (!db) { app.innerHTML = semBanco(); return; }
   app.innerHTML = '<div class="vazio">Abrindo dossiê…</div>';
   const ref = db.doc('fichas/' + id); VER_MORTO[id] = false;
-  let F = null, aba = window._abaFicha || 'pericias', editando = false, mostrarTodas = false, podeEditar = false, ehMestre = false, pendente = false;
+  let F = null, aba = window._abaFicha || abaSalva('pericias'), editando = false, mostrarTodas = false, podeEditar = false, ehMestre = false, pendente = false;
   window._abaFicha = null;
   const salvarVitais = debounce(async () => { try { await ref.update({ atual: F.atual, queda: F.queda || {} }); } catch (e) { toast('Não deu para salvar os vitais.'); } pendente = false; }, 500);
   async function salvar(campos) { try { await ref.update(campos); } catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); } }
@@ -1939,7 +1950,7 @@ ROTAS.agente = async id => {
       try { await ref.update({ vetorVestido: vestir, atual: a }); } catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); }
       pendente = false;
     });
-    $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
+    $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; lembrarAba(aba); render(); });
     $('#todas')?.addEventListener('click', () => { mostrarTodas = !mostrarTodas; render(); });
     $$('[data-vaj]').forEach(t => { const go = () => ajustarVital(F, t.dataset.vaj, { mestre: ehMestre, aoSalvar: async ({ atual, maxExtra }) => { const k = t.dataset.vaj, caiu = atual[k] === 0 && marcas(F, k) == null;
         F.atual = atual; if (maxExtra) F.maxExtra = maxExtra; ajustarQueda(F); render();
@@ -2416,7 +2427,7 @@ async function homebrewVisivel(tipo, comCanon = false) {
 }
 const TIPOS_HB = [['ameaca', 'Ameaças'], ['npc', 'NPCs'], ['habilidade', 'Habilidades'], ['ritual', 'Rituais'], ['feitico', 'Feitiços'], ['item', 'Itens']];
 ROTAS.homebrew = async () => {
-  let aba = 'ameaca', docs = [];
+  let aba = abaSalva('ameaca'), docs = [];
   app.className = 'pagina estreita';
   function render() {
     const lista = docs.filter(x => x.tipo === aba).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
@@ -2428,7 +2439,7 @@ ROTAS.homebrew = async () => {
       <div class="lista" id="lista-hb">${lista.length ? '' : `<div class="vazio">Ainda não há ${TIPOS_HB.find(t => t[0] === aba)[1].toLowerCase()} no homebrew.</div>`}</div>`;
     const desenhar = () => { const q = $('#busca').value.toLowerCase(); $('#lista-hb').innerHTML = lista.filter(x => !q || JSON.stringify(x).toLowerCase().includes(q)).map(cardHB).join('') || (lista.length ? '<div class="vazio">Nada encontrado.</div>' : $('#lista-hb').innerHTML); ligarLista(); };
     $('#busca').oninput = desenhar; desenhar();
-    $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
+    $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; lembrarAba(aba); render(); });
     $('#novo')?.addEventListener('click', () => editarHB({ tipo: aba }));
   }
   const cardHB = x => {
@@ -3476,7 +3487,7 @@ ROTAS.regras = async id => {
   const ref = db.doc(`campanhas/${id}/publico/regras`);
   let doc = {}; try { const s = await ref.get(); doc = s.exists ? s.data() : {}; } catch (e) {}
   const R = JSON.parse(JSON.stringify(doc.rascunho || doc.ativo || regrasVazias())); R.classes ||= []; R.subExtras ||= []; R.mecanicas ||= [];
-  let aba = 'mecanicas', editando = null; // { lista, i }
+  let aba = abaSalva('mecanicas'), editando = null; // { lista, i }
   const salvarR = debounce(async () => { try { await ref.set({ ...doc, rascunho: R }); doc.rascunho = JSON.parse(JSON.stringify(R)); marcarStatus(); } catch (e) { toast('Não deu para salvar o rascunho.'); } }, 700);
   const mudou = () => JSON.stringify(R) !== JSON.stringify(doc.ativo || regrasVazias());
   const marcarStatus = () => { const el = $('#rg-status'); if (el) el.innerHTML = statusHtml(); const b = $('#rg-ok'); if (b) b.disabled = !mudou(); };
@@ -3553,7 +3564,7 @@ ROTAS.regras = async id => {
   const ligarPrevia = () => { const el = $('#previa'); if (!el || !editando || editando.lista !== 'mecanicas') return; const x = R.mecanicas[editando.i]; const f2 = { ...fake, campanhas: ['__previa'], mec: { ...fake.mec, [x.id]: { ...(fake.mec[x.id] || {}), lib: true } } };
     ligarMecanicas(el, f2, { salvarMec: mec => { fake.mec = mec; el.innerHTML = htmlPrevia(); ligarPrevia(); } }); };
   function ligar() {
-    $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
+    $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; lembrarAba(aba); render(); });
     $('#rg-ok').onclick = async () => { doc = { ...doc, ativo: JSON.parse(JSON.stringify(R)), rascunho: JSON.parse(JSON.stringify(R)), confirmado: Date.now(), versao: (+doc.versao || 0) + 1 };
       try { await ref.set(doc); REGRAS[id] = doc.ativo; toast('Ativado. Os agentes da campanha já recebem.'); render(); } catch (e) { toast('Não deu para ativar: ' + (e.message || e.code)); } };
     $('#rg-desc').onclick = () => { if (!doc.ativo) return; const novo = JSON.parse(JSON.stringify(doc.ativo)); Object.keys(R).forEach(k => delete R[k]); Object.assign(R, regrasVazias(), novo); editando = null; salvarR(); render(); };
@@ -3670,7 +3681,7 @@ ROTAS.usuario = async uid => {
   const mxDia = Math.max(1, ...dias14.map(d => d[1]));
   const diasAtivos = Object.values(A.dias || {}).filter(v => v > 0).length;
   const paginas = Object.entries(A.paginas || {}).sort((a, b) => b[1] - a[1]).map(([k, v]) => [`${NOME_SEC[k] || k} (${A.visitas?.[k] || 0}×)`, v]);
-  let aba = 'painel';
+  let aba = abaSalva('painel');
   const render = () => {
     let corpo = '';
     if (aba === 'painel') corpo = `<div class="adm-tiles"><div><b>${atrasDe(A.ultimoAcesso)}</b><span>último acesso${A.ultimoAcesso ? ' · ' + horaBR(A.ultimoAcesso) : ''}</span></div><div><b>${fmtDur(A.total)}</b><span>tempo no site</span></div><div><b>${diasAtivos}</b><span>dias com acesso</span></div><div><b>${fmtDur(diasAtivos ? (A.total || 0) / diasAtivos : 0)}</b><span>média por dia ativo</span></div><div><b>${Object.values(A.visitas || {}).reduce((a, b) => a + b, 0)}</b><span>páginas abertas</span></div></div>
@@ -3687,7 +3698,7 @@ ROTAS.usuario = async uid => {
         <p class="mono faint" style="margin:6px 0 0; font-size:12px; overflow-wrap:anywhere">${esc(A.email || '')}${A.email ? ' · ' : ''}${esc(uid)}</p>${pf?.papel === 'admin' ? '<span class="tag crit">Admin</span>' : ''}${cac ? ` <a class="tag" href="#dossie-${esc(uid)}">Caçador: ${esc(cac.nome)}</a>` : ''}</div></div>
       <div class="abas">${[['painel', 'Atividade'], ['fichas', `Fichas ${fichas.length}`], ['campanhas', `Campanhas ${camps.length + outras.length}`], ['homebrew', `Homebrew ${hb.length}`]].map(([k, l]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${l}</button>`).join('')}</div>
       <section style="display:grid; gap:16px">${corpo}</section>`;
-    $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
+    $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; lembrarAba(aba); render(); });
     const confirma = (txt, fn) => abrirModal('Confirmar', `<p>${txt}</p><div style="display:flex; gap:8px"><button class="btn" id="cf-ok">Apagar</button><button class="btn sec" data-c>Cancelar</button></div>`, (m, fechar) => { m.querySelector('[data-c]').onclick = fechar; m.querySelector('#cf-ok').onclick = async () => { try { await fn(); toast('Apagado.'); } catch (e) { toast('Não deu: ' + (e.message || e.code)); } fechar(); render(); }; });
     $$('[data-del-ficha]').forEach(b => b.onclick = () => { const f = fichas.find(x => x.id === b.dataset.delFicha); confirma(`Apagar a ficha <b>${esc(f.nome)}</b> de ${esc(nome)}? Não tem volta.`, async () => { for (const c of f.campanhas || []) { try { await db.doc(`campanhas/${c}/agentes/${f.id}`).delete(); } catch (e) {} } await db.doc('fichas/' + f.id).delete(); fichas.splice(fichas.indexOf(f), 1); }); });
     $$('[data-canon-u]').forEach(b => b.onclick = async () => { const x = hb.find(y => y.id === b.dataset.canonU); await canonizar(x, !x.canonico); render(); });
@@ -3704,7 +3715,7 @@ ROTAS.usuario = async uid => {
 ROTAS.campanha = async id => {
   if (!db) { app.innerHTML = semBanco(); return; }
   await carregarPart();
-  let aba = ABA_INICIAL || 'agentes'; ABA_INICIAL = null; if (aba === 'rolagens') aba = 'agentes'; LADO = null;
+  let aba = ABA_INICIAL || abaSalva('agentes'); ABA_INICIAL = null; if (aba === 'rolagens') aba = 'agentes'; LADO = null;
   await carregarRegras([id], () => render());
   const listaRol = () => st.rolagens.map(rolHtml).join('') || '<div class="vazio" style="font-size:15px">Nenhuma rolagem ainda.</div>';
   let cfgFeed = null;
@@ -3741,7 +3752,7 @@ ROTAS.campanha = async id => {
       </section>
       <div class="escudo"><aside class="feed" id="feed-j"></aside>
       <div style="display:grid; gap:16px; min-width:0; align-content:start"><div class="abas">${[['agentes', 'Agentes'], ['jogadores', 'Jogadores'], ['combate', st.combate?.ativo ? 'Combate ●' : 'Combate'], ['pistas', 'Pistas'], ['relatorios', 'Relatórios'], ...(temRegras(id) ? [['regras', 'Regras da casa']] : []), ['ligacao', Object.keys(CH.sala === id ? CH.presenca : {}).length ? `Ligação ● ${Object.keys(CH.presenca).length}` : 'Ligação']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>${corpo}</div></div>`;
-    $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
+    $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; lembrarAba(aba); render(); });
     atualizarPersona(st);
     if (aba === 'ligacao' && membro) montarLigacao(id, C, st);
     $('#entrar-c')?.addEventListener('click', () => entrarCampanha(id));
@@ -3803,7 +3814,7 @@ ROTAS.escudo = async id => {
   const refE = db.doc(`mestre/${ME}/escudo/${id}`);
   let E = { anotacoes: { geral: '', futuras: '', anteriores: '' }, combate: { rodada: 1, turno: 0, lista: [], ativo: false }, pistas: [], ocultas: [] };
   try { const s = await refE.get(); if (s.exists) E = { ...E, ...s.data() }; } catch (e) {}
-  let aba = ABA_INICIAL || 'agentes', gravando = Promise.resolve(); ABA_INICIAL = null; LADO = null;
+  let aba = ABA_INICIAL || abaSalva('agentes'), gravando = Promise.resolve(); ABA_INICIAL = null; LADO = null;
   let selCb = null; const estDet = {};
   const VETORES = {};
   assinar(db.collection(`mestre/${ME}/vetores`).where('campanha', '==', id).onSnapshot(s => { for (const k in VETORES) delete VETORES[k]; s.docs.forEach(d => VETORES[d.id] = d.data()); if (aba === 'vetores') render(); }));
@@ -3832,7 +3843,7 @@ ROTAS.escudo = async id => {
   function renderE() {
     const ABAS = [['agentes', 'Agentes'], ['combate', 'Combate'], ['investigacao', 'Investigação'], ['relatorios', 'Relatórios'], ['dados', 'Dados'], ['vetores', 'Vetores'], ['anotacoes', 'Anotações'], ['ligacao', 'Ligação']];
     $('#abas-e').innerHTML = ABAS.map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('');
-    $$('#abas-e [data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; render(); });
+    $$('#abas-e [data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; lembrarAba(aba); render(); });
     const fichas = Object.values(st.fichas).filter(Boolean);
     const corpo = $('#corpo-e');
     if (aba === 'agentes') {
@@ -4059,6 +4070,10 @@ async function montarIce() {
   } catch (e) { return ICE; }
 }
 let ABA_INICIAL = null;
+// lembra a aba aberta em cada tela: se o navegador do celular recarregar a página (fechou o app, voltou), ela volta onde estava
+const chaveTela = () => 'adr-aba|' + location.hash.split('?')[0];
+const abaSalva = padrao => { try { return localStorage.getItem(chaveTela()) || padrao; } catch (e) { return padrao; } };
+const lembrarAba = v => { try { localStorage.setItem(chaveTela(), v); } catch (e) {} };
 const FONE_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><rect x="3" y="14" width="4" height="7" rx="1.5"/><rect x="17" y="14" width="4" height="7" rx="1.5"/><path d="M3 3l18 18" class="risco"/></svg>';
 const DESLIGAR_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 14.5c5-4.7 13-4.7 18 0l-2.3 2.3-3.4-1.6v-2.5c-2.2-.7-4.4-.7-6.6 0v2.5l-3.4 1.6z" fill="currentColor"/></svg>';
 const PERSONA_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>';
@@ -4415,6 +4430,17 @@ async function carregarSessao(session) {
   }
   desenharQuem();
 }
+// posição da página: guarda enquanto rola e, se a página recarregar na mesma tela, volta pro mesmo ponto
+function guardarRolagem() { try { localStorage.setItem('adr-rolagem', JSON.stringify({ h: location.hash, y: Math.round(scrollY), t: Date.now() })); } catch (e) {} }
+addEventListener('scroll', debounce(guardarRolagem, 250), { passive: true });
+addEventListener('pagehide', guardarRolagem);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') guardarRolagem(); });
+function voltarRolagem() {
+  let r = null; try { r = JSON.parse(localStorage.getItem('adr-rolagem') || 'null'); } catch (e) {}
+  if (!r || r.h !== location.hash || !r.y || Date.now() - r.t > 3 * 864e5) return;
+  let n = 0; const tentar = () => { if (location.hash !== r.h) return; if (document.documentElement.scrollHeight - innerHeight >= r.y - 5) scrollTo(0, r.y); else if (++n < 20) setTimeout(tentar, 250); };
+  setTimeout(tentar, 300);
+}
 (async function iniciar() {
   try { await carregarBase(); } catch (e) { app.innerHTML = '<div class="aviso">Não deu para carregar os dados do sistema. Abra o site por um servidor (não direto do arquivo) e recarregue.</div>'; return; }
   const cfg = window.ADR_CONFIG;
@@ -4429,6 +4455,7 @@ async function carregarSessao(session) {
     });
   } else desenharQuem();
   rotear();
+  voltarRolagem();
 })();
 </script>
 </body>
