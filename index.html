@@ -162,6 +162,10 @@ input[type=text], input[type=number], input[type=search], select, textarea {
 textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ouro); }
 .campo { display: grid; gap: 5px; min-width: 0; }
+.vp-compl { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-color: color-mix(in srgb, var(--sangue) 55%, var(--linha)); }
+.vp-lista { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 14px; }
+.vp-fraq { border-color: color-mix(in srgb, var(--sangue) 40%, var(--linha)); }
+.vp-op { display: grid; gap: 3px; text-align: left; cursor: pointer; font: inherit; color: inherit; } .vp-op:hover, .vp-op.aqui { border-color: var(--sangue); }
 .it-abas { margin-bottom: 8px; } .it-lista { gap: 6px; margin-top: 10px; }
 .it-linha { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; }
 .btn.mini.it-add { min-width: 40px; min-height: 34px; font-size: 20px; line-height: 1; }
@@ -841,7 +845,7 @@ const ICON_BUSCA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 const ATR = [['forca','Força','FOR'],['destreza','Destreza','DES'],['constituicao','Constituição','CON'],['inteligencia','Inteligência','INT'],['presenca','Presença','PRE']];
 const SIGLA = Object.fromEntries(ATR.map(a => [a[0], a[2]]));
 // atributo de giro: troca o atributo que soma no teste (só nesta rolagem)
-const comAtributo = (f, P, atr) => { if (!atr || atr === P.atr) return P; const A = f.atributos || {}; return { ...P, atr, mod: P.mod - (A[P.atr] || 0) + (A[atr] || 0) }; };
+const comAtributo = (f, P, atr) => { if (!atr || atr === P.atr) return P; const A = atrEf(f); return { ...P, atr, mod: P.mod - (A[P.atr] || 0) + (A[atr] || 0) }; };
 const seletorGiro = (chave, atrPadrao, rot = 'Atributo de giro') => `<label class="giro" title="${rot}"><span>${rot}</span><select data-giro="${esc(chave)}">${ATR.map(([k, , s]) => `<option value="${k}" ${(UI_ARMA['giro|' + chave] || atrPadrao) === k ? 'selected' : ''}>${s}${k === atrPadrao ? ' (padrão)' : ''}</option>`).join('')}</select></label>`;
 const ELEMS = ['Guerra','Fome','Peste','Morte','Neutro','Conquista','Karma','Destino','Caos'];
 const elDe = nomeAl => String(nomeAl || '').replace(/ \(.*\)$/, '');
@@ -856,7 +860,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261104012619';
+const BUILD = '20261104022915';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1123,7 +1127,7 @@ const fotoEf = f => (vetorAtivo(f) && f.vetor.foto) || f?.foto || '';
 const normBusca = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 function calc(f) {
   const C = classe(f.classe) || { pv: 0, ps: 0, pst: 0 };
-  const A = f.atributos || {}, N = nivelDe(f);
+  const A = atrEf(f), N = nivelDe(f);
   const VB = vetorAtivo(f) ? 5 * N : 0;
   const pt = n => (f.pericias || []).find(p => p.nome === n)?.pontos || 0;
   const vig = pt('Vigor'), vtd = pt('Vontade');
@@ -1139,23 +1143,26 @@ function calc(f) {
     pst: `5 + (${C.pst} + ${A.constituicao || 0}) × ${N}${vig ? ` + ${vig * 2} Vigor` : ''}`,
   };
   if (VB) for (const k in form) form[k] += ` + ${VB} Vetor`;
+  // complemento de vampiro: bônus do tipo e da forma de morcego (Carniçal)
+  const VP = vampDe(f), VF = vampForma(f) ? VAMP_TIPOS.carnical.forma : null;
+  if (VP) for (const k of ['pv', 'ps', 'pst']) { const x = (+VP[k] || 0) + (VF ? +VF[k] || 0 : 0); if (x) { max[k] = Math.max(1, max[k] + x); form[k] += ` ${x > 0 ? '+' : '−'} ${Math.abs(x)} ${VF && VF[k] ? 'Morcego' : 'Vampiro'}`; } }
   // mecânicas da campanha
   const BM = typeof bonusMec === 'function' ? bonusMec(f) : null;
   if (BM) for (const k of ['pv', 'ps', 'pst']) if (BM[k]) { max[k] += BM[k]; form[k] += ` + ${BM[k]} ${BM.nomes.join('/')}`; }
   // ajuste do mestre no máximo (pode ser negativo)
   for (const k of ['pv', 'ps', 'pst']) { const x = +f.maxExtra?.[k] || 0; if (x) { max[k] = Math.max(1, max[k] + x); form[k] += ` ${x > 0 ? '+' : '−'} ${Math.abs(x)} mestre`; } }
   const eq = f.equipamentos || [];
-  const bruto = eq.reduce((s, i) => s + (+i.peso || 0) * (+i.qtd || 1), 0);
+  const bruto = eq.reduce((s, i) => s + (+i.peso || 0) * (+i.qtd || 1) * (VP?.armasMetade && i.dano ? 0.5 : 1), 0);
   const alivio = eq.reduce((s, i) => s + (+i.alivio || 0), 0);
   const carga = Math.max(0, bruto - alivio);
   const cc = ((A.forca || 0) + (A.constituicao || 0)) * 2;
   const rdItens = eq.reduce((s, i) => s + (+i.rd || 0) * 1, 0);
   const temPas = n => (f.passivas || []).some(p => p.nome === n);
-  const rd = Math.max(0, rdItens + (+f.rdExtra || 0) + (BM?.rd || 0));
+  const rd = Math.max(0, rdItens + (+f.rdExtra || 0) + (BM?.rd || 0) + (VF ? VF.rd : 0));
   const rdPar = Math.max(0, (temPas('Resistência Arcana') ? 15 : 0) + (+f.rdParExtra || 0));
   const rdForm = [rdItens ? `${rdItens} itens` : '', +f.rdExtra ? `${+f.rdExtra > 0 ? '+' : ''}${+f.rdExtra} ajuste` : ''].filter(Boolean).join(' ') || '0';
   const rdParForm = [temPas('Resistência Arcana') ? '15 Resistência Arcana' : '', +f.rdParExtra ? `${+f.rdParExtra > 0 ? '+' : ''}${+f.rdParExtra} ajuste` : ''].filter(Boolean).join(' ') || '0';
-  return { max, form, carga, cc, rd, rdPar, rdForm, rdParForm, mov: 5 + (A.destreza || 0), pat: patente(N), vb: VB };
+  return { max, form, carga, cc, rd, rdPar, rdForm, rdParForm, mov: 5 + (A.destreza || 0) + (VF ? VF.mov : 0), pat: patente(N), vb: VB };
 }
 const NOMES_VIT = { pv: 'PV · Vida', ps: 'PS · Sanidade', pst: 'PST · Stamina' };
 // ajuste manual: tirar, somar ou definir um valor; o mestre também mexe no máximo
@@ -1186,9 +1193,100 @@ function dadosPericia(f, nome) {
   const vb = vetorAtivo(f) ? 1 : 0;
   const alem = vb && pontos + 1 > patente(nivelDe(f)).limite ? 1 : 0;
   const bm = typeof bonusMec === 'function' ? bonusMec(f).pericias : 0;
-  return { pontos, vt, vb, alem, atr, dados: Math.max(1, pontos + vt + vb + alem + bm), mod: f.atributos?.[atr] || 0 };
+  const vd = vampDados(f, nome), vtx = vampTeste(f, nome);
+  return { pontos, vt, vb, alem, atr, dados: Math.max(1, pontos + vt + vb + alem + bm + vd), mod: (atrEf(f)[atr] || 0) + vtx, extraVamp: vtx };
 }
 
+/* =================================================================
+   COMPLEMENTO: VAMPIROS (opcional, ligado ficha por ficha pelo dono ou pelo mestre)
+   ================================================================= */
+const VAMP_TIPOS = {
+  carnical: { nome: 'Vampiro Carniçal', resumo: 'O mais bestial. Fora de combate é um vampiro comum; abaixo de 70% do PV, vira um morcego gigante.',
+    forma: { pv: 20, pst: 10, ps: -15, mov: 3, rd: 5, testes: { 'Resiliência': 10 } },
+    vant: ['Abaixo de 70% do PV pode virar morcego gigante.', 'Na forma: +20 PV / +10 PST / −15 PS.', 'Asas: +3m de movimento.', 'Mordida: 2d8 + FOR (×2). Garras: 1d12 + FOR (×3).', '+5 RD física, só em combate.', '+10 em testes de Resiliência em combate.'] },
+  encouracado: { nome: 'Vampiro Encouraçado', resumo: 'O que caça e não desiste até a presa cair sem nenhuma gota de sangue. Sádico, porém calculista: um dos poucos monstros de Fome que não são 100% irracionais.',
+    pv: 10, pst: 15, ps: 5, dados: { 'Armas Brancas': 1, 'Pontaria': 1 }, testes: { 'Furtividade': 3, 'Percepção': 3, 'Análise': 3 }, armasMetade: true, favorita: true,
+    vant: ['+10 PV / +15 PST / +5 PS.', '+1 Armas Brancas / +1 Pontaria.', 'Todas as armas pesam metade.', '+1 na margem de crítico da arma favorita.', '+3 em Furtividade, Percepção e Análise.'] },
+  servente: { nome: 'Vampiro Servente', resumo: 'Não vê vantagem em caminhar sozinho: é útil a outros vampiros para criar alianças e se proteger. Racional, evita confronto direto sendo útil ou sedutor.',
+    pv: -5, pst: 5, ps: 15, dados: { 'Sedução': 1, 'Medicina': 1 }, testes: { 'Sedução': 5, 'Lábia': 5, 'Diplomacia': 5, 'Medicina': 5 },
+    vant: ['−5 PV / +5 PST / +15 PS.', 'Armazena sangue dentro de si para curar aliados em combate.', 'Cura: 2d10 + PRE (ação de movimento) ou 4d10 + 7 (ação completa).', '+5 em Sedução, Lábia, Diplomacia e Medicina.', '+1 Sedução / +1 Medicina.'] },
+  criogenico: { nome: 'Vampiro Criogênico', resumo: 'Reduz o dano do calor roubando o calor do corpo de seres vivos. Dizem que surgiu por causa de uma máscara de pedra antiga, mas nada confirmado.',
+    pv: 12, pst: 12, ps: 12, rdFogo: 5,
+    vant: ['+12 PV / PST / PS.', '50% de chance (1d4) de causar Congelado em qualquer ataque, físico ou de ritual.', 'Congelado: 2d6 de dano por turno, movimento pela metade, regeneração pausada até se curar.', '+3 em qualquer ataque contra um inimigo Congelado.', '+5 RD contra calor e luz.'] },
+  centenario: { nome: 'Vampiro Centenário', resumo: 'Viveu muito tempo como humano e manteve o conhecimento intacto mesmo depois de virar monstro. A experiência foi a única coisa que não conseguiram tirar.',
+    atr: { inteligencia: 1, presenca: 1 }, testes: { 'História': 3, 'Investigação': 3, 'Investigação Paranormal': 3, 'Pesquisa': 3, 'Análise': 3 },
+    vant: ['+1 Intelecto / +1 Presença.', '+3 em História, Investigação, Investigação Paranormal, Pesquisa e Análise.', 'Reconhece símbolos, idiomas e tradições antigas mesmo sem treino.', 'Uma vez por cena: teste de Memória para lembrar da vida humana. Se passar, +5 no próximo teste de Intelecto.'] },
+  aristocrata: { nome: 'Vampiro Aristocrata', resumo: 'Preservou os costumes e a educação da vida antiga. Manipulador e influente, prefere controlar pessoas e instituições a caçar. Muitos humanos nem desconfiam.',
+    pv: 5, pst: 5, ps: 20, atr: { presenca: 1 }, testes: { 'Diplomacia': 5, 'Lábia': 5, 'Intimidar': 5 },
+    vant: ['+5 PV / +5 PST / +20 PS.', '+1 Presença.', '+5 em Diplomacia, Lábia e Intimidação.', 'Autoridade: uma vez por cena, +5 num teste de um aliado que te ouça e decida obedecer.', 'Sangue Nobre: +5 para resistir a manipulação e intimidação.'] },
+};
+const VAMP_HAB = [
+  ['Regeneração Parcial', 'Enquanto consome sangue humano com frequência, o vampiro usa os nutrientes do sangue para se regenerar.', 'Ao declarar que bebeu sangue, recupera até 30% do PV total. Dormindo durante o dia, recupera o PV por completo.'],
+  ['Atributos Aprimorados', 'Modificado, o vampiro realiza feitos físicos superiores aos de um humano médio.', 'Talvez levante uma carroça no braço ou alcance a velocidade de um leopardo: depende do seu dado e da sua criatividade.'],
+  ['Imortalidade Parcial', 'Dentro das regras da Regeneração Parcial, o vampiro é parcialmente imortal: resiste ao frio, a socos, tiros e cortes. Enquanto tiver algo do corpo para regenerar, vive. Mas ainda sente dor.', 'Se joga duma montanha aí, chefe, dá nada não, pode ir.'],
+  ['Telepatia', 'Em vínculo, vampiros mandam mensagens uns aos outros a longa distância. Atingido no cérebro, perde a telepatia até regenerar por completo.', 'Na mesma área, jogadores entrosados se comunicam com frases curtas. Saindo da área, mantém a telepatia por 18 metros. Dano no cérebro tira a telepatia até o fim da sessão.'],
+];
+const VAMP_FRAQ = [
+  ['Fogo / Luz', 'Dano com fogo ou propriedade de luz causa o dobro. A luz do sol causa dano contínuo pelo tempo de exposição. O fogo impede a regeneração enquanto estiver aceso no corpo.'],
+  ['Alho', 'Mais alergia do que fraqueza: a pele coça, a garganta fecha e o corpo pálido avermelha. Não mata, mas incomoda muito.'],
+  ['Decapitação', 'Uma das únicas brechas da imortalidade: decapitado, morre na hora, sem passar pela fase Morrendo.'],
+  ['Estaca no coração', 'Junto com a decapitação, burla a imortalidade: pula a fase Morrendo.'],
+  ['Dependência', 'Não é imediata. Na primeira vez, o sangue tem gosto doce e forte. Depois disso, faz um teste de Resiliência a cada hora da vida real sem sangue. A falta pode enlouquecer e matar de fome se passar mais de duas sessões sem se alimentar.'],
+  ['Água', 'Vampiros não nadam: afundam. Não morrem afogados, mas podem ficar presos na água para sempre ou até morrer de fome.'],
+];
+const vampDe = f => VAMP_TIPOS[f?.vampiro?.tipo] || null;
+const vampForma = f => f?.vampiro?.tipo === 'carnical' && !!f.vampiro.forma;
+// atributos com o bônus do tipo de vampiro (Centenário, Aristocrata)
+const atrEf = f => { const A = { ...(f?.atributos || {}) }, V = vampDe(f); if (V?.atr) for (const k in V.atr) A[k] = (A[k] || 0) + V.atr[k]; return A; };
+// dados extras e bônus fixos de teste vindos do vampiro
+const vampDados = (f, nome) => vampDe(f)?.dados?.[nome] || 0;
+const vampTeste = (f, nome) => (vampDe(f)?.testes?.[nome] || 0) + (vampForma(f) ? VAMP_TIPOS.carnical.forma.testes[nome] || 0 : 0);
+
+function htmlVampiro(F, podeEditar) {
+  const V = vampDe(F), v = F.vampiro || {}, K = calc(F), a = { ...K.max, ...(F.atual || {}) };
+  const horas = v.provou && v.ultimoSangue ? Math.floor((Date.now() - v.ultimoSangue) / 36e5) : null;
+  const armas = (F.equipamentos || []).filter(i => i.dano);
+  const pode70 = a.pv < K.max.pv * 0.7;
+  return `<div style="display:grid; gap:16px">
+    <div class="cab-pagina"><div><span class="rotulo">Complemento · Presas Além da Realidade</span><h2 style="margin:2px 0">${esc(V.nome)}</h2><p class="dim" style="margin:0; max-width:75ch">${esc(V.resumo)}</p></div>
+      ${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn sec mini" id="vp-tipo">Trocar tipo</button><button class="btn sec mini" id="vp-tirar">Tirar complemento</button></div>' : ''}</div>
+    <div class="grade-hab">
+      <article class="hab"><div class="cab"><span class="nm">Vantagens do tipo</span></div><ul class="vp-lista">${V.vant.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+        <p class="faint" style="font-size:12.5px; margin:6px 0 0">PV, PS, PST, atributos, perícias e RD já estão somados na ficha.</p></article>
+      <article class="hab"><div class="cab"><span class="nm">Sangue</span></div>
+        <p style="margin:0">${v.provou ? (horas === null ? 'Ainda não registrou o último gole.' : `Último sangue: <b>há ${horas} hora${horas === 1 ? '' : 's'}</b> (tempo real).`) : 'Ainda não provou sangue humano: sem dependência por enquanto.'}</p>
+        ${v.fogo ? '<p class="falha" style="margin:0">Fogo aceso no corpo: regeneração bloqueada.</p>' : ''}
+        ${podeEditar ? `<div class="linha-ex" style="flex-wrap:wrap; gap:6px"><button class="btn mini" id="vp-sangue" ${v.fogo ? 'disabled' : ''}>Bebi sangue (+30% PV)</button><button class="btn sec mini" id="vp-dormir" ${v.fogo ? 'disabled' : ''}>Dormi durante o dia</button>
+          ${v.provou && horas >= 1 ? `<button class="btn sec mini" id="vp-dep">Teste de Dependência (Resiliência)</button>` : ''}
+          <label class="giro" style="gap:6px"><input type="checkbox" id="vp-fogo" ${v.fogo ? 'checked' : ''}> <span>Fogo no corpo</span></label></div>` : ''}
+        <div class="res" id="vp-res"></div></article>
+      <article class="hab"><div class="cab"><span class="nm">Telepatia</span><span class="tag ${v.cerebro ? 'crit' : ''}">${v.cerebro ? 'Perdida' : 'Ativa'}</span></div>
+        <p class="dim" style="margin:0; font-size:13.5px">Frases curtas com vampiros em vínculo na mesma área. Fora da área, alcance de 18 metros.</p>
+        ${podeEditar ? `<label class="giro" style="gap:6px"><input type="checkbox" id="vp-cerebro" ${v.cerebro ? 'checked' : ''}> <span>Atingido no cérebro (sem telepatia até o fim da sessão)</span></label>` : ''}</article>
+      ${v.tipo === 'carnical' ? `<article class="hab"><div class="cab"><span class="nm">Morcego Gigante</span><span class="tag ${v.forma ? 'crit' : ''}">${v.forma ? 'Transformado' : 'Forma humana'}</span></div>
+        <p class="dim" style="margin:0; font-size:13.5px">${v.forma ? 'Na forma: +20 PV, +10 PST, −15 PS, +3m, +5 RD física e +10 em Resiliência.' : pode70 ? 'PV abaixo de 70%: pode se transformar.' : `Só abaixo de 70% do PV (agora ${a.pv} de ${K.max.pv}).`}</p>
+        ${podeEditar ? `<div class="linha-ex" style="gap:6px; flex-wrap:wrap"><button class="btn mini" id="vp-forma" ${!v.forma && !pode70 ? 'disabled' : ''}>${v.forma ? 'Voltar à forma humana' : 'Virar morcego'}</button>
+          ${v.forma ? '<button class="btn sec mini" data-vp-atk="mordida">Mordida 2d8+FOR ×2</button><button class="btn sec mini" data-vp-atk="garras">Garras 1d12+FOR ×3</button>' : ''}</div>` : ''}</article>` : ''}
+      ${v.tipo === 'encouracado' ? `<article class="hab"><div class="cab"><span class="nm">Arma favorita</span></div><p class="dim" style="margin:0; font-size:13.5px">+1 na margem de crítico com ela.</p>
+        ${podeEditar ? `<select id="vp-fav"><option value="">Nenhuma</option>${armas.map(i => `<option ${i.nome === v.favorita ? 'selected' : ''}>${esc(i.nome)}</option>`).join('')}</select>` : `<b>${esc(v.favorita || 'Nenhuma')}</b>`}</article>` : ''}
+      ${v.tipo === 'servente' ? `<article class="hab"><div class="cab"><span class="nm">Cura de sangue</span></div><p class="dim" style="margin:0; font-size:13.5px">Sangue armazenado para curar um aliado em combate.</p>
+        <div class="linha-ex" style="gap:6px; flex-wrap:wrap"><button class="btn mini" data-vp-rol="2d10+PRE" data-vp-nome="Cura de sangue (movimento)">2d10 + PRE · movimento</button><button class="btn sec mini" data-vp-rol="4d10+7" data-vp-nome="Cura de sangue (completa)">4d10 + 7 · completa</button></div></article>` : ''}
+      ${v.tipo === 'criogenico' ? `<article class="hab"><div class="cab"><span class="nm">Congelar</span></div><p class="dim" style="margin:0; font-size:13.5px">Depois de qualquer ataque: no 1d4, 3 ou 4 deixa o alvo Congelado (2d6 por turno, movimento pela metade, regeneração pausada). +3 nos ataques contra ele.</p>
+        <div class="linha-ex" style="gap:6px"><button class="btn mini" id="vp-congela">Rolar 1d4</button><button class="btn sec mini" data-vp-rol="2d6" data-vp-nome="Dano de Congelado">2d6 do Congelado</button></div></article>` : ''}
+      ${v.tipo === 'centenario' ? `<article class="hab"><div class="cab"><span class="nm">Lembranças</span></div><p class="dim" style="margin:0; font-size:13.5px">Uma vez por cena: se passar no teste de Memória, +5 no próximo teste de Intelecto.</p>
+        <button class="btn mini" data-vp-per="Memória">Teste de Memória</button></article>` : ''}
+      ${v.tipo === 'aristocrata' ? `<article class="hab"><div class="cab"><span class="nm">Autoridade</span></div><p class="dim" style="margin:0; font-size:13.5px">Uma vez por cena, um aliado que te ouça e decida obedecer ganha +5 num teste. Sangue Nobre: +5 para resistir a manipulação e intimidação.</p></article>` : ''}
+    </div>
+    <div><h3 style="margin:0 0 8px">Habilidades de todo vampiro</h3><div class="grade-hab">${VAMP_HAB.map(([n, t, j]) => `<article class="hab"><div class="cab"><span class="nm">${n}</span></div><p style="margin:0">${esc(t)}</p><p class="dim" style="margin:6px 0 0; font-size:13.5px"><b>Dentro do jogo:</b> ${esc(j)}</p></article>`).join('')}</div></div>
+    <div><h3 style="margin:0 0 8px">Fraquezas</h3><div class="grade-hab">${VAMP_FRAQ.map(([n, t]) => `<article class="hab vp-fraq"><div class="cab"><span class="nm">${n}</span></div><p style="margin:0">${esc(t)}</p></article>`).join('')}</div></div>
+  </div>`;
+}
+function escolherTipoVampiro(atual, aoEscolher) {
+  abrirModal('Complemento: Vampiro', `<p class="dim" style="margin:0">Sistema opcional da campanha Presas Além da Realidade. Escolha o tipo de vampiro desta ficha.</p>
+    <div class="lista" style="gap:8px">${Object.entries(VAMP_TIPOS).map(([k, t]) => `<button class="item vp-op ${k === atual ? 'aqui' : ''}" data-vt="${k}"><b>${esc(t.nome)}</b><span class="dim" style="font-size:13px">${esc(t.resumo)}</span><span class="faint" style="font-size:12.5px">${esc(t.vant.slice(0, 3).join(' · '))}</span></button>`).join('')}</div>`, (m, fechar) => {
+    m.querySelectorAll('[data-vt]').forEach(b => b.onclick = () => { fechar(); aoEscolher(b.dataset.vt); });
+  });
+}
 /* ---------- dados (rolagem) ---------- */
 const d = s => 1 + Math.floor(Math.random() * s);
 // "2d8+1d6+3" soma; "3d20m+4" = 3d20 fica o maior
@@ -1849,7 +1947,7 @@ ROTAS.agente = async id => {
       </div>
     </section>
 
-    <div class="abas" role="tablist">${[['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ...(sabeFeitico(F) ? [['feiticos', 'Feitiços']] : []), ...(ehBruxa(F) ? [['maldicoes', 'Maldições']] : []), ...(mecsFicha().length ? [['campanha', 'Campanha']] : []), ['inventario', 'Inventário'], ['descricao', 'Descrição']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
+    <div class="abas" role="tablist">${[['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ...(sabeFeitico(F) ? [['feiticos', 'Feitiços']] : []), ...(ehBruxa(F) ? [['maldicoes', 'Maldições']] : []), ...(mecsFicha().length ? [['campanha', 'Campanha']] : []), ...(vampDe(F) ? [['vampiro', 'Vampiro']] : []), ['inventario', 'Inventário'], ['descricao', 'Descrição']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
     <section id="sec">${secao(K, C, S)}</section>
     </div>`;
     ligarFicha(K);
@@ -1858,6 +1956,7 @@ ROTAS.agente = async id => {
   // mecânicas visíveis: o jogador vê as que valem para ele; o mestre também vê as trancadas para liberar
   function mecsFicha() { const todas = regrasDe(F).mecanicas; return todas.filter(m => mecVale(m, F) || (ehMestre && m.quem?.modo === 'liberado')); }
   function secao(K, C, S) {
+    if (aba === 'vampiro' && vampDe(F)) return htmlVampiro(F, podeEditar);
     if (aba === 'campanha') { const ms = mecsFicha(); return ms.length ? `<div class="grade-mecs">${ms.map(m => htmlMecanica(m, F, { pode: podeEditar && mecVale(m, F), mestre: ehMestre })).join('')}</div>` : '<div class="vazio">Nenhuma mecânica da campanha para este agente.</div>'; }
     const barra = `<div class="caixa barra-teste"><div class="campo"><label class="rotulo" for="dt">DT do teste</label><input type="number" id="dt" value="${window._dt ?? 20}"></div><div class="campo"><label class="rotulo" for="bonus">Bônus extra</label><input type="number" id="bonus" value="${window._bonus ?? 0}"></div><span class="dim" style="font-size:13px; margin-left:auto">${esc(K.pat.nome)}: limite <b class="mono" style="color:var(--ouro)">${K.pat.limite}</b> por perícia</span></div>`;
     if (aba === 'pericias') {
@@ -1901,6 +2000,7 @@ ROTAS.agente = async id => {
         <div class="cab-pagina"><h2>Classe · ${esc(F.subclasse)}</h2></div>
         <div class="grade-hab">${habCl.map(h => `<article class="hab ${h.nivel > F.nivel ? 'bloq' : ''}"><div class="cab"><span class="nm">${esc(h.nome)}</span><span class="tag">Nv ${h.nivel}</span></div><p>${esc(h.texto)}</p>${h.nivel > F.nivel ? '' : botoesUso(h.nome)}</article>`).join('') || '<div class="vazio">Sem subclasse.</div>'}</div>
         ${VL_HAB()}
+        ${podeEditar || vampDe(F) ? `<div class="caixa vp-compl"><div><span class="rotulo">Complementos opcionais</span><p class="dim" style="margin:2px 0 0; font-size:13.5px">${vampDe(F) ? `Esta ficha é um <b>${esc(vampDe(F).nome)}</b>. Os detalhes estão na aba Vampiro.` : 'Quando o personagem vira vampiro (Presas Além da Realidade), ligue aqui.'}</p></div>${vampDe(F) ? '<button class="btn sec mini" data-aba="vampiro">Abrir aba Vampiro</button>' : '<button class="btn mini" id="vp-ligar">Tornar vampiro</button>'}</div>` : ''}
         <div class="cab-pagina"><h2>Passivas</h2>${podeEditar ? '<button class="btn mini" id="add-passiva">Adicionar passiva</button>' : ''}</div>
         <div class="grade-hab">${(F.passivas || []).map((h, i) => cardHab(h, 'passivas', i)).join('') || '<div class="vazio">Nenhuma passiva.</div>'}</div>
         <div class="cab-pagina"><h2>Outras habilidades</h2>${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" id="add-hab">Adicionar do homebrew</button><button class="btn sec mini" id="nova-hab">Nova habilidade</button></div>' : ''}</div>
@@ -2116,14 +2216,14 @@ ROTAS.agente = async id => {
     // clicar no número do atributo rola o teste puro dele: 1d20 + valor do atributo (+ bônus do campo)
     $$('.inv-item').forEach(dt => { dt.addEventListener('toggle', () => { const k = id + '|' + dt.dataset.inv; dt.open ? INV_ABERTO.add(k) : INV_ABERTO.delete(k); });
       dt.querySelector('summary').addEventListener('click', e => { if (e.target.closest('.inv-ctrl')) e.preventDefault(); }); });
-    $$('[data-rolar-atr]').forEach(b => b.onclick = () => { if (editando) return; const k = b.dataset.rolarAtr, nome = ATR.find(a => a[0] === k)[1], v = +(F.atributos?.[k]) || 0, mod = v + bnv();
+    $$('[data-rolar-atr]').forEach(b => b.onclick = () => { if (editando) return; const k = b.dataset.rolarAtr, nome = ATR.find(a => a[0] === k)[1], v = +(atrEf(F)[k]) || 0, mod = v + bnv();
       const r = teste(1, mod);
       popRolagem({ quem: F.nome, titulo: nome, tipo: 'Teste de atributo', expr: `1d20${mod ? (mod > 0 ? '+' : '') + mod : ''}`, linhas: [{ det: r.detalhe, total: r.total }], total: r.total, nat20: r.nat20 });
       publicarRolagem(F, nome, r); });
     $$('[data-teste]').forEach(b => b.onclick = () => { const n = b.dataset.teste, P = comAtributo(F, dadosPericia(F, n), UI_ARMA['giro|' + id + '|p|' + n]), mod = P.mod + bnv(); const r = teste(P.dados, mod);
       $(`[data-res="${CSS.escape(n)}"]`).innerHTML = UI_ARMA['pres|' + id + '|' + n] = `${P.atr !== dadosPericia(F, n).atr ? `<span class="faint">com ${SIGLA[P.atr]}</span> ` : ''}${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtv())}${r.nat20 ? ' <span class="critico">20 natural</span>' : ''}`; publicarRolagem(F, `${n}${P.atr !== dadosPericia(F, n).atr ? ` (${SIGLA[P.atr]})` : ''}`, r); });
     const rolarAcerto = i => { const it = F.equipamentos[i], E = armaEf(it), B = somaBonus(F.bonusAtaque); const P = comAtributo(F, dadosPericia(F, it.pericia || 'Armas Brancas'), UI_ARMA['giro|' + id + '|a|' + i]); const r = teste(P.dados, P.mod + bnv() + E.acerto + B.acerto);
-      const margem = Math.max(2, E.margem - B.margem), critou = r.nat >= margem; { const cb = $('#crit-' + i); if (cb) cb.checked = critou; UI_ARMA[id + '|c|' + i] = critou; }
+      const margem = Math.max(2, E.margem - B.margem - (F.vampiro?.tipo === 'encouracado' && F.vampiro.favorita && F.vampiro.favorita === it.nome ? 1 : 0)), critou = r.nat >= margem; { const cb = $('#crit-' + i); if (cb) cb.checked = critou; UI_ARMA[id + '|c|' + i] = critou; }
       return { r, critou, html: `Acerto ${r.detalhe} = <b>${r.total}</b>${veredito(r.total, dtv())}${critou ? ` <span class="critico">Crítico (${r.nat} natural, margem ${margem})</span>` : ''}` }; };
     const rolarDano = (i, crit) => { const it = F.equipamentos[i], E = armaEf(it), B = somaBonus(F.bonusAtaque), mx = $(`[data-mx="${i}"]`)?.checked ? +it.multExtra : 1;
       // toda maldição da arma cobra 3 PS de quem empunha quando o golpe sai; sem PS, ela não ativa
@@ -2260,6 +2360,32 @@ ROTAS.agente = async id => {
     // adicionar
     const add = (lista, obj) => { if (lista === 'equipamentos') { const ja = (F.equipamentos || []).find(x => x.nome === obj.nome && !x.dano === !obj.dano && (x.obs || '') === (obj.obs || '')); if (ja) { ja.qtd = (+ja.qtd || 1) + (+obj.qtd || 1); salvar({ equipamentos: F.equipamentos }); render(); return toast(`${obj.nome}: agora ×${ja.qtd}.`); } }
       F[lista] = [...(F[lista] || []), obj]; salvar({ [lista]: F[lista] }); render(); };
+    // complemento de vampiro
+    const salvarVamp = (vp, extra = {}) => { F.vampiro = vp; Object.assign(F, extra); render(); return salvar({ vampiro: vp, ...extra }); };
+    $('#vp-ligar')?.addEventListener('click', () => escolherTipoVampiro(null, t => { lembrarAba('vampiro'); aba = 'vampiro'; salvarVamp({ tipo: t, desde: Date.now() }); toast('Agora esta ficha é vampira.'); }));
+    $('#vp-tipo')?.addEventListener('click', () => escolherTipoVampiro(F.vampiro?.tipo, t => salvarVamp({ ...F.vampiro, tipo: t, forma: false })));
+    $('#vp-tirar')?.addEventListener('click', () => { if (!confirm('Tirar o complemento de vampiro desta ficha?')) return; aba = 'habilidades'; lembrarAba(aba); salvarVamp(null); });
+    const vpRes = (titulo, rr, txt) => { const o = $('#vp-res'); if (o) o.innerHTML = txt; popRolagem({ quem: F.nome, titulo, tipo: 'Vampiro', expr: '', linhas: [{ det: rr.detalhe, total: rr.total }], total: rr.total, nat20: rr.nat20 }); publicarRolagem(F, titulo, rr); };
+    $('#vp-sangue')?.addEventListener('click', () => { const K = calc(F), a = { ...K.max, ...(F.atual || {}) }, cura = Math.floor(K.max.pv * 0.3), novo = Math.min(K.max.pv, a.pv + cura);
+      const primeira = !F.vampiro.provou; salvarVamp({ ...F.vampiro, provou: true, ultimoSangue: Date.now() }, { atual: { ...a, pv: novo } });
+      toast(`+${novo - a.pv} PV${primeira ? '. Primeiro gole: o gosto é doce e forte.' : ''}`); });
+    $('#vp-dormir')?.addEventListener('click', () => { const K = calc(F), a = { ...K.max, ...(F.atual || {}) }; salvarVamp({ ...F.vampiro }, { atual: { ...a, pv: K.max.pv } }); toast('Dormiu durante o dia: PV cheio.'); });
+    $('#vp-fogo')?.addEventListener('change', e => salvarVamp({ ...F.vampiro, fogo: e.target.checked }));
+    $('#vp-cerebro')?.addEventListener('change', e => salvarVamp({ ...F.vampiro, cerebro: e.target.checked }));
+    $('#vp-fav')?.addEventListener('change', e => salvarVamp({ ...F.vampiro, favorita: e.target.value }));
+    $('#vp-forma')?.addEventListener('click', () => { const K = calc(F), a = { ...K.max, ...(F.atual || {}) }, liga = !F.vampiro.forma, VF = VAMP_TIPOS.carnical.forma;
+      if (liga && a.pv >= K.max.pv * 0.7) return toast('Só abaixo de 70% do PV.');
+      // ao virar morcego, o PV ganha os +20 na hora; ao voltar, nada passa do novo máximo
+      const at = { ...a }; if (liga) { at.pv += VF.pv; at.pst += VF.pst; at.ps = Math.max(0, at.ps + VF.ps); }
+      salvarVamp({ ...F.vampiro, forma: liga }, { atual: at }); if (!liga) { const K2 = calc(F); const at2 = { ...F.atual }; for (const k of ['pv', 'ps', 'pst']) at2[k] = Math.min(at2[k], K2.max[k]); F.atual = at2; salvar({ atual: at2 }); render(); }
+      toast(liga ? 'Virou morcego gigante.' : 'Voltou à forma humana.'); });
+    $('#vp-dep')?.addEventListener('click', () => { const P = dadosPericia(F, 'Resiliência'), rr = teste(P.dados, P.mod + bnv()); vpRes('Dependência (Resiliência)', rr, `Resiliência ${rr.detalhe} = <b>${rr.total}</b>${veredito(rr.total, dtv())}`); });
+    $('#vp-congela')?.addEventListener('click', () => { const x = d(4), ok = x >= 3; vpRes('Congelar (1d4)', { total: x, detalhe: `[${x}]`, nat20: false }, `1d4 = <b>${x}</b>: ${ok ? '<span class="critico">alvo Congelado</span>' : 'não congelou'}`); });
+    $$('[data-vp-per]').forEach(b => b.onclick = () => { const n = b.dataset.vpPer, P = dadosPericia(F, n), rr = teste(P.dados, P.mod + bnv()); vpRes(n, rr, `${n} ${rr.detalhe} = <b>${rr.total}</b>${veredito(rr.total, dtv())}`); });
+    $$('[data-vp-rol]').forEach(b => b.onclick = () => { const rr = rolar(exprMec(b.dataset.vpRol, F, null)); if (!rr) return; vpRes(b.dataset.vpNome, rr, `${esc(b.dataset.vpNome)}: ${rr.detalhe} = <b>${rr.total}</b>`); });
+    $$('[data-vp-atk]').forEach(b => b.onclick = () => { const g = b.dataset.vpAtk === 'garras', P = dadosPericia(F, 'Lutar'), ac = teste(P.dados, P.mod + bnv()), crit = ac.nat >= 20, mult = g ? 3 : 2;
+      const dn = rolar(exprMec(g ? '1d12+FOR' : '2d8+FOR', F, null)), tot = crit ? Math.floor(dn.total * mult) : dn.total, nome = g ? 'Garras' : 'Mordida';
+      vpRes(`${nome} (morcego)`, { total: tot, detalhe: `acerto ${ac.total} · dano ${dn.detalhe}${crit ? ` ×${mult}` : ''}`, nat20: crit }, `Acerto ${ac.detalhe} = <b>${ac.total}</b>${veredito(ac.total, dtv())}${crit ? ' <span class="critico">Crítico</span>' : ''}<br>Dano ${dn.detalhe}${crit ? ` ×${mult}` : ''} = <b>${tot}</b>`); });
     $('#add-passiva')?.addEventListener('click', () => seletor('Habilidades passivas', SIS.passivas, p => `<b>${esc(p.nome)}</b><p>${esc(p.texto)}</p>`, p => add('passivas', p)));
     $('#add-hab')?.addEventListener('click', async () => { const hb = await homebrewVisivel('habilidade'); if (!hb.length) return toast('Nenhuma habilidade no homebrew ainda.');
       seletor('Habilidades do homebrew', hb, h => `<b>${esc(h.nome)}</b><p>${esc(h.texto)}</p>`, h => add('habilidades', { nome: h.nome, texto: h.texto, origem: 'Homebrew' })); });
@@ -3937,7 +4063,7 @@ ROTAS.escudo = async id => {
       const blocoCond = x0 ? `<div style="display:grid; gap:6px"><span class="rotulo">Condições</span><div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center">${I0.conds.map((cd, j) => `<span class="cond-chip" title="${esc(textoCond(cd))}">${esc(cd.turnos ? `${cd.nome} (${cd.turnos})` : cd.nome)}<button data-rmc="${sel}" data-j="${j}" aria-label="Tirar ${esc(cd.nome)}">×</button></span>`).join('')}
           <select data-addc="${sel}" style="width:auto; padding:3px 6px; font-size:12.5px"><option value="">+ condição</option>${SIS.condicoes.map(cd => `<option>${esc(cd.nome)}</option>`).join('')}</select></div>
           ${I0.f && ((I0.f.condicoes || []).length || quedaAtiva(I0.f).length) ? `<button class="btn mini sec" style="justify-self:start" data-resolver="${esc(I0.f.id)}">Resolver condições de ${esc(I0.f.nome.split(' ')[0])}</button>` : ''}</div>` : '';
-      const defX = x => { if (x.tipo === 'agente') { const f = st.fichas[x.ref]; const K = f ? calc(f) : null; return { rd: K?.rd || 0, rdPar: K?.rdPar || 0, resist: {}, imun: [], vuln: [] }; } const fc = x.ficha || {}; return { rd: +fc.rd || 0, resist: fc.resist || {}, imun: fc.imunidades || [], vuln: fc.vulner || [] }; };
+      const defX = x => { if (x.tipo === 'agente') { const f = st.fichas[x.ref]; const K = f ? calc(f) : null; const vp = f?.vampiro?.tipo; return { rd: K?.rd || 0, rdPar: K?.rdPar || 0, resist: vp === 'criogenico' ? { 'Fogo': 5 } : {}, imun: [], vuln: vp ? ['Fogo'] : [] }; } const fc = x.ficha || {}; return { rd: +fc.rd || 0, resist: fc.resist || {}, imun: fc.imunidades || [], vuln: fc.vulner || [] }; };
       const rdTxtX = x => { const d = defX(x), rs = Object.entries(d.resist).filter(([, v]) => +v).map(([t, v]) => `${t} ${v}`); return [`RD ${d.rd}`, ...(d.rdPar ? [`RD paranormal ${d.rdPar}`] : []), ...rs, ...(d.imun.length ? ['imune: ' + d.imun.join(', ')] : []), ...(d.vuln.length ? ['vulnerável: ' + d.vuln.join(', ')] : [])].join(' · '); };
       let det = '<div class="vazio-det">Selecione alguém na ordem de iniciativa</div>';
       if (x0 && x0.tipo === 'agente' && I0.f) { const f = I0.f, K = I0.K, a = I0.a, ab = est0.aba;
