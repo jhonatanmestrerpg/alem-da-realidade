@@ -335,8 +335,20 @@ hr.sep-at { border: 0; border-top: 1px dashed var(--linha-2); margin: 8px 0; }
 @media (max-width: 860px) { .det-am { grid-template-columns: 1fr; } }
 .det-am .img { background: transparent; border: 1px solid var(--linha-2); } .det-am .img.papel { background: #f2efe6; }
 .det-am .img img { display: block; width: 100%; }
-.relato { display: grid; gap: 14px; }
+.relato { display: grid; gap: 14px; align-content: start; }
 .relato h3 { color: var(--ouro); font-size: 17px; }
+.h-ler { display: flex; align-items: center; gap: 8px; }
+.btn-ouvir { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--linha-2); background: transparent; color: var(--lua-dim); cursor: pointer; flex: none; transition: color .15s, border-color .15s, background .15s; }
+.btn-ouvir:hover, .btn-ouvir:focus-visible { color: var(--ouro); border-color: var(--ouro); }
+.btn-ouvir.lendo { color: var(--noite); background: var(--ouro); border-color: var(--ouro); }
+.ouvir-tudo { justify-self: start; align-self: start; display: inline-flex; gap: 8px; align-items: center; width: auto; height: auto; }
+.btn.ouvir-tudo.lendo { color: var(--noite); background: var(--ouro); border-color: var(--ouro); }
+.leitor { position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; z-index: 60; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 32px); padding: 8px 14px; background: var(--painel-2); border: 1px solid var(--ouro); box-shadow: 0 10px 30px rgba(0,0,0,.5); font-size: 13.5px; }
+.leitor select { width: auto; padding: 4px 8px; font-size: 12.5px; max-width: 170px; }
+.leitor-onda { display: inline-flex; gap: 2px; align-items: flex-end; height: 14px; } .leitor-onda i { width: 3px; background: var(--ouro); animation: onda .9s ease-in-out infinite; }
+.leitor-onda i:nth-child(2) { animation-delay: .15s; } .leitor-onda i:nth-child(3) { animation-delay: .3s; }
+@keyframes onda { 0%, 100% { height: 4px; } 50% { height: 14px; } }
+@media (prefers-reduced-motion: reduce) { .leitor-onda i { animation: none; height: 10px; } }
 .relato p { max-width: 70ch; color: #c9ccd8; }
 .nota-arthur { font-family: var(--f-ital); font-style: italic; font-size: 19px; line-height: 1.4; color: var(--sangue-hi); border-left: 2px solid var(--sangue); padding-left: 14px; }
 .uv { background: #120a24; border: 1px dashed #6b4fd0; padding: 12px 14px; color: #c9b8ff; font-family: var(--f-ital); font-style: italic; font-size: 17px; }
@@ -844,7 +856,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261104011656';
+const BUILD = '20261104011940';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -880,8 +892,16 @@ function ligarRascunhos() {
     el.form?.addEventListener('submit', () => setTimeout(salvar, 0));
   });
 }
+// todo card de habilidade, ritual, feitiço ou poder ganha o botão de ouvir
+let nLer = 0;
+function ligarOuvir() {
+  if (!temVoz()) return;
+  document.querySelectorAll('article.hab:not([data-ler-ok])').forEach(c => { c.dataset.lerOk = '1'; if (!c.id) c.id = 'lh-' + (++nLer);
+    const cab = c.querySelector('.cab'); if (!cab) return; const b = document.createElement('span'); b.innerHTML = botaoOuvir('#' + c.id, 'Ouvir ' + (cab.querySelector('.nm')?.textContent || ''));
+    const btn = b.firstElementChild; if (!btn) return; const nm = cab.querySelector('.nm'); nm ? nm.after(btn) : cab.prepend(btn); });
+}
 let filaNomear = false;
-new MutationObserver(() => { if (filaNomear) return; filaNomear = true; requestAnimationFrame(() => { filaNomear = false; nomearCampos(); ligarRascunhos(); }); }).observe(document.documentElement, { childList: true, subtree: true });
+new MutationObserver(() => { if (filaNomear) return; filaNomear = true; requestAnimationFrame(() => { filaNomear = false; nomearCampos(); ligarRascunhos(); ligarOuvir(); }); }).observe(document.documentElement, { childList: true, subtree: true });
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
 /* ---------- dados estáticos do sistema ---------- */
@@ -1334,7 +1354,45 @@ function seletor(titulo, itens, render, aoEscolher, extra = '', grupo = null) {
    ROTEADOR
    ================================================================= */
 const ROTAS = {};
+/* ---------- Leitor em voz: botão de alto-falante lê o texto com a voz neural do aparelho ---------- */
+const ICON_SOM = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>';
+const ICON_PARAR = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>';
+const LEITOR = { botao: null, vel: (() => { try { return +localStorage.getItem('adr-voz-vel') || 1; } catch (e) { return 1; } })(), vozNome: (() => { try { return localStorage.getItem('adr-voz') || ''; } catch (e) { return ''; } })() };
+const temVoz = () => 'speechSynthesis' in window;
+function vozesPt() { return (speechSynthesis.getVoices() || []).filter(v => /^pt/i.test(v.lang)).sort((a, b) => notaVoz(b) - notaVoz(a)); }
+// prefere as vozes neurais (Google, Microsoft Online/Natural) e o português do Brasil
+const notaVoz = v => (/pt[-_]BR/i.test(v.lang) ? 4 : 0) + (/natural|neural|online/i.test(v.name) ? 6 : 0) + (/google/i.test(v.name) ? 5 : 0) + (/francisca|antonio|thalita|luciana|daniel|felipe/i.test(v.name) ? 2 : 0) + (v.localService ? 0 : 1);
+function escolherVoz() { const vs = vozesPt(); return vs.find(v => v.name === LEITOR.vozNome) || vs[0] || null; }
+const botaoOuvir = (alvo, rotulo = 'Ouvir') => temVoz() ? `<button type="button" class="btn-ouvir" data-ler="${esc(alvo)}" aria-label="${esc(rotulo)}" title="${esc(rotulo)}">${ICON_SOM}</button>` : '';
+function pararLeitura() { if (!temVoz()) return; speechSynthesis.cancel(); if (LEITOR.botao) { LEITOR.botao.classList.remove('lendo'); LEITOR.botao.innerHTML = LEITOR.botao.dataset.orig || ICON_SOM; } LEITOR.botao = null; $('#leitor')?.remove(); }
+function lerTexto(txt, botao) {
+  pararLeitura(); txt = String(txt || '').replace(/\s+/g, ' ').trim(); if (!txt) return;
+  // o Chrome corta falas longas: vai frase por frase
+  const partes = txt.match(/[^.!?…]+[.!?…]*["”»)]*\s*/g) || [txt]; const voz = escolherVoz();
+  LEITOR.botao = botao || null; if (botao) { botao.dataset.orig = botao.dataset.orig || botao.innerHTML; botao.classList.add('lendo'); botao.innerHTML = botao.classList.contains('ouvir-tudo') ? ICON_PARAR + ' Parar leitura' : ICON_PARAR; }
+  const barra = document.createElement('div'); barra.id = 'leitor'; barra.className = 'leitor';
+  barra.innerHTML = `<span class="leitor-onda" aria-hidden="true"><i></i><i></i><i></i></span><span>Lendo${voz ? ` · <span class="faint">${esc(voz.name.replace(/Microsoft |Google |\(.*?\)| Online| - .*$/g, '').trim())}</span>` : ''}</span>
+    <select id="leitor-vel" aria-label="Velocidade">${[0.8, 1, 1.15, 1.3, 1.5].map(v => `<option value="${v}" ${v === LEITOR.vel ? 'selected' : ''}>${String(v).replace('.', ',')}×</option>`).join('')}</select>
+    ${vozesPt().length > 1 ? `<select id="leitor-voz" aria-label="Voz">${vozesPt().map(v => `<option ${v.name === voz?.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>` : ''}
+    <button class="btn mini sec" id="leitor-parar">Parar</button>`;
+  document.body.appendChild(barra);
+  let i = 0; const falar = () => { if (i >= partes.length || LEITOR.botao !== (botao || null) || !$('#leitor')) return pararLeitura();
+    const u = new SpeechSynthesisUtterance(partes[i++]); u.lang = voz?.lang || 'pt-BR'; if (voz) u.voice = voz; u.rate = LEITOR.vel; u.pitch = 1;
+    u.onend = falar; u.onerror = e => { if (e.error !== 'interrupted' && e.error !== 'canceled') pararLeitura(); }; speechSynthesis.speak(u); };
+  barra.querySelector('#leitor-parar').onclick = pararLeitura;
+  barra.querySelector('#leitor-vel').onchange = e => { LEITOR.vel = +e.target.value; try { localStorage.setItem('adr-voz-vel', LEITOR.vel); } catch (x) {} };
+  barra.querySelector('#leitor-voz')?.addEventListener('change', e => { LEITOR.vozNome = e.target.value; try { localStorage.setItem('adr-voz', LEITOR.vozNome); } catch (x) {} const resto = partes.slice(Math.max(0, i - 1)).join(' '); lerTexto(resto, botao); });
+  falar();
+}
+if (temVoz()) { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); }
+document.addEventListener('click', e => { const b = e.target.closest('[data-ler]'); if (!b) return; e.preventDefault(); e.stopPropagation();
+  if (LEITOR.botao === b) return pararLeitura();
+  const alvo = document.querySelector(b.dataset.ler); if (!alvo) return;
+  const c = alvo.cloneNode(true); c.querySelectorAll('[data-ler], button, select, input, .nao-ler').forEach(x => x.remove());
+  lerTexto(c.innerText || c.textContent, b); });
+addEventListener('pagehide', () => temVoz() && speechSynthesis.cancel());
 async function rotear() {
+  pararLeitura();
   limparSubs(); $('#camada').innerHTML = '';
   if (typeof fecharSala === 'function' && !CH.dentro) { fecharSala(); CH.ctxLig = null; }
   const h = location.hash.slice(1) || 'inicio';
@@ -2938,7 +2996,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-am-t
 ROTAS.ameaca = async id => {
   const c = await acharAmeaca(id);
   if (!c) { app.innerHTML = '<div class="vazio">Ameaça não encontrada.</div>'; return; }
-  const sec = (t, v) => v ? `<div><h3>${t}</h3><p>${nl(v)}</p></div>` : '';
+  let nSec = 0; const sec = (t, v) => { if (!v) return ''; const k = 'ls-' + (++nSec); return `<div class="sec-ler" id="${k}"><h3 class="h-ler"><span>${t}</span>${botaoOuvir('#' + k, 'Ouvir ' + t)}</h3><p>${nl(v)}</p></div>`; };
   ouvirAbates();
   const nv = nivelAm(c.nivel);
   app.innerHTML = `<a href="#ameacas" class="dim" style="font-size:14px">← Todas as ameaças</a>
@@ -2947,12 +3005,13 @@ ROTAS.ameaca = async id => {
     <div class="det-am">
       <div style="display:grid; gap:16px; align-content:start">${c.imagem ? `<div class="img ${ehPapel(c.imagem) ? 'papel' : ''}"><img src="${esc(c.imagem)}" alt="${esc(c.nome)}"></div>` : ''}${blocoFicha(c, 'res-am')}</div>
       <div class="relato">
+        ${temVoz() ? `<button class="btn sec mini ouvir-tudo" data-ler="#relato-txt">${ICON_SOM} Ouvir o registro inteiro</button>` : ''}
 ${c.homebrew ? '' : `<div class="registro-am"><span class="rotulo">Registro nº ${String(c.id).padStart(3, '0')}</span>
       <dl class="ficha-reg"><dt>Grau</dt><dd>${grausHtml(+c.nivel)} ${esc(nv[1])}${nv[3] ? ` <span class="faint">· ícone ${esc(nv[3])}</span>` : ''}</dd><dt>Elemento</dt><dd>${elTag(c.elemento)} <span class="faint">${esc(SIS.capitulos?.[capDe(c)] || '')}</span></dd><dt>Origem</dt><dd>${esc(c.origem || 'Desconhecida')}</dd></dl>
       <div id="abates-cr"></div></div>`}
-        ${c.anotacoes ? `<p class="nota-arthur">“${esc(c.anotacoes)}”</p>` : ''}
+        <div id="relato-txt" class="relato">${c.anotacoes ? `<p class="nota-arthur">“${esc(c.anotacoes)}”</p>` : ''}
         ${sec('Descrição', c.descricao)}${sec('Como encontrei', c.encontro)}${sec('Hábitos e vítimas', c.habitos)}${sec('Comportamento', c.comportamento)}${sec('Modus operandi', c.modus)}
-        ${sec('Ponto forte', c.ponto_forte)}${sec('Ponto fraco', c.ponto_fraco)}${sec('Forma de abate', c.forma_de_abate)}
+        ${sec('Ponto forte', c.ponto_forte)}${sec('Ponto fraco', c.ponto_fraco)}${sec('Forma de abate', c.forma_de_abate)}</div>
         ${c.uv ? `<div><button class="btn sec mini" id="luz">Acender a luz UV</button><div class="uv" id="uv" hidden>${nl(c.uv)}</div></div>` : ''}
       </div>
     </div>`;
