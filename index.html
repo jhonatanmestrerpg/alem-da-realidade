@@ -162,6 +162,10 @@ input[type=text], input[type=number], input[type=search], select, textarea {
 textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ouro); }
 .campo { display: grid; gap: 5px; min-width: 0; }
+.rec-palco { margin: 0 auto; background: #07080c; overflow: hidden; touch-action: none; max-width: 100%; border: 1px solid var(--linha); }
+.rec-palco canvas { display: block; cursor: grab; touch-action: none; } .rec-palco canvas:active { cursor: grabbing; }
+.rec-ctrl { display: flex; align-items: center; gap: 10px; justify-content: center; } .rec-ctrl input { flex: 1; max-width: 220px; accent-color: var(--ouro); padding: 0; }
+.modal.modal-rec { width: min(420px, calc(100vw - 24px)); }
 .vp-compl { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-color: color-mix(in srgb, var(--sangue) 55%, var(--linha)); }
 .vp-lista { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 14px; }
 .vp-fraq { border-color: color-mix(in srgb, var(--sangue) 40%, var(--linha)); }
@@ -860,7 +864,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261104025109';
+const BUILD = '20261104025542';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1369,8 +1373,71 @@ async function encolherImagem(file, lado = 1600) {
     return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.webp', { type: 'image/webp' });
   } catch (e) { return file; }
 }
-async function enviarImagem(file) {
+/* ---------- ajustar a imagem antes de enviar: arrastar, zoom e girar (círculo, retrato, quadrado ou faixa) ---------- */
+const RECORTE = { circulo: { forma: 'circulo', proporcao: 1, saida: 512 }, retrato: { forma: 'ret', proporcao: 0.8, saida: 800 }, quadrado: { forma: 'ret', proporcao: 1, saida: 900 }, capa: { forma: 'ret', proporcao: 16 / 9, saida: 1440 } };
+const limitar = (v, a, b) => Math.max(a, Math.min(b, v));
+function recortarImagem(file, opt) {
+  const { forma = 'circulo', proporcao = 1, saida = 512 } = typeof opt === 'string' ? RECORTE[opt] || {} : opt || {};
+  if (!/^image\/(jpeg|png|webp|bmp|heic|heif)/i.test(file.type)) return Promise.resolve(file); // GIF e SVG passam direto
+  return new Promise(res => {
+    const url = URL.createObjectURL(file), img = new Image(); let feito = false;
+    img.onerror = () => { URL.revokeObjectURL(url); toast('Não deu para abrir essa imagem.'); res(null); };
+    img.onload = () => {
+      const PW = Math.min(340, innerWidth - 64), PH = Math.round(proporcao >= 1 ? PW / proporcao + 40 : PW), FW = forma === 'circulo' ? PW - 40 : Math.round(proporcao >= 1 ? PW - 24 : (PH - 24) * proporcao), FH = forma === 'circulo' ? FW : Math.round(FW / proporcao);
+      let rot = 0, zoom = 1, ox = 0, oy = 0;
+      const dims = () => rot % 180 ? [img.height, img.width] : [img.width, img.height];
+      const base = () => { const [w, h] = dims(); return Math.max(FW / w, FH / h); };
+      abrirModal2('Ajustar imagem', `<div class="rec-palco" style="width:${PW}px;height:${PH}px"><canvas width="${PW * 2}" height="${PH * 2}" style="width:${PW}px;height:${PH}px"></canvas></div>
+        <div class="rec-ctrl"><span aria-hidden="true" style="font-size:13px">−</span><input type="range" id="rec-z" min="1" max="4" step="0.01" value="1" aria-label="Zoom"><span aria-hidden="true" style="font-size:18px">+</span><button class="btn mini sec" id="rec-g" title="Girar 90°" aria-label="Girar">⟳</button></div>
+        <p class="faint" style="margin:0; text-align:center; font-size:13px">Arraste para enquadrar. Roda do mouse ou pinça para zoom.</p>
+        <div style="display:flex; gap:8px; justify-content:space-between; flex-wrap:wrap"><div style="display:flex; gap:6px"><button class="btn sec mini" id="rec-r">Redefinir</button><button class="btn sec mini" id="rec-o" title="Envia a imagem inteira, sem cortar">Usar sem cortar</button></div><div style="display:flex; gap:6px"><button class="btn sec" id="rec-x">Cancelar</button><button class="btn" id="rec-ok">Aplicar</button></div></div>`, (m, fechar) => {
+        m.closest('.modal')?.classList.add('modal-rec');
+        const cv = m.querySelector('canvas'), g = cv.getContext('2d'), K = 2;
+        const prender = () => { const [w, h] = dims(), sc = base() * zoom, mx = Math.max(0, (w * sc - FW) / 2), my = Math.max(0, (h * sc - FH) / 2); ox = limitar(ox, -mx, mx); oy = limitar(oy, -my, my); };
+        const pintar = (ctx, W, H, k, moldura) => {
+          ctx.clearRect(0, 0, W, H); ctx.save(); ctx.translate(W / 2 + ox * k, H / 2 + oy * k); ctx.rotate(rot * Math.PI / 180);
+          const sc = base() * zoom * k; ctx.drawImage(img, -img.width * sc / 2, -img.height * sc / 2, img.width * sc, img.height * sc); ctx.restore();
+          if (!moldura) return;
+          ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.62)'; ctx.beginPath(); ctx.rect(0, 0, W, H);
+          if (forma === 'circulo') ctx.arc(W / 2, H / 2, FW * k / 2, 0, Math.PI * 2, true); else ctx.rect(W / 2 + FW * k / 2, H / 2 - FH * k / 2, -FW * k, FH * k);
+          ctx.fill('evenodd'); ctx.strokeStyle = '#e8c77a'; ctx.lineWidth = 1.5 * k; ctx.beginPath();
+          if (forma === 'circulo') ctx.arc(W / 2, H / 2, FW * k / 2, 0, Math.PI * 2); else ctx.rect(W / 2 - FW * k / 2, H / 2 - FH * k / 2, FW * k, FH * k);
+          ctx.stroke(); ctx.restore();
+        };
+        const desenhar = () => { prender(); pintar(g, cv.width, cv.height, K, true); };
+        // arrastar com um dedo, pinça com dois
+        const toques = new Map(); let arr = null, pin = null;
+        cv.onpointerdown = e => { cv.setPointerCapture(e.pointerId); toques.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (toques.size === 1) arr = { x: e.clientX, y: e.clientY, ox, oy }; else if (toques.size === 2) { const [a, b] = [...toques.values()]; pin = { d: Math.hypot(a.x - b.x, a.y - b.y), z: zoom }; arr = null; } };
+        cv.onpointermove = e => { if (!toques.has(e.pointerId)) return; toques.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (pin && toques.size === 2) { const [a, b] = [...toques.values()]; zoom = limitar(pin.z * Math.hypot(a.x - b.x, a.y - b.y) / pin.d, 1, 4); z.value = zoom; desenhar(); }
+          else if (arr) { ox = arr.ox + e.clientX - arr.x; oy = arr.oy + e.clientY - arr.y; desenhar(); } };
+        cv.onpointerup = cv.onpointercancel = e => { toques.delete(e.pointerId); if (toques.size < 2) pin = null; if (!toques.size) arr = null; else { const [t] = [...toques.values()]; arr = { x: t.x, y: t.y, ox, oy }; } };
+        const z = m.querySelector('#rec-z');
+        z.oninput = () => { zoom = +z.value; desenhar(); };
+        cv.onwheel = e => { e.preventDefault(); zoom = limitar(zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08), 1, 4); z.value = zoom; desenhar(); };
+        m.querySelector('#rec-g').onclick = () => { rot = (rot + 90) % 360; desenhar(); };
+        m.querySelector('#rec-r').onclick = () => { rot = 0; zoom = 1; ox = 0; oy = 0; z.value = 1; desenhar(); };
+        const sair = v => { if (feito) return; feito = true; URL.revokeObjectURL(url); fechar(); res(v); };
+        m.querySelector('#rec-x').onclick = () => sair(null);
+        m.closest('.camada2')?.querySelector('[data-fechar2]')?.addEventListener('click', () => sair(null));
+        m.querySelector('#rec-o').onclick = () => sair(file);
+        m.querySelector('#rec-ok').onclick = () => {
+          const OW = saida, OH = Math.round(OW / (forma === 'circulo' ? 1 : proporcao)), k = OW / FW;
+          const out = document.createElement('canvas'); out.width = OW; out.height = OH;
+          const tmp = document.createElement('canvas'); tmp.width = Math.round(FW * k); tmp.height = Math.round(FH * k); pintar(tmp.getContext('2d'), tmp.width, tmp.height, k, false);
+          out.getContext('2d').drawImage(tmp, 0, 0, OW, OH);
+          out.toBlob(b => sair(b ? new File([b], (file.name || 'imagem').replace(/\.[^.]+$/, '') + '.webp', { type: 'image/webp' }) : null), 'image/webp', 0.9);
+        };
+        desenhar();
+      });
+    };
+    img.src = url;
+  });
+}
+async function enviarImagem(file, recorte) {
   if (!sb || !ME) { toast('Entre na sua conta para enviar imagens.'); return null; }
+  if (recorte) { file = await recortarImagem(file, recorte); if (!file) return null; }
   file = await encolherImagem(file);
   if (file.size > 8 * 1024 * 1024) { toast('Imagem acima de 8 MB. Reduza e tente de novo.'); return null; }
   const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -1385,14 +1452,14 @@ const campoImagem = (id, atual, rotulo = 'Capa') => `<div class="campo"><span cl
     <img alt="" ${atual ? `src="${esc(atual)}"` : 'hidden'}><div class="zi-txt"><b>${atual ? 'Toque para trocar' : 'Toque para escolher'}</b><span>ou arraste, ou cole com Ctrl+V</span></div><div class="zi-st" hidden>Enviando…</div>
     <input type="file" accept="image/*" hidden></div>
   <div class="linha-ex"><input type="text" inputmode="url" class="zi-url" placeholder="Ou cole o link de uma imagem" style="flex:1; min-width:0"><button type="button" class="btn mini sec zi-rm" ${atual ? '' : 'hidden'}>Tirar</button></div></div>`;
-function ligarImagem(m, id, atual = '') {
+function ligarImagem(m, id, atual = '', recorte = 'quadrado') {
   const z = m.querySelector('#' + id), img = z.querySelector('img'), inp = z.querySelector('input[type=file]'), st = z.querySelector('.zi-st'), wrap = z.parentElement;
   const url = wrap.querySelector('.zi-url'), rm = wrap.querySelector('.zi-rm');
   let valor = atual, pend = null;
   const mostrar = u => { valor = u; img.hidden = !u; if (u) img.src = u; else img.removeAttribute('src'); z.classList.toggle('tem', !!u); rm.hidden = !u; z.querySelector('.zi-txt b').textContent = u ? 'Toque para trocar' : 'Toque para escolher'; };
   const enviar = f => { if (!f || !/^image\//.test(f.type)) return toast('Isso não é imagem.');
     const local = URL.createObjectURL(f); img.src = local; img.hidden = false; z.classList.add('tem', 'enviando'); st.hidden = false;
-    pend = enviarImagem(f).then(u => { if (u) { mostrar(u); toast('Imagem enviada.'); } else mostrar(valor); return u; }).finally(() => { z.classList.remove('enviando'); st.hidden = true; pend = null; URL.revokeObjectURL(local); }); };
+    pend = enviarImagem(f, recorte).then(u => { if (u) { mostrar(u); toast('Imagem enviada.'); } else mostrar(valor); return u; }).finally(() => { z.classList.remove('enviando'); st.hidden = true; pend = null; URL.revokeObjectURL(local); }); };
   z.onclick = () => inp.click(); z.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inp.click(); } };
   inp.onchange = () => { enviar(inp.files[0]); inp.value = ''; };
   z.ondragover = e => { e.preventDefault(); z.classList.add('arrasto'); }; z.ondragleave = () => z.classList.remove('arrasto');
@@ -1737,7 +1804,7 @@ ROTAS.novo = async (campId = '') => {
       if (v < 0 || v > patente(R.nivel).limite) return; if (+b.dataset.d > 0 && gastos >= tot) return; R.pericias[n] = v; if (!v) delete R.pericias[n]; render(); });
     $$('[data-t]').forEach(i => i.addEventListener('input', () => { R[i.dataset.t] = i.value; guardar(); if (i.dataset.t === 'nome') $('#finalizar').disabled = !R.nome.trim(); }));
     $('#foto-url')?.addEventListener('change', e => { R.foto = e.target.value.trim(); render(); });
-    $('#foto-arq')?.addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; const u = await enviarImagem(f); if (u) { R.foto = u; render(); } });
+    $('#foto-arq')?.addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; const u = await enviarImagem(f, 'retrato'); e.target.value = ''; if (u) { R.foto = u; render(); } });
     $('#finalizar')?.addEventListener('click', async e => {
       e.target.disabled = true; e.target.textContent = 'Registrando…';
       if (R.nivel === 0) { R.vontade = ''; R.vontadeEscolha = {}; R.classe = ''; R.subclasse = ''; }
@@ -2204,7 +2271,7 @@ ROTAS.agente = async id => {
     $$('[data-cor-rm]').forEach(b => b.onclick = () => { const k = +b.dataset.corRm; salvarEstilo({ ...F.estiloRolagem, cores: (F.estiloRolagem?.cores || []).filter((_, i) => i !== k) }); });
     $('[data-cor-ang]')?.addEventListener('change', e => { if (!F.estiloRolagem?.cores?.length) return; salvarEstilo({ ...F.estiloRolagem, angulo: +e.target.value }); });
     $('[data-cor-limpa]')?.addEventListener('click', () => salvarEstilo(null));
-    $('#e-foto')?.addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; const u = await enviarImagem(f); if (u) salvar({ foto: u }); });
+    $('#e-foto')?.addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; const u = await enviarImagem(f, 'retrato'); e.target.value = ''; if (u) salvar({ foto: u }); });
     $$('#ficha [data-op-vontade]').forEach(sel => sel.onchange = () => { const ve = { ...(F.vontadeEscolha || {}), [sel.dataset.opVontade]: sel.value }; F.vontadeEscolha = ve; salvar({ vontadeEscolha: ve }); render(); });
     $('#dist-pts')?.addEventListener('click', () => { editando = true; mostrarTodas = true; render(); });
     $('#busca-per')?.addEventListener('input', e => { window._buscaPer = e.target.value; const q = normBusca(e.target.value), g = $('.grade-per[data-base]'); if (!g) return; const base = JSON.parse(g.dataset.base); let algum = false;
@@ -2822,7 +2889,7 @@ function formAmeaca(x, salvarFn) {
         <div class="campo"><label class="rotulo">Descrição <span class="faint" style="text-transform:none; letter-spacing:0">(**negrito** fica destacado)</span></label><textarea data-p="descricao" style="min-height:110px">${esc(S.descricao)}</textarea></div>
         ${npc ? '' : `<div class="campo"><label class="rotulo">Ponto fraco</label><textarea data-p="ponto_fraco" style="min-height:60px">${esc(S.ponto_fraco)}</textarea></div>`}
         <div class="campo"><label class="rotulo">${npc ? 'Notas do mestre' : 'Forma de abate'}</label><textarea data-p="forma_de_abate" style="min-height:60px">${esc(S.forma_de_abate)}</textarea></div>`;
-      alvo.querySelector('#fa-img').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) { S.imagem = u; toast('Imagem enviada.'); desenhar(); } };
+      alvo.querySelector('#fa-img').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0], 'quadrado'); e.target.value = ''; if (u) { S.imagem = u; toast('Imagem enviada.'); desenhar(); } };
       alvo.querySelectorAll('[data-re]').forEach(s => s.addEventListener('change', () => setTimeout(desenhar)));
       alvo.querySelectorAll('[data-tg]').forEach(b => b.onclick = () => { const p = b.dataset.tg, l = p.split('.').reduce((o, k) => o[k], S), v = b.dataset.v, i = l.indexOf(v); i >= 0 ? l.splice(i, 1) : l.push(v); b.classList.toggle('aqui', i < 0); });
       alvo.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { F[b.dataset.add].push(b.dataset.add === 'movAlt' ? { tipo: '', m: '' } : { nome: '', dados: 1, bonus: 0 }); desenhar(); });
@@ -2831,7 +2898,7 @@ function formAmeaca(x, salvarFn) {
       alvo.querySelector('#f2-on').onchange = e => { temF2 = e.target.checked; desenhar(); };
       alvo.querySelector('#f2-somar')?.addEventListener('change', e => { fase2.somar = e.target.checked; });
       alvo.querySelectorAll('[data-f2]').forEach(el => el.addEventListener('input', e => { e.stopPropagation(); setP(fase2, el.dataset.f2, el.type === 'number' ? (el.value === '' ? '' : +el.value) : el.value); }));
-      alvo.querySelector('#f2-img')?.addEventListener('change', async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) { fase2.imagem = u; toast('Imagem da fase enviada.'); desenhar(); } });
+      alvo.querySelector('#f2-img')?.addEventListener('change', async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0], 'quadrado'); e.target.value = ''; if (u) { fase2.imagem = u; toast('Imagem da fase enviada.'); desenhar(); } });
       alvo.querySelectorAll('[data-f2nova]').forEach(b => b.onclick = () => editarAcao(null, b.dataset.f2nova === 'poderes', a => { fase2[b.dataset.f2nova].push(a); desenhar(); }));
       alvo.querySelectorAll('[data-f2ed]').forEach(b => b.onclick = () => { const [l, i] = b.dataset.f2ed.split('|'); editarAcao(fase2[l][+i], l === 'poderes', a => { fase2[l][+i] = a; desenhar(); }); });
       alvo.querySelectorAll('[data-f2rm]').forEach(b => b.onclick = () => { const [l, i] = b.dataset.f2rm.split('|'); fase2[l].splice(+i, 1); desenhar(); });
@@ -3387,7 +3454,7 @@ ROTAS.campanhas = async () => {
   $('#nova').onclick = () => abrirModal('Nova campanha', `<div class="campo"><label class="rotulo" for="nc-n">Nome</label><input type="text" id="nc-n" placeholder="Os Filhos do Caos"></div>
     <div class="campo"><label class="rotulo" for="nc-d">Descrição</label><textarea id="nc-d" placeholder="O que os jogadores sabem ao entrar."></textarea></div>
     ${campoImagem('nc-c', '')}<button class="btn" id="nc-ok">Criar campanha</button>`, (m, fechar) => {
-    const CI = ligarImagem(m, 'nc-c', '');
+    const CI = ligarImagem(m, 'nc-c', '', 'capa');
     m.querySelector('#nc-ok').onclick = async () => { const nome = m.querySelector('#nc-n').value.trim(); if (!nome) return toast('Dê um nome à campanha.');
       const bt = m.querySelector('#nc-ok'); bt.disabled = true; bt.textContent = 'Esperando a capa…'; await CI.pronto(); bt.disabled = false; bt.textContent = 'Criar campanha'; const capa = CI.valor;
       try { const ref = await db.collection('campanhas').add({ nome, descricao: m.querySelector('#nc-d').value.trim(), capa, mestre: ME, criado: Date.now() });
@@ -3412,7 +3479,7 @@ function editarCampanha(id, C) {
     cx.oninput = () => { bx.disabled = cx.value.trim() !== String(C.nome).trim(); };
     bx.onclick = async () => { bx.disabled = true; bx.textContent = 'Excluindo…';
       try { await excluirCampanha(id); fechar(); toast('Campanha excluída.'); location.hash = 'campanhas'; } catch (e) { toast('Não deu para excluir: ' + (e.message || e.code)); bx.disabled = false; bx.textContent = 'Excluir para sempre'; } };
-    const CI = ligarImagem(m, 'ec-c', C.capa || '');
+    const CI = ligarImagem(m, 'ec-c', C.capa || '', 'capa');
     m.querySelector('#ec-ok').onclick = async () => {
       const nome = m.querySelector('#ec-n').value.trim();
       if (!nome) return toast('Dê um nome à campanha.');
@@ -4000,7 +4067,7 @@ function editarVetor(f, v = {}, salvarFn) {
     <div class="campo"><label class="rotulo" for="vt-h">Habilidades extras (uma por linha: Nome: efeito)</label><textarea id="vt-h" style="min-height:140px" placeholder="Intangível: uma vez por rodada, teste de Vontade DT 18 para ficar Intangível até o próximo turno.">${esc((v.habilidades || []).map(h => `${h.nome}: ${h.texto}`).join('\n'))}</textarea></div>
     <button class="btn" id="vt-ok">Salvar vetor</button>`, (m, fechar) => {
     let foto = v.foto || '';
-    m.querySelector('#vt-f').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) { foto = u; m.querySelector('#vt-prev').style.background = `center/cover url('${u}')`; } };
+    m.querySelector('#vt-f').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0], 'retrato'); e.target.value = ''; if (u) { foto = u; m.querySelector('#vt-prev').style.background = `center/cover url('${u}')`; } };
     m.querySelector('#vt-ok').onclick = () => { const nome = m.querySelector('#vt-n').value.trim(); if (!nome) return toast('Dê um nome ao vetor.');
       const habilidades = m.querySelector('#vt-h').value.split('\n').map(l => l.trim()).filter(Boolean).map(l => { const i = l.indexOf(':'); return i > 0 ? { nome: l.slice(0, i).trim(), texto: l.slice(i + 1).trim() } : { nome: l, texto: '' }; });
       salvarFn({ nome, cor: m.querySelector('#vt-c').value, foto, descricao: m.querySelector('#vt-d').value.trim(), habilidades }); fechar(); };
@@ -4199,7 +4266,7 @@ ROTAS.escudo = async id => {
       corpo.innerHTML = `<div class="cab-pagina"><h2>Fichas de investigação</h2><button class="btn" id="nova-p">Adicionar</button></div><p class="dim">Pistas ficam escondidas até você revelar. Reveladas aparecem para os jogadores na aba Pistas.</p>
         <div class="lista">${E.pistas.map((p, i) => `<div class="item"><div class="cab"><span class="nm">${esc(p.titulo)}</span><span style="display:flex; gap:8px; align-items:center"><button class="btn mini ${p.revelada ? 'sec' : 'ouro'}" data-rev="${i}">${p.revelada ? 'Esconder' : 'Revelar'}</button><button class="btn mini sec" data-edp="${i}">Editar</button><button class="btn-x" data-rmp="${i}" aria-label="Apagar">×</button></span></div><p class="dim">${nl(p.texto)}</p>${p.revelada ? '<span class="tag crit" style="justify-self:start">Visível aos jogadores</span>' : ''}</div>`).join('') || '<div class="vazio">Nenhuma pista ainda.</div>'}</div>`;
       const formP = (p, aoSalvar) => abrirModal(p ? 'Editar pista' : 'Nova pista', `<div class="campo"><label class="rotulo" for="p-t">Título</label><input type="text" id="p-t" value="${esc(p?.titulo)}"></div><div class="campo"><label class="rotulo" for="p-x">Conteúdo</label><textarea id="p-x">${esc(p?.texto)}</textarea></div><div class="campo"><label class="rotulo" for="p-i">Imagem (opcional)</label><input type="file" id="p-i" accept="image/*"></div><button class="btn" id="p-ok">Salvar</button>`, (m, fechar) => {
-        let img = p?.imagem || ''; m.querySelector('#p-i').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) img = u; };
+        let img = p?.imagem || ''; m.querySelector('#p-i').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0], 'capa'); e.target.value = ''; if (u) img = u; };
         m.querySelector('#p-ok').onclick = () => { const t = m.querySelector('#p-t').value.trim(); if (!t) return toast('Dê um título.'); aoSalvar({ ...(p || { id: uid8(), revelada: false }), titulo: t, texto: m.querySelector('#p-x').value, imagem: img }); fechar(); }; });
       $('#nova-p').onclick = () => formP(null, p => { E.pistas.push(p); salvarE(); render(); });
       $$('[data-edp]').forEach(b => b.onclick = () => formP(E.pistas[+b.dataset.edp], p => { E.pistas[+b.dataset.edp] = p; salvarE(); if (p.revelada) publicarPistas(); render(); }));
@@ -4457,7 +4524,7 @@ function interpretarPersonagem(campId, C, st) {
     const sel = m.querySelector('#ip-f'), custom = m.querySelector('#ip-custom');
     const mostrar = () => { custom.hidden = !!sel.value; }; sel.onchange = mostrar; mostrar();
     let foto = atual.foto || '';
-    m.querySelector('#ip-img').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) { foto = u; toast('Imagem enviada.'); } };
+    m.querySelector('#ip-img').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0], 'retrato'); e.target.value = ''; if (u) { foto = u; toast('Imagem enviada.'); } };
     const gravar = async persona => { try { await db.doc(`campanhas/${campId}/membros/${ME}`).update({ persona }); fechar(); toast('Personagem atualizado na ligação.'); } catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); } };
     m.querySelector('#ip-ok').onclick = () => gravar(sel.value ? { ficha: sel.value, cor: m.querySelector('#ip-c').value } : { ficha: null, nome: m.querySelector('#ip-n').value.trim(), foto, cor: m.querySelector('#ip-c').value });
     m.querySelector('#ip-limpar')?.addEventListener('click', () => gravar(null));
@@ -4576,7 +4643,7 @@ ROTAS.entrar = async () => {
       ${DONO ? `<div class="caixa" style="display:grid; gap:10px"><div class="sec-f"><h3 style="margin:0">Contas da mesa</h3><a class="btn mini" href="#admin" style="text-decoration:none">Abrir painel do administrador</a></div><p class="faint" style="margin:0; font-size:13px">Busque pelo nome para ver o ID de alguém. Administrador é marcado no banco pelo ID, então trocar de nome não tira o acesso.</p>
         <div class="busca">${ICON_BUSCA}<input type="search" id="pf-busca" placeholder="Nome, por exemplo: Yonne"></div><div id="pf-contas" class="lista"></div></div>` : ''}`;
     const ligarP = () => {
-      $('#pf-foto').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0]); if (u) { foto = u; $('#pf-ava').style.backgroundImage = `url('${u}')`; $('#pf-ava').textContent = ''; toast('Foto enviada. Clique em Salvar perfil.'); } };
+      $('#pf-foto').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0], 'circulo'); e.target.value = ''; if (u) { foto = u; $('#pf-ava').style.backgroundImage = `url('${u}')`; $('#pf-ava').textContent = ''; toast('Foto enviada. Clique em Salvar perfil.'); } };
       $('#pf-tirar')?.addEventListener('click', () => { foto = ''; toast('Foto removida. Clique em Salvar perfil.'); });
       $('#pf-copiar').onclick = async () => { try { await navigator.clipboard.writeText(ME); toast('ID copiado.'); } catch (e) { toast(ME); } };
       $('#salvar-nome').onclick = async () => { const nome = $('#meu-nome').value.trim(); if (!nome) return toast('Escreva um nome.');
