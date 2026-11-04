@@ -864,7 +864,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261104025542';
+const BUILD = '20261104025657';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1206,8 +1206,8 @@ function dadosPericia(f, nome) {
    ================================================================= */
 const VAMP_TIPOS = {
   carnical: { nome: 'Vampiro Carniçal', resumo: 'O mais bestial. Fora de combate é um vampiro comum; abaixo de 70% do PV, vira um morcego gigante.',
-    forma: { pv: 20, pst: 10, ps: -15, mov: 3, rd: 5, testes: { 'Resiliência': 10 } },
-    vant: ['Abaixo de 70% do PV pode virar morcego gigante.', 'Na forma: +20 PV / +10 PST / −15 PS.', 'Asas: +3m de movimento.', 'Mordida: 2d8 + FOR (×2). Garras: 1d12 + FOR (×3).', '+5 RD física, só em combate.', '+10 em testes de Resiliência em combate.'] },
+    pv: 20, pst: 10, ps: -15, forma: { mov: 3, rd: 5, testes: { 'Resiliência': 10 } },
+    vant: ['+20 PV / +10 PST / −15 PS.', 'Abaixo de 70% do PV pode virar morcego gigante (forma de combate).', 'Na forma: asas (+3m de movimento), Mordida 2d8 + FOR (×2) e Garras 1d12 + FOR (×3).', 'Na forma: +5 RD física.', 'Na forma: +10 em testes de Resiliência.'] },
   encouracado: { nome: 'Vampiro Encouraçado', resumo: 'O que caça e não desiste até a presa cair sem nenhuma gota de sangue. Sádico, porém calculista: um dos poucos monstros de Fome que não são 100% irracionais.',
     pv: 10, pst: 15, ps: 5, dados: { 'Armas Brancas': 1, 'Pontaria': 1 }, testes: { 'Furtividade': 3, 'Percepção': 3, 'Análise': 3 }, armasMetade: true, favorita: true,
     vant: ['+10 PV / +15 PST / +5 PS.', '+1 Armas Brancas / +1 Pontaria.', 'Todas as armas pesam metade.', '+1 na margem de crítico da arma favorita.', '+3 em Furtividade, Percepção e Análise.'] },
@@ -1275,7 +1275,7 @@ function htmlVampiro(F, podeEditar) {
         <p class="dim" style="margin:0; font-size:13.5px">Frases curtas com vampiros em vínculo na mesma área. Fora da área, alcance de 18 metros.</p>
         ${podeEditar ? `<label class="giro" style="gap:6px"><input type="checkbox" id="vp-cerebro" ${v.cerebro ? 'checked' : ''}> <span>Atingido no cérebro (sem telepatia até o fim da sessão)</span></label>` : ''}</article>
       ${v.tipo === 'carnical' ? `<article class="hab"><div class="cab"><span class="nm">Morcego Gigante</span><span class="tag ${v.forma ? 'crit' : ''}">${v.forma ? 'Transformado' : 'Forma humana'}</span></div>
-        <p class="dim" style="margin:0; font-size:13.5px">${v.forma ? 'Na forma: +20 PV, +10 PST, −15 PS, +3m, +5 RD física e +10 em Resiliência.' : pode70 ? 'PV abaixo de 70%: pode se transformar.' : `Só abaixo de 70% do PV (agora ${a.pv} de ${K.max.pv}).`}</p>
+        <p class="dim" style="margin:0; font-size:13.5px">${v.forma ? 'Na forma: +3m, +5 RD física, +10 em Resiliência, Garras e Mordida na aba Combate.' : pode70 ? 'PV abaixo de 70%: pode se transformar.' : `Só abaixo de 70% do PV (agora ${a.pv} de ${K.max.pv}).`}</p>
         ${podeEditar ? `<div class="linha-ex" style="gap:6px; flex-wrap:wrap"><button class="btn mini" id="vp-forma" ${!v.forma && !pode70 ? 'disabled' : ''}>${v.forma ? 'Voltar à forma humana' : 'Virar morcego'}</button>
           ${v.forma ? '<button class="btn sec mini" data-vp-atk="mordida">Mordida 2d8+FOR ×2</button><button class="btn sec mini" data-vp-atk="garras">Garras 1d12+FOR ×3</button>' : ''}</div>` : ''}</article>` : ''}
       ${v.tipo === 'encouracado' ? `<article class="hab"><div class="cab"><span class="nm">Arma favorita</span></div><p class="dim" style="margin:0; font-size:13.5px">+1 na margem de crítico com ela.</p>
@@ -2046,7 +2046,7 @@ ROTAS.agente = async id => {
         <div class="vazio" id="busca-per-nada" ${!bq || SIS.pericias.some(p => vis(p.nome)) ? 'hidden' : ''}>Nenhuma perícia com esse nome.</div>
         <div class="grade-per" data-base="${esc(JSON.stringify(nomes))}">${SIS.pericias.map(p => p.nome).map(n => { const P = dadosPericia(F, n);
           return `<div class="per ${P.pontos + P.vt ? '' : 'zero'}" data-pnome="${esc(n)}" ${vis(n) ? '' : 'hidden'}><div class="topo-p"><b>${esc(n)}</b><div class="pips">${Array.from({ length: Math.max(K.pat.limite, P.pontos) }, (_, k) => `<span class="pip ${k < P.pontos ? 'on' : ''}"></span>`).join('')}${P.vt ? '<span class="pip vt" title="+1 da Vontade"></span>' : ''}</div></div>
-          <div class="mono dim" style="font-size:12px" data-pline="${esc(id + '|p|' + n)}">${(G => `${G.dados}d20 + ${G.mod} (${SIGLA[G.atr]})`)(comAtributo(F, P, UI_ARMA['giro|' + id + '|p|' + n]))}</div>
+          <div class="mono dim" style="font-size:12px" data-pline="${esc(id + '|p|' + n)}">${(G => `${G.dados}d20 + ${G.mod} (${SIGLA[G.atr]}${G.extraVamp ? ` +${G.extraVamp} vampiro` : ''})`)(comAtributo(F, P, UI_ARMA['giro|' + id + '|p|' + n]))}</div>
           ${P.vb ? `<div style="display:flex; gap:4px; flex-wrap:wrap"><span class="tag tag-vetor">Vetor +1</span>${P.alem ? '<span class="tag tag-vetor">Além do limite +1 dado</span>' : ''}</div>` : ''}
           <div class="edit-only" style="display:flex; gap:6px; align-items:center"><button class="vbtn" data-pp="${esc(n)}" data-d="-1">−</button><button class="vbtn" data-pp="${esc(n)}" data-d="1">+</button>
             <select data-patr="${esc(n)}" style="width:auto; padding:4px">${ATR.map(([k, , s]) => `<option value="${k}" ${P.atr === k ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
@@ -2437,7 +2437,11 @@ ROTAS.agente = async id => {
     const add = (lista, obj) => { if (lista === 'equipamentos') { const ja = (F.equipamentos || []).find(x => x.nome === obj.nome && !x.dano === !obj.dano && (x.obs || '') === (obj.obs || '')); if (ja) { ja.qtd = (+ja.qtd || 1) + (+obj.qtd || 1); salvar({ equipamentos: F.equipamentos }); render(); return toast(`${obj.nome}: agora ×${ja.qtd}.`); } }
       F[lista] = [...(F[lista] || []), obj]; salvar({ [lista]: F[lista] }); render(); };
     // complemento de vampiro
-    const salvarVamp = (vp, extra = {}) => { F.vampiro = vp; Object.assign(F, extra); render(); return salvar({ vampiro: vp, ...extra }); };
+    // ao ligar, trocar ou tirar o tipo, o PV/PS/PST atual acompanha a diferença do máximo (cheio continua cheio)
+    const salvarVamp = (vp, extra = {}) => { const antes = calc(F).max, at0 = { ...antes, ...(F.atual || {}), ...(extra.atual || {}) };
+      F.vampiro = vp; Object.assign(F, extra); const depois = calc(F).max;
+      if (!extra.atual && (antes.pv !== depois.pv || antes.ps !== depois.ps || antes.pst !== depois.pst)) { const at = { ...at0 }; for (const k of ['pv', 'ps', 'pst']) at[k] = Math.max(0, Math.min(depois[k], (+at0[k] || 0) + depois[k] - antes[k])); F.atual = at; extra = { ...extra, atual: at }; }
+      render(); return salvar({ vampiro: vp, ...extra }); };
     $('#vp-ligar')?.addEventListener('click', () => escolherTipoVampiro(null, t => { lembrarAba('vampiro'); aba = 'vampiro'; salvarVamp({ tipo: t, desde: Date.now() }); toast('Agora esta ficha é vampira.'); }));
     $('#vp-tipo')?.addEventListener('click', () => escolherTipoVampiro(F.vampiro?.tipo, t => salvarVamp({ ...F.vampiro, tipo: t, forma: false })));
     $('#vp-tirar')?.addEventListener('click', () => { if (!confirm('Tirar o complemento de vampiro desta ficha?')) return; aba = 'habilidades'; lembrarAba(aba); salvarVamp(null); });
@@ -2452,7 +2456,7 @@ ROTAS.agente = async id => {
     $('#vp-forma')?.addEventListener('click', () => { const K = calc(F), a = { ...K.max, ...(F.atual || {}) }, liga = !F.vampiro.forma, VF = VAMP_TIPOS.carnical.forma;
       if (liga && a.pv >= K.max.pv * 0.7) return toast('Só abaixo de 70% do PV.');
       // ao virar morcego, o PV ganha os +20 na hora; ao voltar, nada passa do novo máximo
-      const at = { ...a }; if (liga) { at.pv += VF.pv; at.pst += VF.pst; at.ps = Math.max(0, at.ps + VF.ps); }
+      const at = { ...a };
       salvarVamp({ ...F.vampiro, forma: liga }, { atual: at }); if (!liga) { const K2 = calc(F); const at2 = { ...F.atual }; for (const k of ['pv', 'ps', 'pst']) at2[k] = Math.min(at2[k], K2.max[k]); F.atual = at2; salvar({ atual: at2 }); render(); }
       toast(liga ? 'Virou morcego gigante.' : 'Voltou à forma humana.'); });
     $('#vp-dep')?.addEventListener('click', () => { const P = dadosPericia(F, 'Resiliência'), rr = teste(P.dados, P.mod + bnv()); vpRes('Dependência (Resiliência)', rr, `Resiliência ${rr.detalhe} = <b>${rr.total}</b>${veredito(rr.total, dtv())}`); });
