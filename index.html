@@ -865,7 +865,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261104025834';
+const BUILD = '20261104025903';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1207,8 +1207,8 @@ function dadosPericia(f, nome) {
    ================================================================= */
 const VAMP_TIPOS = {
   carnical: { nome: 'Vampiro Carniçal', resumo: 'O mais bestial. Fora de combate é um vampiro comum; abaixo de 70% do PV, vira um morcego gigante.',
-    pv: 20, pst: 10, ps: -15, forma: { mov: 3, rd: 5, testes: { 'Resiliência': 10 } },
-    vant: ['+20 PV / +10 PST / −15 PS.', 'Abaixo de 70% do PV pode virar morcego gigante (forma de combate).', 'Na forma: asas (+3m de movimento), Mordida 2d8 + FOR (×2) e Garras 1d12 + FOR (×3).', 'Na forma: +5 RD física.', 'Na forma: +10 em testes de Resiliência.'] },
+    pv: 20, pst: 10, ps: -10, forma: { mov: 3, rd: 5, testes: { 'Resiliência': 10 } },
+    vant: ['+20 PV / +10 PST / −10 PS.', 'Abaixo de 70% do PV pode virar morcego gigante (forma de combate).', 'Na forma: asas (+3m de movimento), Mordida 2d8 + FOR (×2) e Garras 1d12 + FOR (×3).', 'Na forma: +5 RD física.', 'Na forma: +10 em testes de Resiliência.'] },
   encouracado: { nome: 'Vampiro Encouraçado', resumo: 'O que caça e não desiste até a presa cair sem nenhuma gota de sangue. Sádico, porém calculista: um dos poucos monstros de Fome que não são 100% irracionais.',
     pv: 10, pst: 15, ps: 5, dados: { 'Armas Brancas': 1, 'Pontaria': 1 }, testes: { 'Furtividade': 3, 'Percepção': 3, 'Análise': 3 }, armasMetade: true, favorita: true,
     vant: ['+10 PV / +15 PST / +5 PS.', '+1 Armas Brancas / +1 Pontaria.', 'Todas as armas pesam metade.', '+1 na margem de crítico da arma favorita.', '+3 em Furtividade, Percepção e Análise.'] },
