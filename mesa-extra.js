@@ -45,6 +45,20 @@ async function enviarArquivo(file, limiteMB = 25) {
   return sb.storage.from('imagens').getPublicUrl(caminho).data.publicUrl;
 }
 
+/* ---------- mapa: posições dos pinos ficam no quadro da equipe (jogadores podem mover os próprios agentes) ---------- */
+const salaMapa = id => [...String(id)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
+function opcoesMapa(id, getQ, meus, mestre, nome) {
+  return { getPos: () => getQ()?.pinos || {}, podeMover: p => mestre || !!p.livre || (!!p.ficha && meus.includes(p.ficha)), eu: { nome: nome || 'Alguém', cor: corDe(ME) }, sala: salaMapa(id),
+    salvarPos: async (cena, pino, xy) => { const v = { ...xy, t: Date.now(), uid: ME }, Q = getQ() || {}; Q.pinos = { ...(Q.pinos || {}), [cena]: { ...(Q.pinos?.[cena] || {}), [pino]: v } }; await salvarQ(id, { pinos: { [cena]: { [pino]: v } } }); } };
+}
+// mapa flutuante: descobre os agentes da pessoa uma vez e libera mover os pinos deles
+const MAPA_MEUS = { ids: null, carregando: null };
+window.mapaExtra = (camp, getQ, refazer) => {
+  if (!camp || !ME) return {};
+  if (!MAPA_MEUS.ids && !MAPA_MEUS.carregando) MAPA_MEUS.carregando = db.collection('fichas').where('dono', '==', ME).get().then(sn => { MAPA_MEUS.ids = sn.docs.map(d => d.id); MAPA_MEUS.nome = (sn.docs.find(d => d.id === MEU_PRINCIPAL) || sn.docs[0])?.data()?.nome || ''; MAPA_MEUS.carregando = null; refazer?.(); }).catch(() => { MAPA_MEUS.carregando = null; });
+  return opcoesMapa(camp, getQ, MAPA_MEUS.ids || [], false, MAPA_MEUS.nome || 'Alguém');
+};
+
 /* ---------- pistas e arquivo: papéis no mural ---------- */
 const idPista = p => p.id || 'p' + [...String(p.titulo || '') + String(p.texto || '')].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
 const papelPista = p => `<div class="pista">${p.titulo ? `<b>${esc(p.titulo)}</b>` : ''}${p.imagem ? `<img src="${esc(p.imagem)}" alt="" loading="lazy">` : ''}${p.texto ? `<p>${nl(p.texto)}</p>` : ''}${p.audio ? `<audio controls preload="none" src="${esc(p.audio)}"></audio>` : ''}</div>`;

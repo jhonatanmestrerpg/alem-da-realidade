@@ -38,11 +38,36 @@
     }
   }
 
-  const pinoHTML = (p, mestre, escondido) => `<div class="pino ${p.oculto ? 'oculto' : ''} ${escondido ? 'na-nevoa' : ''} ${mestre ? 'mov' : ''}" data-pino="${esc(p.id)}" style="left:${+p.x || 50}%;top:${+p.y || 50}%;--pc:${esc(p.cor || '#c4000d')}" title="${esc(p.nome)}">
-    <span class="pino-nome">${esc(p.nome)}${p.oculto ? ' 🙈' : ''}${escondido ? ' 🌫' : ''}</span><span class="pino-cab" style="${p.foto ? `background-image:url('${esc(p.foto)}')` : ''}">${p.foto ? '' : esc(p.ic || '📍')}</span></div>`;
+  /* ---------- posições: quem move (mestre ou jogador) grava em quadro/estado.pinos[cena][pino]; a luz de quem está arrastando vai por broadcast ---------- */
+  const OPT = { getPos: () => ({}), podeMover: () => false, salvarPos: null, eu: null, sala: '' };
+  const REMOTO = {}; // pino -> { x, y, nome, cor, t }
+  const posDe = (cena, p) => { const o = OPT.getPos()?.[cena?.id]?.[p.id], r = REMOTO[p.id]; if (r && Date.now() - r.t < 4000) return { x: r.x, y: r.y }; return o && (o.t || 0) >= (p.t || 0) ? o : p; };
+  const CANAIS = {};
+  function canal(sala) {
+    if (!sala || typeof sb === 'undefined' || !sb) return null;
+    if (CANAIS[sala]) return CANAIS[sala];
+    const ch = sb.channel('mapa-' + sala, { config: { broadcast: { self: false } } });
+    ch.on('broadcast', { event: 'mv' }, ({ payload: m }) => { if (!m?.pino) return;
+      if (m.fim) delete REMOTO[m.pino]; else REMOTO[m.pino] = { x: m.x, y: m.y, nome: m.nome, cor: m.cor, t: Date.now() };
+      document.querySelectorAll(`.mapa-palco [data-pino="${CSS.escape(m.pino)}"]`).forEach(el => luz(el, m));
+    }).subscribe();
+    return (CANAIS[sala] = ch);
+  }
+  function luz(el, m) {
+    if (m.fim) { el.style.left = m.x + '%'; el.style.top = m.y + '%'; el.classList.remove('movendo'); el.querySelector('.pino-quem')?.remove(); return; }
+    el.style.left = m.x + '%'; el.style.top = m.y + '%'; el.classList.add('movendo'); el.style.setProperty('--mv', m.cor || '#3ddc84');
+    let q = el.querySelector('.pino-quem'); if (!q) { q = document.createElement('span'); q.className = 'pino-quem'; el.prepend(q); } q.textContent = '✋ ' + (m.nome || 'Alguém');
+    clearTimeout(el._luz); el._luz = setTimeout(() => { el.classList.remove('movendo'); q.remove(); }, 4000);
+  }
+  let ultimoEnvio = 0;
+  const avisarMov = (pino, x, y, fim) => { const ch = canal(OPT.sala); if (!ch) return; const agora = Date.now(); if (!fim && agora - ultimoEnvio < 70) return; ultimoEnvio = agora;
+    ch.send({ type: 'broadcast', event: 'mv', payload: { pino, x: +x.toFixed(2), y: +y.toFixed(2), fim: !!fim, nome: OPT.eu?.nome || 'Alguém', cor: OPT.eu?.cor || '#3ddc84' } }); };
+  const pinoHTML = (p, mestre, escondido, cena, movel) => { const q = posDe(cena, p), r = REMOTO[p.id] && Date.now() - REMOTO[p.id].t < 4000 ? REMOTO[p.id] : null;
+    return `<div class="pino ${p.oculto ? 'oculto' : ''} ${escondido ? 'na-nevoa' : ''} ${mestre || movel ? 'mov' : ''} ${r ? 'movendo' : ''}" data-pino="${esc(p.id)}" style="left:${+q.x || 50}%;top:${+q.y || 50}%;--pc:${esc(p.cor || '#c4000d')};--tam:${+p.tam || 1}${r ? `;--mv:${esc(r.cor)}` : ''}" title="${esc(p.nome)}">${r ? `<span class="pino-quem">✋ ${esc(r.nome)}</span>` : ''}
+    <span class="pino-nome">${esc(p.nome)}${p.oculto ? ' 🙈' : ''}${escondido ? ' 🌫' : ''}</span><span class="pino-cab" style="${p.foto ? `background-image:url('${esc(p.foto)}')` : ''}">${p.foto ? '' : esc(p.ic || '📍')}</span></div>`; };
 
-  function desenharMapa(A, getC, { mestre, salvarC, DETS = [], E = null }) {
-    rotulos();
+  function desenharMapa(A, getC, { mestre, salvarC, DETS = [], E = null, getPos, podeMover, salvarPos, eu, sala }) {
+    rotulos(); Object.assign(OPT, { getPos: getPos || (() => ({})), podeMover: podeMover || (() => false), salvarPos: salvarPos || null, eu: eu || null, sala: sala || '' }); canal(OPT.sala);
     const C = getC(), cenas = cenasDe(C), ativo = ativoDe(C), mesaId = C.id || C.nome || 'm';
     const ui = UI[mesaId] = UI[mesaId] || { ver: null, modo: 'mover', pincel: 2 };
     if (!mestre) ui.ver = null;
@@ -78,7 +103,7 @@
       new ResizeObserver(pintar).observe(palco);
       ligarZoom(A.querySelector('.mapa-vista'), ui, cena, () => (cenasDe(getC()).find(x => x.id === cena.id) || cena), mestre);
     }
-    if (!mestre) return;
+    if (!mestre) { if (palco) ligarArrastoJog(palco, cena); return; }
 
     /* ---------- ações da Diretora ---------- */
     const refazer = () => { const p = A.querySelector('.mapa-palco'); if (p) p.dataset.img = '-'; desenharMapa(A, getC, { mestre, salvarC, DETS, E }); };
@@ -144,14 +169,17 @@
         <div class="campo"><span class="rotulo">Ícone</span><div class="pino-ics">${ICONES.map(ic => `<button type="button" class="${ic === (pino.ic || '📍') ? 'aqui' : ''}" data-ic="${ic}">${ic}</button>`).join('')}</div></div>
         <div class="duas"><div class="campo"><label class="rotulo" for="pn-c">Cor</label><input type="color" id="pn-c" value="${esc(pino.cor || '#c4000d')}" style="height:40px;padding:2px"></div>
         <label class="chk" style="align-self:end"><input type="checkbox" id="pn-o" ${pino.oculto ? 'checked' : ''}> Esconder da mesa</label></div>
+        <div class="campo"><label class="rotulo" for="pn-t">Tamanho <b id="pn-tv">${Math.round((+pino.tam || 1) * 100)}%</b></label><input type="range" id="pn-t" min="0.5" max="4" step="0.25" value="${+pino.tam || 1}"></div>
         <label class="chk"><input type="checkbox" id="pn-fx" ${pino.fixo ? 'checked' : ''}> Aparece mesmo na névoa (personagem da mesa)</label>
+        <label class="chk"><input type="checkbox" id="pn-lv" ${pino.livre ? 'checked' : ''}> Qualquer jogador pode mover${pino.ficha ? ' (o dono do agente já pode)' : ''}</label>
         ${pino.foto ? `<label class="chk"><input type="checkbox" id="pn-f" checked> Usar a foto no lugar do ícone</label>` : ''}
         ${cenas.length > 1 && !novo ? `<div class="campo"><label class="rotulo" for="pn-mv">Levar para outra cena</label><select id="pn-mv"><option value="">Fica aqui</option>${cenas.filter(c => c.id !== ui.ver).map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('')}</select></div>` : ''}
         <div class="btns"><button class="btn" id="pn-ok">${novo ? 'Colocar' : 'Salvar'}</button>${novo ? '' : '<button class="btn perigo" id="pn-x">Remover</button>'}</div>`, (m, fechar) => {
       let ic = pino.ic || '📍';
+      m.querySelector('#pn-t').oninput = e => { m.querySelector('#pn-tv').textContent = Math.round(e.target.value * 100) + '%'; };
       m.querySelectorAll('[data-ic]').forEach(b => b.onclick = () => { ic = b.dataset.ic; m.querySelectorAll('[data-ic]').forEach(x => x.classList.toggle('aqui', x === b)); });
       m.querySelector('#pn-ok').onclick = async () => {
-        const p2 = { ...pino, nome: m.querySelector('#pn-n').value.trim() || 'Pino', ic, cor: m.querySelector('#pn-c').value, oculto: m.querySelector('#pn-o').checked, fixo: m.querySelector('#pn-fx').checked, foto: m.querySelector('#pn-f') && !m.querySelector('#pn-f').checked ? '' : pino.foto || '' };
+        const p2 = { ...pino, nome: m.querySelector('#pn-n').value.trim() || 'Pino', ic, cor: m.querySelector('#pn-c').value, oculto: m.querySelector('#pn-o').checked, fixo: m.querySelector('#pn-fx').checked, livre: m.querySelector('#pn-lv').checked, tam: +m.querySelector('#pn-t').value || 1, foto: m.querySelector('#pn-f') && !m.querySelector('#pn-f').checked ? '' : pino.foto || '' };
         const destino = m.querySelector('#pn-mv')?.value; fechar();
         const l = cenasAt(), i = l.findIndex(x => x.id === ui.ver); if (i < 0) return;
         const ps = [...(l[i].pinos || [])], j = ps.findIndex(p => p.id === pino.id);
@@ -177,12 +205,14 @@
     palco.addEventListener('pointermove', e => {
       if (pint) { pincelar(...pos(e)); return; }
       if (!arr) return; if (Math.hypot(e.clientX - arr.x0, e.clientY - arr.y0) > 4) arr.moveu = true; if (!arr.moveu) return;
-      [arr.x, arr.y] = pos(e); arr.el.style.left = arr.x + '%'; arr.el.style.top = arr.y + '%'; });
+      [arr.x, arr.y] = pos(e); arr.el.style.left = arr.x + '%'; arr.el.style.top = arr.y + '%'; avisarMov(arr.id, arr.x, arr.y); });
     const soltar = async () => {
       if (pint) { const nv = pint.nv; pint = null; palco.dataset.ocupado = ''; await trocarCena(x => ({ ...x, nevoa: nv })); return; }
       if (!arr) return; const a = arr; arr = null; a.el.classList.remove('arrastando'); palco.dataset.ocupado = '';
       const l = pinosAt(), p = l.find(x => x.id === a.id); if (!p) return;
       if (!a.moveu) return editar(p, false);
+      avisarMov(a.id, a.x, a.y, true);
+      if (OPT.salvarPos) { await OPT.salvarPos(cena.id, p.id, { x: +a.x.toFixed(2), y: +a.y.toFixed(2) }); return; }
       p.x = +a.x.toFixed(2); p.y = +a.y.toFixed(2); await salvarPinos(l); };
     palco.addEventListener('pointerup', soltar); palco.addEventListener('pointercancel', soltar);
   }
@@ -246,9 +276,27 @@
 
   function pinosVisiveis(cena, mestre) {
     return (cena?.pinos || []).filter(p => mestre || !p.oculto).map(p => {
-      const naNevoa = !p.fixo && !revelado(cena.nevoa, +p.x || 50, Math.min(99.9, (+p.y || 50)));
-      return mestre ? pinoHTML(p, true, naNevoa) : naNevoa ? '' : pinoHTML(p, false, false);
+      const q = posDe(cena, p), naNevoa = !p.fixo && !revelado(cena.nevoa, +q.x || 50, Math.min(99.9, (+q.y || 50)));
+      return mestre ? pinoHTML(p, true, naNevoa, cena) : naNevoa ? '' : pinoHTML(p, false, false, cena, OPT.podeMover(p));
     }).join('');
+  }
+  // jogador arrasta o próprio agente (ou um pino liberado pelo mestre)
+  function ligarArrastoJog(palco, cena) {
+    if (palco.dataset.jog === '1') return; palco.dataset.jog = '1';
+    let arr = null;
+    const pos = e => { const r = palco.getBoundingClientRect(); return [Math.min(100, Math.max(0, (e.clientX - r.left) / r.width * 100)), Math.min(100, Math.max(0, (e.clientY - r.top) / r.height * 100))]; };
+    palco.addEventListener('pointerdown', e => {
+      const el = e.target.closest('.pino.mov'); if (!el || !OPT.salvarPos) return;
+      e.preventDefault(); e.stopPropagation(); palco.dataset.ocupado = '1';
+      arr = { el, id: el.dataset.pino, x0: e.clientX, y0: e.clientY, moveu: false }; el.setPointerCapture(e.pointerId); el.classList.add('arrastando');
+    });
+    palco.addEventListener('pointermove', e => {
+      if (!arr) return; if (Math.hypot(e.clientX - arr.x0, e.clientY - arr.y0) > 4) arr.moveu = true; if (!arr.moveu) return;
+      [arr.x, arr.y] = pos(e); arr.el.style.left = arr.x + '%'; arr.el.style.top = arr.y + '%'; avisarMov(arr.id, arr.x, arr.y);
+    });
+    const soltar = async () => { if (!arr) return; const a = arr; arr = null; a.el.classList.remove('arrastando'); palco.dataset.ocupado = '';
+      if (!a.moveu) return; avisarMov(a.id, a.x, a.y, true); await OPT.salvarPos(palco.dataset.cena, a.id, { x: +a.x.toFixed(2), y: +a.y.toFixed(2) }); };
+    palco.addEventListener('pointerup', soltar); palco.addEventListener('pointercancel', soltar);
   }
 
   /* ---------- mapa flutuante: abre por cima de qualquer tela (ficha, mesa), arrasta, aumenta, diminui e fecha no X ---------- */
@@ -280,8 +328,12 @@
       if (!sn.exists) { corpo.innerHTML = '<div class="vazio">Mesa não encontrada.</div>'; return; }
       const C = { id: mesaId, ...sn.data() }, a = ativoDe(C);
       el.querySelector('[data-pop-tit]').textContent = a ? a.nome : (C.nome || 'Mapa');
-      desenharMapa(corpo, () => C, { mestre: false });
+      POP.C = C; desenharPop();
     });
+    const camp = col.startsWith('campanhas/') ? col.split('/')[1] : '';
+    POP.Q = {};
+    const desenharPop = () => { if (!POP.C) return; const ex = typeof window.mapaExtra === 'function' ? window.mapaExtra(camp, () => POP.Q, () => desenharPop()) : {}; desenharMapa(corpo, () => POP.C, { mestre: false, ...ex }); };
+    if (camp) { const u2 = db.doc(`campanhas/${camp}/quadro/estado`).onSnapshot(sq => { POP.Q = sq.exists ? sq.data() || {} : {}; desenharPop(); }); const u1 = POP.unsub; POP.unsub = () => { u1?.(); u2(); }; }
   }
   document.addEventListener('click', e => { const b = e.target.closest('[data-abrir-mapa]'); if (!b) return; e.preventDefault(); const [col, id] = b.dataset.abrirMapa.split('|'); abrirMapaFlutuante(col, id); });
 
@@ -294,7 +346,11 @@
 .pino { position: absolute; transform: translate(-50%, -100%); display: grid; justify-items: center; gap: 2px; z-index: 2; transition: left .25s, top .25s; }
 .pino.mov { cursor: grab; } .pino.arrastando { cursor: grabbing; transition: none; z-index: 5; } .pino.oculto { opacity: .55; }
 .pino-nome { background: rgba(0,0,0,.82); color: #fff; font: 700 11.5px/1.2 var(--f-body); padding: 2px 7px; border-radius: 6px; border: 1px solid var(--pc); white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
-.pino-cab { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--pc); background: #0b0d14 center/cover no-repeat; display: grid; place-items: center; font-size: 17px; box-shadow: 0 3px 6px rgba(0,0,0,.6); }
+.pino-cab { width: calc(34px * var(--tam, 1)); height: calc(34px * var(--tam, 1)); border-radius: 50%; border: 3px solid var(--pc); background: #0b0d14 center/cover no-repeat; display: grid; place-items: center; font-size: calc(17px * var(--tam, 1)); box-shadow: 0 3px 6px rgba(0,0,0,.6); transition: box-shadow .2s; }
+.pino.movendo { z-index: 6; transition: left .08s linear, top .08s linear; } .pino.movendo .pino-cab { box-shadow: 0 0 0 3px var(--mv), 0 0 18px 6px var(--mv); animation: pinoLuz 1s ease-in-out infinite; }
+@keyframes pinoLuz { 50% { box-shadow: 0 0 0 3px var(--mv), 0 0 28px 10px var(--mv); } }
+.pino-quem { background: var(--mv); color: #0b0d14; font: 800 10.5px/1.2 var(--f-body); padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+.mapa-palco .pino.mov { cursor: grab; touch-action: none; }
 .pino-ics { display: flex; flex-wrap: wrap; gap: 4px; } .pino-ics button { font-size: 20px; width: 38px; height: 38px; border: 1px solid var(--linha-2); background: var(--painel-2); cursor: pointer; } .pino-ics button.aqui { background: var(--ouro); }
 
 .mapa-cenas { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; }
