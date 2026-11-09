@@ -870,7 +870,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261104033604';
+const BUILD = '20261109212819';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -3507,9 +3507,10 @@ ROTAS.campanhas = async () => {
   const desenhar = () => {
     const l = Object.values(camps).filter(Boolean).sort((a, b) => (b.criado || 0) - (a.criado || 0));
     $('#lista-c').innerHTML = l.length ? l.map(c => `<article class="card-camp" style="${c.capa ? `background-image:url('${esc(c.capa)}')` : ''}"><span class="qtd">${c.mestre === ME ? 'Mestre' : 'Jogador'} · desde ${dataBR(c.criado)}</span>
-      <div class="corpo"><div><h3 style="font-size:24px">${esc(c.nome)}</h3>${c.descricao ? `<p class="dim" style="font-size:13px; max-width:40ch">${esc(c.descricao.slice(0, 90))}${c.descricao.length > 90 ? '…' : ''}</p>` : ''}</div><a class="btn" href="#campanha-${esc(c.id)}" style="text-decoration:none">Acessar</a></div></article>`).join('')
+      <div class="corpo"><div><h3 style="font-size:24px">${esc(c.nome)}</h3>${c.descricao ? `<p class="dim" style="font-size:13px; max-width:40ch">${esc(c.descricao.slice(0, 90))}${c.descricao.length > 90 ? '…' : ''}</p>` : ''}</div><span style="display:flex; gap:6px"><a class="btn" href="#campanha-${esc(c.id)}" style="text-decoration:none">Acessar</a>${c.mestre === ME ? `<button class="btn sec" data-x-camp="${esc(c.id)}" title="Apagar campanha" aria-label="Apagar ${esc(c.nome)}">🗑</button>` : ''}</span></div></article>`).join('')
       : '<div class="vazio">Você ainda não está em nenhuma campanha. Crie uma ou entre com o código que o mestre passou.</div>';
   };
+  $('#lista-c').addEventListener('click', e => { const b = e.target.closest('[data-x-camp]'); if (!b) return; const c = camps[b.dataset.xCamp]; if (c) pedirExcluirCampanha(c.id, c.nome, () => { delete camps[c.id]; desenhar(); }); });
   if (!PART.campanhas.length) desenhar();
   PART.campanhas.forEach(id => assinar(db.doc('campanhas/' + id).onSnapshot(s => { camps[id] = s.exists ? { id, ...s.data() } : null; desenhar(); })));
   $('#nova').onclick = () => abrirModal('Nova campanha', `<div class="campo"><label class="rotulo" for="nc-n">Nome</label><input type="text" id="nc-n" placeholder="Os Filhos do Caos"></div>
@@ -3548,6 +3549,15 @@ function editarCampanha(id, C) {
       try { await db.doc('campanhas/' + id).update({ nome, descricao: m.querySelector('#ec-d').value.trim(), capa }); toast('Campanha salva.'); fechar(); }
       catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); }
     };
+  });
+}
+// confirmação pelo nome antes de apagar (lista de campanhas, página da campanha e Escudo)
+function pedirExcluirCampanha(id, nome, depois) {
+  abrirModal('Apagar campanha', `<p>Apagar <b>${esc(nome)}</b> com combate, chat, rolagens, pistas, mapa, relatórios e homebrew dela? Os agentes continuam existindo, só saem da campanha. Não tem volta.</p>
+    <div class="campo"><label class="rotulo" for="xc-n">Digite o nome da campanha para confirmar</label><input type="text" id="xc-n" placeholder="${esc(nome)}" autocomplete="off"></div><button class="btn perigo" id="xc-ok" disabled>Apagar para sempre</button>`, (m, fechar) => {
+    const x = m.querySelector('#xc-n'), ok = m.querySelector('#xc-ok');
+    x.oninput = () => { ok.disabled = x.value.trim().toLowerCase() !== String(nome).trim().toLowerCase(); };
+    ok.onclick = async () => { ok.disabled = true; ok.textContent = 'Apagando…'; try { await excluirCampanha(id); fechar(); toast('Campanha apagada.'); depois ? depois() : (location.hash = 'campanhas'); } catch (e) { toast('Não deu para apagar: ' + (e.message || e.code)); ok.disabled = false; ok.textContent = 'Apagar para sempre'; } };
   });
 }
 async function excluirCampanha(id) {
@@ -4072,7 +4082,7 @@ ROTAS.campanha = async id => {
         ${RG.subExtras.length ? `<h2 style="margin:0">Subclasses novas</h2><div class="grade-cards">${RG.subExtras.map(sc => `<div class="caixa"><span class="rotulo">${esc(sc.classe)}</span><h3 style="margin:0">${esc(sc.nome)}</h3><p class="dim">${esc(sc.descricao || '')}</p>${(sc.habilidades || []).filter(h => h.nome).map(h => `<div><span class="tag">Nv ${h.nivel}</span> <b>${esc(h.nome)}</b> <span class="dim">${esc(h.texto)}</span></div>`).join('')}</div>`).join('')}</div>` : ''}</div>`; }
     if (aba === 'ligacao') corpo = membro ? '<div id="ligacao"></div>' : '<div class="vazio">Entre na campanha para usar a ligação.</div>';
     app.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
-        ${mestre ? `<button class="btn sec" id="editar-c">Editar campanha</button><a class="btn sec" href="#regras-${esc(id)}" style="text-decoration:none">Homebrew da campanha</a><a class="btn ouro" href="#escudo-${esc(id)}" style="text-decoration:none">Escudo do mestre</a>` : ''}
+        ${mestre ? `<button class="btn sec" id="editar-c">Editar campanha</button><a class="btn sec" href="#regras-${esc(id)}" style="text-decoration:none">Homebrew da campanha</a><a class="btn ouro" href="#escudo-${esc(id)}" style="text-decoration:none">Escudo do mestre</a><button class="btn sec" id="x-camp" title="Apagar campanha">🗑 Apagar</button>` : ''}
         ${membro ? `<a class="btn" href="#novo-${esc(id)}" style="text-decoration:none">Criar agente da campanha</a>` : ''}${membro ? '<button class="btn sec" id="add-ag">Adicionar agente</button><button class="btn sec" id="convidar">Convidar jogadores</button>' : '<button class="btn" id="entrar-c">Entrar nesta campanha</button>'}
         ${membro && !mestre ? '<button class="btn sec" id="sair">Sair da campanha</button>' : ''}</div>
       <section class="camp-topo ${C.capa ? 'com-capa' : ''}">
@@ -4086,6 +4096,7 @@ ROTAS.campanha = async id => {
     if (aba === 'ligacao' && membro) montarLigacao(id, C, st);
     $('#entrar-c')?.addEventListener('click', () => entrarCampanha(id));
     $('#editar-c')?.addEventListener('click', () => editarCampanha(id, C));
+    $('#x-camp')?.addEventListener('click', () => pedirExcluirCampanha(id, C.nome));
     $('#convidar')?.addEventListener('click', () => abrirModal('Convidar jogadores', `<p>Mande o código abaixo para os jogadores. Eles entram no site com a conta deles e vão em Campanhas, Entrar com código.</p>
       <div style="display:flex; gap:8px"><input type="text" id="cod-c" readonly value="${esc(id)}"><button class="btn" id="copiar">Copiar</button></div>`, m => {
       m.querySelector('#copiar').onclick = async () => { const i = m.querySelector('#cod-c'); try { await navigator.clipboard.writeText(i.value); toast('Código copiado.'); } catch (e) { i.select(); toast('Selecionei o código, copie com Ctrl+C.'); } }; }));
