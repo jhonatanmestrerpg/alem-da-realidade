@@ -62,11 +62,33 @@
   let ultimoEnvio = 0;
   const avisarMov = (pino, x, y, fim) => { const ch = canal(OPT.sala); if (!ch) return; const agora = Date.now(); if (!fim && agora - ultimoEnvio < 70) return; ultimoEnvio = agora;
     ch.send({ type: 'broadcast', event: 'mv', payload: { pino, x: +x.toFixed(2), y: +y.toFixed(2), fim: !!fim, nome: OPT.eu?.nome || 'Alguém', cor: OPT.eu?.cor || '#3ddc84' } }); };
-  const pinoHTML = (p, mestre, escondido, cena, movel) => { const q = posDe(cena, p), r = REMOTO[p.id] && Date.now() - REMOTO[p.id].t < 4000 ? REMOTO[p.id] : null;
-    return `<div class="pino ${p.oculto ? 'oculto' : ''} ${escondido ? 'na-nevoa' : ''} ${mestre || movel ? 'mov' : ''} ${r ? 'movendo' : ''}" data-pino="${esc(p.id)}" style="left:${+q.x || 50}%;top:${+q.y || 50}%;--pc:${esc(p.cor || '#c4000d')};--tam:${+p.tam || 1}${r ? `;--mv:${esc(r.cor)}` : ''}" title="${esc(p.nome)}">${r ? `<span class="pino-quem">✋ ${esc(r.nome)}</span>` : ''}
-    <span class="pino-nome">${esc(p.nome)}${p.oculto ? ' 🙈' : ''}${escondido ? ' 🌫' : ''}</span><span class="pino-cab" style="${p.foto ? `background-image:url('${esc(p.foto)}')` : ''}">${p.foto ? '' : esc(p.ic || '📍')}</span></div>`; };
+  const SEL = { id: null }; // token selecionado (alças de tamanho e giro, barra do mestre)
+  const rotDe = (cena, p) => { const o = OPT.getPos()?.[cena?.id]?.[p.id]; return o && o.rot != null ? +o.rot : +p.rot || 0; };
+  const BARRA = [['vis', '👁', 'Mostrar ou esconder da mesa'], ['trava', '🔒', 'Travar ou destravar'], ['frente', '⬆', 'Trazer para a frente'], ['tras', '⬇', 'Mandar para trás'], ['dup', '⧉', 'Duplicar'], ['nome', 'Aa', 'Mostrar ou esconder o nome'], ['del', '🗑', 'Apagar'], ['mais', '⋯', 'Editar tudo']];
+  const pinoHTML = (p, mestre, escondido, cena, movel) => { const q = posDe(cena, p), r = REMOTO[p.id] && Date.now() - REMOTO[p.id].t < 4000 ? REMOTO[p.id] : null, sel = SEL.id === p.id && (mestre || movel);
+    return `<div class="pino ${p.oculto ? 'oculto' : ''} ${escondido ? 'na-nevoa' : ''} ${(mestre || movel) && !(p.travado && !mestre) ? 'mov' : ''} ${p.travado ? 'travado' : ''} ${r ? 'movendo' : ''} ${sel ? 'sel' : ''} ${p.semNome ? 'sem-nome' : ''}" data-pino="${esc(p.id)}" style="left:${+q.x || 50}%;top:${+q.y || 50}%;--pc:${esc(p.cor || '#c4000d')};--tam:${+p.tam || 1};--rot:${rotDe(cena, p)}deg${r ? `;--mv:${esc(r.cor)}` : ''}" title="${esc(p.nome)}">${r ? `<span class="pino-quem">✋ ${esc(r.nome)}</span>` : ''}
+    <span class="pino-nome">${esc(p.nome)}${p.oculto ? ' 🙈' : ''}${p.travado ? ' 🔒' : ''}${escondido ? ' 🌫' : ''}</span><span class="pino-alvo"><span class="pino-cab" style="${p.foto ? `background-image:url('${esc(p.foto)}')` : ''}">${p.foto ? '' : esc(p.ic || '📍')}</span>${sel ? `<span class="pino-h girar" data-h="girar" title="Girar (Shift: de 15 em 15°)"></span>${mestre ? ['nw', 'ne', 'sw', 'se'].map(c => `<span class="pino-h canto ${c}" data-h="tam" title="Arraste para aumentar ou diminuir"></span>`).join('') : ''}` : ''}</span>
+    ${sel && mestre ? `<div class="pino-barra">${BARRA.map(([k, ic, t]) => `<button type="button" data-pb="${k}" title="${t}" aria-label="${t}" class="${(k === 'vis' && p.oculto) || (k === 'trava' && p.travado) || (k === 'nome' && p.semNome) ? 'on' : ''}">${ic}</button>`).join('')}</div>` : ''}</div>`; };
+  // alças: girar e mudar o tamanho arrastando (mostra ao vivo, grava ao soltar)
+  function gestoAlca(e, palco, aoFim) {
+    const h = e.target.closest('[data-h]'); if (!h) return false;
+    const el = h.closest('.pino'), cab = el.querySelector('.pino-cab'); e.preventDefault(); e.stopPropagation();
+    const r = cab.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const g = { tipo: h.dataset.h, id: el.dataset.pino, d0: Math.hypot(e.clientX - cx, e.clientY - cy) || 1, tam0: parseFloat(el.style.getPropertyValue('--tam')) || 1, rot: null, tam: null };
+    palco.dataset.ocupado = '1'; try { h.setPointerCapture(e.pointerId); } catch (x) {}
+    const mover = ev => { ev.stopPropagation();
+      if (g.tipo === 'girar') { let a = Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180 / Math.PI + 90; if (ev.shiftKey) a = Math.round(a / 15) * 15; g.rot = Math.round((a + 360) % 360); el.style.setProperty('--rot', g.rot + 'deg'); }
+      else { g.tam = Math.round(Math.min(6, Math.max(0.5, g.tam0 * Math.hypot(ev.clientX - cx, ev.clientY - cy) / g.d0)) * 20) / 20; el.style.setProperty('--tam', g.tam); } };
+    const fim = async ev => { ev?.stopPropagation(); h.removeEventListener('pointermove', mover); h.removeEventListener('pointerup', fim); h.removeEventListener('pointercancel', fim); palco.dataset.ocupado = ''; if (g.rot != null || g.tam != null) await aoFim(g); };
+    h.addEventListener('pointermove', mover); h.addEventListener('pointerup', fim); h.addEventListener('pointercancel', fim);
+    return true;
+  }
+  const salvarGiro = async (cena, p, rot, salvarPinosFn) => { const q = posDe(cena, p);
+    if (OPT.salvarPos) return OPT.salvarPos(cena.id, p.id, { x: +(+q.x || 50).toFixed(2), y: +(+q.y || 50).toFixed(2), rot });
+    if (salvarPinosFn) return salvarPinosFn(rot); };
 
-  function desenharMapa(A, getC, { mestre, salvarC, DETS = [], E = null, getPos, podeMover, salvarPos, eu, sala }) {
+  function desenharMapa(A, getC, opts) {
+    const { mestre, salvarC, DETS = [], E = null, getPos, podeMover, salvarPos, eu, sala } = opts;
     rotulos(); Object.assign(OPT, { getPos: getPos || (() => ({})), podeMover: podeMover || (() => false), salvarPos: salvarPos || null, eu: eu || null, sala: sala || '' }); canal(OPT.sala);
     const C = getC(), cenas = cenasDe(C), ativo = ativoDe(C), mesaId = C.id || C.nome || 'm';
     const ui = UI[mesaId] = UI[mesaId] || { ver: null, modo: 'mover', pincel: 2 };
@@ -77,7 +99,7 @@
     if (palco0?.dataset.ocupado === '1') return; // pintando ou arrastando: não redesenha por cima
     // atualização leve: mesma cena e mesma imagem, só pinos e névoa
     if (palco0 && palco0.dataset.cena === (cena?.id || '') && palco0.dataset.img === (cena?.img || '') && A.querySelector('.mapa-cenas')?.dataset.n === String(cenas.length) && A.querySelector('[data-ativo]')?.dataset.ativo === (ativo?.id || '')) {
-      palco0.querySelector('.pinos').innerHTML = pinosVisiveis(cena, mestre);
+      palco0._cena = cena; palco0.querySelector('.pinos').innerHTML = pinosVisiveis(cena, mestre);
       pintarNevoa(palco0.querySelector('.nevoa'), cena.nevoa, mestre); return;
     }
     const ehAtivo = cena && ativo && cena.id === ativo.id;
@@ -97,7 +119,7 @@
       : `<div class="vazio">${mestre ? (cena ? 'Suba a imagem desta cena: planta do local, sala, porão, mapa da cidade…' : 'Crie a primeira cena com ＋ Cena. Dá para ter uma por prédio, sala ou andar e trocar na hora.') : `O Mestre ainda não mostrou nenhum mapa.`}</div>`}</div>`;
     const palco = A.querySelector('.mapa-palco');
     if (palco) {
-      const cv = palco.querySelector('.nevoa'), img = palco.querySelector('img');
+      palco._cena = cena; const cv = palco.querySelector('.nevoa'), img = palco.querySelector('img');
       const pintar = () => pintarNevoa(cv, cena.nevoa, mestre);
       if (img.complete) pintar(); else img.onload = pintar;
       new ResizeObserver(pintar).observe(palco);
@@ -106,7 +128,7 @@
     if (!mestre) { if (palco) ligarArrastoJog(palco, cena); return; }
 
     /* ---------- ações da Diretora ---------- */
-    const refazer = () => { const p = A.querySelector('.mapa-palco'); if (p) p.dataset.img = '-'; desenharMapa(A, getC, { mestre, salvarC, DETS, E }); };
+    const refazer = () => { const p = A.querySelector('.mapa-palco'); if (p) p.dataset.img = '-'; desenharMapa(A, getC, opts); };
     const salvarCenas = async (l, extra = {}) => { await salvarC({ mapas: l, ...(getC().mapa ? { mapa: null } : {}), ...extra }); };
     const cenasAt = () => cenasDe(getC()).map(x => ({ ...x }));
     const atual = () => cenasAt().find(x => x.id === ui.ver);
@@ -198,19 +220,35 @@
       const arr2 = nv.v.split('');
       for (let r = r0 - rad; r <= r0 + rad; r++) for (let c = c0 - rad; c <= c0 + rad; c++) { if (r < 0 || c < 0 || r >= nv.rows || c >= nv.cols || (r - r0) ** 2 + (c - c0) ** 2 > rad * rad + rad) continue; const k = r * nv.cols + c; if (arr2[k] !== val) { arr2[k] = val; mudou = true; } }
       if (mudou) { nv.v = arr2.join(''); pintarNevoa(palco.querySelector('.nevoa'), nv, true); } };
+    const repintar = () => { const c = palco._cena || cena; palco.querySelector('.pinos').innerHTML = pinosVisiveis(c, true); };
     palco.addEventListener('pointerdown', e => {
       if (ui.modo !== 'mover' && cena.nevoa?.on) { e.preventDefault(); palco.dataset.ocupado = '1'; palco.setPointerCapture(e.pointerId); pint = { nv: { ...cena.nevoa } }; pincelar(...pos(e)); return; }
-      const el = e.target.closest('.pino'); if (!el) return; e.preventDefault(); palco.dataset.ocupado = '1';
-      arr = { el, id: el.dataset.pino, x0: e.clientX, y0: e.clientY, moveu: false }; el.setPointerCapture(e.pointerId); el.classList.add('arrastando'); });
+      if (e.target.closest('.pino-barra')) return;
+      if (gestoAlca(e, palco, async g => { const l = pinosAt(), p = l.find(x => x.id === g.id); if (!p) return;
+        if (g.tam != null) { p.tam = g.tam; await salvarPinos(l); } else await salvarGiro(palco._cena || cena, p, g.rot, async rot => { p.rot = rot; await salvarPinos(l); }); })) return;
+      const el = e.target.closest('.pino'); if (!el) { if (SEL.id) { SEL.id = null; repintar(); } return; } e.preventDefault(); palco.dataset.ocupado = '1';
+      arr = { el, id: el.dataset.pino, x0: e.clientX, y0: e.clientY, moveu: false, trav: el.classList.contains('travado') }; el.setPointerCapture(e.pointerId); if (!arr.trav) el.classList.add('arrastando'); });
+    palco.addEventListener('click', async e => {
+      const b = e.target.closest('[data-pb]'); if (!b) return; e.stopPropagation();
+      const l = pinosAt(), i = l.findIndex(x => x.id === SEL.id), p = l[i]; if (!p) return; const k = b.dataset.pb;
+      if (k === 'mais') return editar(p, false);
+      if (k === 'del') { if (!await confirmar(`Apagar o token "${esc(p.nome || 'Pino')}"?`, { titulo: 'Apagar token', ok: 'Apagar' })) return; SEL.id = null; await salvarPinos(l.filter(x => x.id !== p.id)); return desenharMapa(A, getC, opts); }
+      if (k === 'vis') p.oculto = !p.oculto;
+      if (k === 'trava') p.travado = !p.travado;
+      if (k === 'nome') p.semNome = !p.semNome;
+      if (k === 'frente') l.push(l.splice(i, 1)[0]);
+      if (k === 'tras') l.unshift(l.splice(i, 1)[0]);
+      if (k === 'dup') { const q = posDe(palco._cena || cena, p), c = { ...JSON.parse(JSON.stringify(p)), id: novoId('p'), ficha: undefined, x: Math.min(97, (+q.x || 50) + 3), y: Math.min(97, (+q.y || 50) + 3), rot: rotDe(palco._cena || cena, p) }; delete c.ficha; l.push(c); SEL.id = c.id; }
+      await salvarPinos(l); desenharMapa(A, getC, opts); });
     palco.addEventListener('pointermove', e => {
       if (pint) { pincelar(...pos(e)); return; }
-      if (!arr) return; if (Math.hypot(e.clientX - arr.x0, e.clientY - arr.y0) > 4) arr.moveu = true; if (!arr.moveu) return;
+      if (!arr || arr.trav) return; if (Math.hypot(e.clientX - arr.x0, e.clientY - arr.y0) > 4) arr.moveu = true; if (!arr.moveu) return;
       [arr.x, arr.y] = pos(e); arr.el.style.left = arr.x + '%'; arr.el.style.top = arr.y + '%'; avisarMov(arr.id, arr.x, arr.y); });
     const soltar = async () => {
       if (pint) { const nv = pint.nv; pint = null; palco.dataset.ocupado = ''; await trocarCena(x => ({ ...x, nevoa: nv })); return; }
       if (!arr) return; const a = arr; arr = null; a.el.classList.remove('arrastando'); palco.dataset.ocupado = '';
       const l = pinosAt(), p = l.find(x => x.id === a.id); if (!p) return;
-      if (!a.moveu) return editar(p, false);
+      if (!a.moveu) { SEL.id = SEL.id === p.id ? null : p.id; repintar(); return; }
       avisarMov(a.id, a.x, a.y, true);
       if (OPT.salvarPos) { await OPT.salvarPos(cena.id, p.id, { x: +a.x.toFixed(2), y: +a.y.toFixed(2) }); return; }
       p.x = +a.x.toFixed(2); p.y = +a.y.toFixed(2); await salvarPinos(l); };
@@ -285,8 +323,10 @@
     if (palco.dataset.jog === '1') return; palco.dataset.jog = '1';
     let arr = null;
     const pos = e => { const r = palco.getBoundingClientRect(); return [Math.min(100, Math.max(0, (e.clientX - r.left) / r.width * 100)), Math.min(100, Math.max(0, (e.clientY - r.top) / r.height * 100))]; };
+    const repintar = () => { const c = palco._cena || cena; palco.querySelector('.pinos').innerHTML = pinosVisiveis(c, false); };
     palco.addEventListener('pointerdown', e => {
-      const el = e.target.closest('.pino.mov'); if (!el || !OPT.salvarPos) return;
+      if (OPT.salvarPos && gestoAlca(e, palco, async g => { const c = palco._cena || cena, p = (c.pinos || []).find(x => x.id === g.id); if (p && g.rot != null) await salvarGiro(c, p, g.rot); })) return;
+      const el = e.target.closest('.pino.mov'); if (!el || !OPT.salvarPos) { if (SEL.id && !e.target.closest('.pino')) { SEL.id = null; repintar(); } return; }
       e.preventDefault(); e.stopPropagation(); palco.dataset.ocupado = '1';
       arr = { el, id: el.dataset.pino, x0: e.clientX, y0: e.clientY, moveu: false }; el.setPointerCapture(e.pointerId); el.classList.add('arrastando');
     });
@@ -295,7 +335,7 @@
       [arr.x, arr.y] = pos(e); arr.el.style.left = arr.x + '%'; arr.el.style.top = arr.y + '%'; avisarMov(arr.id, arr.x, arr.y);
     });
     const soltar = async () => { if (!arr) return; const a = arr; arr = null; a.el.classList.remove('arrastando'); palco.dataset.ocupado = '';
-      if (!a.moveu) return; avisarMov(a.id, a.x, a.y, true); await OPT.salvarPos(palco.dataset.cena, a.id, { x: +a.x.toFixed(2), y: +a.y.toFixed(2) }); };
+      if (!a.moveu) { SEL.id = SEL.id === a.id ? null : a.id; repintar(); return; } avisarMov(a.id, a.x, a.y, true); await OPT.salvarPos(palco.dataset.cena, a.id, { x: +a.x.toFixed(2), y: +a.y.toFixed(2) }); };
     palco.addEventListener('pointerup', soltar); palco.addEventListener('pointercancel', soltar);
   }
 
@@ -351,6 +391,20 @@
 @keyframes pinoLuz { 50% { box-shadow: 0 0 0 3px var(--mv), 0 0 28px 10px var(--mv); } }
 .pino-quem { background: var(--mv); color: #0b0d14; font: 800 10.5px/1.2 var(--f-body); padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
 .mapa-palco .pino.mov { cursor: grab; touch-action: none; }
+.pino-alvo { position: relative; display: grid; place-items: center; }
+.pino-cab { transform: rotate(var(--rot, 0deg)); }
+.pino.travado .pino-cab { cursor: default; } .pino.sem-nome .pino-nome { display: none; } .mapa-palco.modo-mover .pino.sem-nome.sel .pino-nome { display: none; }
+.pino.sel { z-index: 7; } .pino.sel .pino-nome { display: none; }
+.pino.sel .pino-alvo::before { content: ''; position: absolute; inset: -5px; border: 2px dashed var(--ouro); border-radius: 6px; pointer-events: none; }
+.pino-h { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 2px solid #0b0d14; box-shadow: 0 1px 4px rgba(0,0,0,.6); touch-action: none; z-index: 3; }
+.pino-h.canto.nw { left: -11px; top: -11px; cursor: nwse-resize; } .pino-h.canto.se { right: -11px; bottom: -11px; cursor: nwse-resize; }
+.pino-h.canto.ne { right: -11px; top: -11px; cursor: nesw-resize; } .pino-h.canto.sw { left: -11px; bottom: -11px; cursor: nesw-resize; }
+.pino-h.girar { left: 50%; top: -30px; margin-left: -7px; width: 14px; height: 14px; background: var(--ouro); cursor: grab; }
+.pino-h.girar::after { content: ''; position: absolute; left: 50%; top: 100%; width: 2px; height: 12px; margin-left: -1px; background: var(--ouro); }
+@media (pointer: coarse) { .pino-h { width: 18px; height: 18px; } .pino-h.girar { width: 20px; height: 20px; margin-left: -10px; top: -36px; } }
+.pino-barra { position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; background: rgba(18,22,36,.96); border: 1px solid var(--linha-2); border-radius: 999px; box-shadow: 0 6px 18px rgba(0,0,0,.6); white-space: nowrap; z-index: 8; }
+.pino-barra button { width: 30px; height: 30px; border: 0; border-radius: 50%; background: transparent; color: var(--lua); font: 700 14px/1 var(--f-body); cursor: pointer; display: grid; place-items: center; }
+.pino-barra button:hover { background: var(--painel-3); } .pino-barra button.on { background: var(--ouro); color: #0b0d14; }
 .pino-ics { display: flex; flex-wrap: wrap; gap: 4px; } .pino-ics button { font-size: 20px; width: 38px; height: 38px; border: 1px solid var(--linha-2); background: var(--painel-2); cursor: pointer; } .pino-ics button.aqui { background: var(--ouro); }
 
 .mapa-cenas { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; }
