@@ -221,6 +221,9 @@ hr.sep-at { border: 0; border-top: 1px dashed var(--linha-2); margin: 8px 0; }
 /* abas */
 .abas { display: flex; gap: 0 18px; border-bottom: 1px solid var(--linha); flex-wrap: wrap; scrollbar-width: none; }
 .abas::-webkit-scrollbar { display: none; }
+.lista-pessoas { display: grid; gap: 6px; max-height: 260px; overflow-y: auto; }
+.opcao-pessoa { display: flex; justify-content: flex-start; gap: 10px; align-items: center; text-align: left; padding: 8px 10px; background: var(--painel-2); border: 1px solid var(--linha); color: var(--lua); font: inherit; cursor: pointer; } .opcao-pessoa:hover { border-color: var(--ouro); }
+.opcao-pessoa .ava { width: 30px; height: 30px; font-size: 12px; flex: none; }
 .grade-ars { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 .ars-card { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding: 12px; background: var(--painel); border: 1px solid var(--linha); border-left: 3px solid var(--violeta); }
 .ars-card.ativa { border-left-color: var(--sangue-hi); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sangue-hi) 30%, transparent); }
@@ -885,7 +888,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261109231329';
+const BUILD = '20261109233636';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1703,6 +1706,29 @@ ROTAS.agentes = async () => {
   $('#busca').addEventListener('input', desenhar);
   $('#todos')?.addEventListener('click', e => { todos = !todos; e.target.textContent = todos ? 'Só os meus' : 'Ver todos os agentes'; ouvir(); });
 };
+/* ---------- entregar ficha: o dono (ou o mestre que montou) passa o agente para outra conta ---------- */
+async function entregarFicha(F) {
+  let cand = [];
+  try { await carregarPart(); const ids = new Set();
+    for (const c of [...new Set([...(PART.campanhas || []), ...(F.campanhas || [])])]) { try { (await db.collection(`campanhas/${c}/membros`).get()).docs.forEach(d => ids.add(d.id)); const cs = await db.doc('campanhas/' + c).get(); if (cs.exists) ids.add(cs.data().mestre); } catch (e) {} }
+    ids.delete(ME); ids.delete(F.dono); const nomes = await nomeDe([...ids]); cand = [...ids].map(u => ({ id: u, nome: nomes[u] })).sort((a, b) => a.nome.localeCompare(b.nome)); } catch (e) {}
+  const linha = u => `<button type="button" class="opcao opcao-pessoa" data-para="${esc(u.id)}" data-nome="${esc(u.nome || 'Alguém')}"><span class="ava" style="background:${corDe(u.id)}">${esc(iniciais(u.nome))}</span><b>${esc(u.nome || '(sem nome)')}</b></button>`;
+  abrirModal('Entregar ficha', `<p class="dim" style="margin:0">Escolha quem vai ser o novo dono de <b>${esc(F.nome)}</b>. A ficha some da sua lista e aparece na dele, nas mesmas campanhas. Se você é o mestre de uma delas, continua podendo editar.</p>
+    <span class="rotulo">Jogadores das suas campanhas</span><div class="lista-pessoas" id="ent-camp">${cand.map(linha).join('') || '<span class="faint">Ninguém nas suas campanhas ainda.</span>'}</div>
+    <div class="campo"><label class="rotulo" for="ent-busca">Ou procure pelo nome da conta</label><input type="search" id="ent-busca" placeholder="Nome do jogador" autocomplete="off"></div><div class="lista-pessoas" id="ent-res"></div>`, (m, fechar) => {
+    const buscar = debounce(async () => { const q = m.querySelector('#ent-busca').value.trim(), el = m.querySelector('#ent-res'); if (q.length < 2) { el.innerHTML = ''; return; }
+      const { data } = await sb.from('perfis').select('id,nome').ilike('nome', `%${q}%`).limit(20); el.innerHTML = (data || []).filter(u => u.id !== ME && u.id !== F.dono).map(linha).join('') || '<span class="faint">Ninguém com esse nome.</span>'; }, 300);
+    m.querySelector('#ent-busca').addEventListener('input', buscar);
+    m.addEventListener('click', e => { const b = e.target.closest('[data-para]'); if (!b) return; const uid = b.dataset.para, nome = b.dataset.nome;
+      abrirModal2('Confirmar entrega', `<p>Entregar <b>${esc(F.nome)}</b> para <b>${esc(nome)}</b>? Você deixa de ser o dono.</p><div class="btns"><button class="btn" id="ent-ok">Entregar</button><button class="btn sec" id="ent-nao">Cancelar</button></div>`, (m2, fechar2) => {
+        m2.querySelector('#ent-nao').onclick = () => fechar2();
+        m2.querySelector('#ent-ok').onclick = async () => { const bt = m2.querySelector('#ent-ok'); bt.disabled = true; bt.textContent = 'Entregando…';
+          try { await db.doc('fichas/' + F.id).update({ dono: uid, jogador: nome, entreguePor: ME, entregueEm: Date.now() });
+            if (MEU_PRINCIPAL === F.id) MEU_PRINCIPAL = null;
+            fechar2(); fechar(); toast(`${F.nome} agora é de ${nome}.`); location.hash = 'agentes'; }
+          catch (er) { bt.disabled = false; bt.textContent = 'Entregar'; toast(er.code === 'invalid_argument' ? 'O banco ainda não deixa entregar: rode o seguranca.sql de novo no Supabase.' : 'Não deu: ' + (er.message || er.code)); } }; }); });
+  });
+}
 /* ---------- morte ---------- */
 const VER_MORTO = {};
 function declararMorte(f, aoConfirmar) {
@@ -1994,7 +2020,7 @@ ROTAS.agente = async id => {
         ${VA ? `<h1 class="nome-vetor">${esc(F.vetor.nome || 'Vetor')}</h1><div class="dim" style="margin-top:-4px">${esc(F.nome)}, vestindo o vetor</div>` : `<h1>${esc(F.nome)}</h1>`}
         <div class="dim">${nivelDe(F) === 0 ? 'Mundano' : `${esc(F.classe)} · ${esc(F.subclasse)}`} · Nível ${nivelDe(F)}${F.vontade ? ` · Vontade de ${esc(F.vontade)}` : ''}</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px">
-          ${ehMestre ? (F.morto ? '<button class="btn ouro" id="reviver">Reviver</button>' : '<button class="btn sec" id="matar" title="Só o mestre declara a morte">Declarar morte</button>') : ''}${podeEditar ? `<button class="btn ${editando ? '' : 'sec'}" id="editar">${editando ? 'Concluir edição' : 'Editar ficha'}</button>${editando ? '<button class="btn sec" id="corrigir" title="Ajusta atributos, perícias, passivas e vitais às regras do nível e da patente">Corrigir ficha</button>' : ''}${editando && (F.dono === ME || DONO) ? '<button class="btn sec perigo" id="apagar-ag">Apagar agente</button>' : ''}` : ''}
+          ${ehMestre ? (F.morto ? '<button class="btn ouro" id="reviver">Reviver</button>' : '<button class="btn sec" id="matar" title="Só o mestre declara a morte">Declarar morte</button>') : ''}${podeEditar ? `<button class="btn ${editando ? '' : 'sec'}" id="editar">${editando ? 'Concluir edição' : 'Editar ficha'}</button>${editando ? '<button class="btn sec" id="corrigir" title="Ajusta atributos, perícias, passivas e vitais às regras do nível e da patente">Corrigir ficha</button>' : ''}${F.dono === ME || DONO ? '<button class="btn sec" id="entregar-ag" title="Passar esta ficha para outro jogador">🎁 Entregar</button>' : ''}${editando && (F.dono === ME || DONO) ? '<button class="btn sec perigo" id="apagar-ag">Apagar agente</button>' : ''}` : ''}
           ${VL ? (podeEditar ? `<button class="btn btn-vetor ${VA ? 'ativo' : ''}" id="vestir">${VA ? 'Tirar o vetor' : 'Vestir vetor'}</button>` : '')
             : `<button class="btn btn-vetor" disabled title="Só o mestre libera">${CADEADO} Vestir vetor</button>`}
           ${F.dono === ME ? (MEU_PRINCIPAL === id ? `<a class="btn sec principal-on" href="#dossie-${esc(ME)}" title="Abrir seu dossiê de caçador">★ Personagem principal · caçador</a>` : `<button class="btn sec" id="tornar-principal" title="Vira seu caçador no Bestiário, com dossiê e registro de abates">☆ Tornar personagem principal</button>`) : ''}
@@ -2283,6 +2309,7 @@ ROTAS.agente = async id => {
       F.atual = r.atual; F.condicoes = r.conds; salvar({ atual: r.atual, condicoes: r.conds });
       (window._resCond = window._resCond || {})[id] = r.linhas.map(esc).join('<br>') || 'Nada aconteceu neste turno.';
       publicarRolagem(F, `Fim ${por === 'rodada' ? 'da rodada' : 'do turno'} · condições`, { total: '', detalhe: esc(r.linhas.join(' · ') || 'sem efeito') }); render(); });
+    $('#entregar-ag')?.addEventListener('click', () => entregarFicha(F));
     $('#apagar-ag')?.addEventListener('click', () => abrirModal('Apagar agente', `<p>Isso apaga <b>${esc(F.nome)}</b> para sempre: a ficha sai de todas as campanhas e, se for o seu personagem principal, o dossiê de caçador e os abates somem junto. Não tem como desfazer.</p>
       <div class="campo"><label class="rotulo" for="ap-nome">Digite o nome do agente para confirmar</label><input type="text" id="ap-nome" autocomplete="off" placeholder="${esc(F.nome)}"></div>
       <button class="btn" id="ap-ok" style="background:#a52a33" disabled>Apagar para sempre</button>`, (m, fechar) => {

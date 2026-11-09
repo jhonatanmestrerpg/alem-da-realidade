@@ -65,7 +65,8 @@ begin
   -- fichas: o dono; ou o mestre de uma campanha em que a ficha está
   if s[1] = 'fichas' then
     if velho is null then return d->>'dono' = u; end if;
-    if velho->>'dono' = u then return coalesce(d->>'dono', u) = u; end if;
+    -- o dono edita e pode entregar a ficha para outra conta (muda o dono)
+    if velho->>'dono' = u then return d is null or coalesce(d->>'dono', '') <> ''; end if;
     return exists (
       select 1 from jsonb_array_elements_text(coalesce(velho->'campanhas', '[]'::jsonb)) as c(id)
       join public.docs x on x.path = 'campanhas/' || c.id
