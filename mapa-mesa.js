@@ -60,8 +60,11 @@
     clearTimeout(el._luz); el._luz = setTimeout(() => { el.classList.remove('movendo'); q.remove(); }, 4000);
   }
   let ultimoEnvio = 0;
-  const avisarMov = (pino, x, y, fim) => { const ch = canal(OPT.sala); if (!ch) return; const agora = Date.now(); if (!fim && agora - ultimoEnvio < 70) return; ultimoEnvio = agora;
-    ch.send({ type: 'broadcast', event: 'mv', payload: { pino, x: +x.toFixed(2), y: +y.toFixed(2), fim: !!fim, nome: OPT.eu?.nome || 'Alguém', cor: OPT.eu?.cor || '#3ddc84' } }); };
+  // quem arrasta também vê a própria luz (igual a mesa vê), e a mesa recebe pelo canal
+  const avisarMov = (pino, x, y, fim) => { const m = { pino, x: +x.toFixed(2), y: +y.toFixed(2), fim: !!fim, nome: OPT.eu?.nome || 'Alguém', cor: OPT.eu?.cor || '#3ddc84' };
+    document.querySelectorAll(`.mapa-palco [data-pino="${CSS.escape(pino)}"]`).forEach(el => luz(el, m));
+    const ch = canal(OPT.sala); if (!ch) return; const agora = Date.now(); if (!fim && agora - ultimoEnvio < 70) return; ultimoEnvio = agora;
+    Promise.resolve(ch.send({ type: 'broadcast', event: 'mv', payload: m })).catch(() => {}); };
   const SEL = { id: null }; // token selecionado (alças de tamanho e giro, barra do mestre)
   const rotDe = (cena, p) => { const o = OPT.getPos()?.[cena?.id]?.[p.id]; return o && o.rot != null ? +o.rot : +p.rot || 0; };
   const BARRA = [['vis', '👁', 'Mostrar ou esconder da mesa'], ['trava', '🔒', 'Travar ou destravar'], ['frente', '⬆', 'Trazer para a frente'], ['tras', '⬇', 'Mandar para trás'], ['dup', '⧉', 'Duplicar'], ['nome', 'Aa', 'Mostrar ou esconder o nome'], ['del', '🗑', 'Apagar'], ['mais', '⋯', 'Editar tudo']];

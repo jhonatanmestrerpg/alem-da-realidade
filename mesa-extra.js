@@ -48,7 +48,7 @@ async function enviarArquivo(file, limiteMB = 25) {
 /* ---------- mapa: posições dos pinos ficam no quadro da equipe (jogadores podem mover os próprios agentes) ---------- */
 const salaMapa = id => [...String(id)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
 function opcoesMapa(id, getQ, meus, mestre, nome) {
-  return { getPos: () => getQ()?.pinos || {}, podeMover: p => mestre || !!p.livre || (!!p.ficha && meus.includes(p.ficha)), eu: { nome: nome || 'Alguém', cor: corDe(ME) }, sala: salaMapa(id),
+  return { getPos: () => getQ()?.pinos || {}, podeMover: p => mestre || !!p.livre || (!!p.ficha && meus.includes(p.ficha)), eu: { nome: nome || 'Alguém', cor: mestre ? '#e3c47f' : corDe(ME) }, sala: salaMapa(id),
     salvarPos: async (cena, pino, xy) => { const v = { ...xy, t: Date.now(), uid: ME }, Q = getQ() || {}; Q.pinos = { ...(Q.pinos || {}), [cena]: { ...(Q.pinos?.[cena] || {}), [pino]: v } }; await salvarQ(id, { pinos: { [cena]: { [pino]: v } } }); } };
 }
 // mapa flutuante: descobre os agentes da pessoa uma vez e libera mover os pinos deles
