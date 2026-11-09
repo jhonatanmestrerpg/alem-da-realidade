@@ -221,6 +221,7 @@ hr.sep-at { border: 0; border-top: 1px dashed var(--linha-2); margin: 8px 0; }
 /* abas */
 .abas { display: flex; gap: 0 18px; border-bottom: 1px solid var(--linha); flex-wrap: wrap; scrollbar-width: none; }
 .abas::-webkit-scrollbar { display: none; }
+.tag-oculta { color: #c9b8ff; border-color: color-mix(in srgb, #9a86f0 60%, transparent); }
 .abas-inv { justify-content: flex-start; margin-top: -8px; gap: 0 16px; } .abas-inv button { font-size: 15px !important; padding: 8px 0; }
 .abas button { background: none; border: none; padding: 10px 0; color: var(--lua-dim); font: 400 17px/1 var(--f-disp); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .abas button:hover { color: var(--lua); }
@@ -874,7 +875,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261109220634';
+const BUILD = '20261109220838';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -3604,6 +3605,9 @@ function ouvirCampanha(id, aoMudar) {
   assinar(db.collection(`campanhas/${id}/chat`).orderBy('t', 'desc').limit(80).onSnapshot(s => { st.chat = s.docs.map(x => ({ id: x.id, ...x.data() })); aoMudar(st, 'chat'); }));
   return st;
 }
+/* ---------- fichas ocultas: o mestre marca um jogador e os agentes dele somem para os outros jogadores ---------- */
+const ocultosDe = st => new Set((st?.membros || []).filter(m => m.oculto).map(m => m.uid));
+const vePessoa = (st, uid, mestre) => mestre || !uid || uid === ME || !ocultosDe(st).has(uid);
 /* ---------- painel lateral: rolagens e chat da sessão ---------- */
 const FEED_ABA = {};
 const vistoChat = id => { try { return +(localStorage.getItem('chatVisto|' + id) || 0); } catch (e) { return 0; } };
@@ -4077,7 +4081,8 @@ ROTAS.campanha = async id => {
   await carregarPart();
   let aba = ABA_INICIAL || abaSalva('agentes'); ABA_INICIAL = null; if (aba === 'rolagens') aba = 'agentes'; LADO = null;
   await carregarRegras([id], () => render());
-  const listaRol = () => st.rolagens.map(rolHtml).join('') || '<div class="vazio" style="font-size:15px">Nenhuma rolagem ainda.</div>';
+  const rolVis = () => st.rolagens.filter(r => vePessoa(st, r.uid, st.camp?.mestre === ME));
+  const listaRol = () => rolVis().map(rolHtml).join('') || '<div class="vazio" style="font-size:15px">Nenhuma rolagem ainda.</div>';
   let cfgFeed = null;
   // mapa, quadro, NPCs e suspeitos se redesenham sozinhos (sem refazer a página inteira e perder zoom ou arrasto)
   let ABA_EL = null, QUADRO = null, abaInv = 'pistas';
@@ -4086,7 +4091,7 @@ ROTAS.campanha = async id => {
   const salvarMesaC = async p => { st.mesa = { ...(st.mesa || {}), ...p }; try { await salvarMesa(id, p); } catch (e) { toast('Não salvou: ' + (e.message || e.code)); } };
   const desenharAbaViva = () => { const A = ABA_EL; if (!A?.isConnected || !st.camp) return false; const mestre = st.camp.mestre === ME;
     if (aba === 'mapa') { const fs = Object.values(st.fichas).filter(Boolean), meu = fs.find(f => f.dono === ME && f.id === MEU_PRINCIPAL) || fs.find(f => f.dono === ME);
-      desenharMapa(A, getMesa, { mestre, salvarC: salvarMesaC, DETS: fs.map(f => ({ id: f.id, nome: f.nome, foto: fotoEf(f) })), ...opcoesMapa(id, getQd, fs.filter(f => f.dono === ME).map(f => f.id), mestre, mestre ? 'Mestre' : meu?.nome) }); return true; }
+      desenharMapa(A, getMesa, { mestre, salvarC: salvarMesaC, DETS: fs.map(f => ({ id: f.id, nome: f.nome, foto: fotoEf(f), oculto: ocultosDe(st).has(f.dono) })), ...opcoesMapa(id, getQd, fs.filter(f => f.dono === ME).map(f => f.id), mestre, mestre ? 'Mestre' : meu?.nome) }); return true; }
     if (aba === 'npcs') { desenharNpcs(A, getMesa, { mestre, salvarC: salvarMesaC }); return true; }
     if (aba === 'suspeitos') { desenharSuspeitos(A, getMesa, getQd, id); return true; }
     if (aba === 'quadro') { if (!QUADRO || !A.querySelector('#q-quadro')) QUADRO = abrirAbaQuadro(A, id, getMesa, getQd, pistasQuadro); else QUADRO.desenhar(); return true; }
@@ -4101,14 +4106,14 @@ ROTAS.campanha = async id => {
     if (st.camp === false) { app.innerHTML = '<div class="vazio">Campanha não encontrada.</div>'; return; }
     const C = st.camp, mestre = C.mestre === ME, membro = st.membros.some(m => m.uid === ME) || mestre;
     if (membro) guardarUltima(id, C.nome, false);
-    const fichas = Object.values(st.fichas).filter(Boolean);
+    const OC = ocultosDe(st), fichas = Object.values(st.fichas).filter(Boolean).filter(f => vePessoa(st, f.dono, mestre));
     const nomes = await nomeDe([...new Set([C.mestre, ...st.membros.map(m => m.uid), ...fichas.map(f => f.dono).filter(Boolean)])]);
     let corpo = '';
     if (aba === 'agentes') corpo = `<div class="grade-cards">${fichas.map(f => { const K = calc(f); const a = { ...K.max, ...(f.atual || {}) };
-      return cardAgente(f, `<div class="vit">${vitalMini('pv', a.pv, K.max.pv)}${vitalMini('ps', a.ps, K.max.ps)}${vitalMini('pst', a.pst, K.max.pst)}</div>${f.dono === ME || mestre || DONO ? `<button class="btn mini sec" data-rm-ag="${esc(f.id)}" title="Tirar da campanha">Remover</button>` : ''}`, nomes[f.dono] || f.jogador || ''); }).join('') || '<div class="vazio">Nenhum agente nesta campanha ainda.</div>'}</div>`;
-    if (aba === 'jogadores') corpo = `<div class="lista">${[...new Set([C.mestre, ...st.membros.map(m => m.uid)])].map(u => `<div class="item"><div class="cab"><span style="display:flex; gap:10px; align-items:center"><span class="ava" style="background:${corDe(u)}">${esc(iniciais(nomes[u]))}</span><b>${esc(nomes[u])}${u === ME ? ' (você)' : ''}</b></span><span class="tag ${u === C.mestre ? 'crit' : ''}">${u === C.mestre ? 'Mestre' : 'Jogador'}</span></div></div>`).join('')}</div>`;
+      return cardAgente(f, `${OC.has(f.dono) ? `<span class="tag tag-oculta" title="Só o mestre e o dono veem este agente">🕶 Oculta</span>` : ''}<div class="vit">${vitalMini('pv', a.pv, K.max.pv)}${vitalMini('ps', a.ps, K.max.ps)}${vitalMini('pst', a.pst, K.max.pst)}</div>${f.dono === ME || mestre || DONO ? `<button class="btn mini sec" data-rm-ag="${esc(f.id)}" title="Tirar da campanha">Remover</button>` : ''}`, nomes[f.dono] || f.jogador || ''); }).join('') || '<div class="vazio">Nenhum agente nesta campanha ainda.</div>'}</div>`;
+    if (aba === 'jogadores') corpo = `<div class="lista">${[...new Set([C.mestre, ...st.membros.map(m => m.uid)])].map(u => `<div class="item"><div class="cab"><span style="display:flex; gap:10px; align-items:center"><span class="ava" style="background:${corDe(u)}">${esc(iniciais(nomes[u]))}</span><b>${esc(nomes[u])}${u === ME ? ' (você)' : ''}</b></span><span style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">${OC.has(u) && (mestre || u === ME) ? `<span class="tag tag-oculta">🕶 Ficha oculta</span>` : ''}${mestre && u !== C.mestre ? `<button class="btn mini ${OC.has(u) ? '' : 'sec'}" data-ocultar="${esc(u)}" title="${OC.has(u) ? 'Mostrar os agentes desta pessoa para a mesa' : 'Esconder os agentes desta pessoa dos outros jogadores'}">${OC.has(u) ? 'Mostrar ficha' : '🕶 Ocultar ficha'}</button>` : ''}<span class="tag ${u === C.mestre ? 'crit' : ''}">${u === C.mestre ? 'Mestre' : 'Jogador'}</span></span></div>${OC.has(u) && u === ME && !mestre ? '<p class="faint" style="margin:6px 0 0; font-size:13px">O mestre deixou sua ficha oculta: só você e ele veem seus agentes e suas rolagens nesta campanha.</p>' : ''}</div>`).join('')}</div>`;
     if (aba === 'combate') corpo = st.combate?.ativo ? `<div class="cb-topo"><h2>Rodada ${st.combate.rodada || 1}</h2><span class="dim">Ordem de iniciativa</span></div>
-      <section class="ini-lista" style="max-width:560px">${(st.combate.ordem || []).map((o, i) => { const f = o.tipo === 'agente' ? st.fichas[o.ref] : null; const K = f ? calc(f) : null; const a = f ? { ...K.max, ...(f.atual || {}) } : null;
+      <section class="ini-lista" style="max-width:560px">${(st.combate.ordem || []).map((o, i) => { const f = o.tipo === 'agente' ? st.fichas[o.ref] : null; if (f && !vePessoa(st, f.dono, mestre)) return ''; const K = f ? calc(f) : null; const a = f ? { ...K.max, ...(f.atual || {}) } : null;
         return cardIni({ i, nome: o.nome, foto: f ? fotoEf(f) : (o.img || ''), ameaca: o.tipo !== 'agente', pv: a?.pv, pvM: K?.max.pv, ps: a?.ps, psM: K?.max.ps, conds: o.cond || [], ini: o.ini, vez: i === st.combate.turno, meu: f?.dono === ME, morto: !!f?.morto, mostrarPV: !!f, rotTipo: o.tipo === 'ameaca' ? 'Ameaça' : o.tipo === 'npc' ? 'NPC' : '' }); }).join('')}</section>`
       : '<div class="vazio">Nenhum combate em andamento.</div>';
     const nSus = suspeitosDe(st.mesa).filter(x => !inocentado(x, st.quadro)).length;
@@ -4142,6 +4147,9 @@ ROTAS.campanha = async id => {
     if (aba === 'ligacao' && membro) montarLigacao(id, C, st);
     $('#entrar-c')?.addEventListener('click', () => entrarCampanha(id));
     $('#editar-c')?.addEventListener('click', () => editarCampanha(id, C));
+    $$('[data-ocultar]').forEach(b => b.onclick = async () => { const u = b.dataset.ocultar, v = !OC.has(u), m = st.membros.find(x => x.uid === u);
+      try { const r = db.doc(`campanhas/${id}/membros/${u}`); if (m) await r.update({ oculto: v }); else await r.set({ uid: u, entrou: Date.now(), papel: 'jogador', oculto: v }); if (m) m.oculto = v; toast(v ? 'Ficha oculta: os outros jogadores não veem os agentes nem as rolagens dessa pessoa.' : 'Ficha visível para a mesa de novo.'); render(); }
+      catch (e) { toast('Não deu: ' + (e.message || e.code)); } });
     $('#x-camp')?.addEventListener('click', () => pedirExcluirCampanha(id, C.nome));
     $('#convidar')?.addEventListener('click', () => abrirModal('Convidar jogadores', `<p>Mande o código abaixo para os jogadores. Eles entram no site com a conta deles e vão em Campanhas, Entrar com código.</p>
       <div style="display:flex; gap:8px"><input type="text" id="cod-c" readonly value="${esc(id)}"><button class="btn" id="copiar">Copiar</button></div>`, m => {
@@ -4158,7 +4166,7 @@ ROTAS.campanha = async id => {
         try { await db.doc(`campanhas/${id}/agentes/${f.id}`).set({ ficha: f.id, por: ME, t: Date.now() }); await db.doc('fichas/' + f.id).update({ campanhas: [...new Set([...(f.campanhas || []), id])] }); } catch (e) { toast('Não deu para adicionar: ' + (e.message || e.code)); } });
     });
     const meuAg = fichas.find(f => f.dono === ME && f.id === MEU_PRINCIPAL) || fichas.find(f => f.dono === ME);
-    cfgFeed = { id, st, nRol: () => st.rolagens.length, listaRol: mestre ? () => st.rolagens.map(r => comLixeira(rolHtml(r), r.id)).join('') || listaRol() : listaRol,
+    cfgFeed = { id, st, nRol: () => rolVis().length, listaRol: mestre ? () => st.rolagens.map(r => comLixeira(rolHtml(r), r.id)).join('') || listaRol() : listaRol,
       rodapeRol: `<div class="btns feed-rodape"><a class="btn mini sec" href="#historico-${esc(id)}" style="text-decoration:none">Histórico completo</a>${mestre ? '<button class="btn mini sec" data-limpar-hist>🗑 Limpar</button>' : ''}</div>`,
       extraRol: membro ? `<div class="feed-dados"><input type="text" id="dados-expr" placeholder="Rolar na mesa: 2d6+3" style="min-width:0"><button class="btn mini" id="dados-ok">Rolar</button></div>` : '',
       autor: () => mestre ? { autor: 'Mestre', foto: '' } : meuAg ? { autor: meuAg.nome, foto: fotoEf(meuAg) } : { autor: nomes[ME] || 'Jogador', foto: '' },
@@ -4179,7 +4187,8 @@ ROTAS.historico = async id => {
   const s0 = await db.doc('campanhas/' + id).get();
   if (!s0.exists) { app.innerHTML = '<div class="vazio">Campanha não encontrada.</div>'; return; }
   const C = s0.data(), mestre = C.mestre === ME;
-  let ROLS = [], fAut = 'todos';
+  let ROLS = [], fAut = 'todos', OCH = new Set();
+  if (!mestre) { try { OCH = new Set((await db.collection(`campanhas/${id}/membros`).get()).docs.map(d => d.data()).filter(m => m.oculto && m.uid !== ME).map(m => m.uid)); } catch (e) {} }
   app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Histórico</span><h1>${esc(C.nome)}</h1><p class="dim">Todas as rolagens da campanha, da mais nova para a mais antiga.</p></div>
     <div class="btns">${mestre ? '<button class="btn sec" id="h-limpar">🗑 Limpar histórico</button>' : ''}<a class="btn sec" href="#${mestre ? 'escudo' : 'campanha'}-${esc(id)}" style="text-decoration:none">Voltar para a campanha</a></div></div>
     <div class="caixa hist-filtros"><div class="campo"><label class="rotulo" for="h-aut">Quem rolou</label><select id="h-aut"></select></div><span class="faint" id="h-n"></span></div>
@@ -4198,7 +4207,7 @@ ROTAS.historico = async id => {
   $('#h-aut').onchange = e => { fAut = e.target.value; desenhar(); };
   $('#h-feed').addEventListener('click', e => { const b = e.target.closest('[data-del-rol]'); if (b && mestre) apagarRolagem(id, b.dataset.delRol); });
   $('#h-limpar')?.addEventListener('click', () => limparHistorico(id));
-  assinar(db.collection(`campanhas/${id}/rolagens`).orderBy('t', 'desc').limit(1000).onSnapshot(sn => { ROLS = sn.docs.map(d => ({ id: d.id, ...d.data() })); desenhar(); }));
+  assinar(db.collection(`campanhas/${id}/rolagens`).orderBy('t', 'desc').limit(1000).onSnapshot(sn => { ROLS = sn.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !OCH.has(r.uid)); desenhar(); }));
 };
 
 /* =================================================================
@@ -4252,7 +4261,7 @@ ROTAS.escudo = async id => {
   const cfgFeedE = { id, get st() { return st; }, nRol: () => todasRol().length, listaRol: () => todasRol().map(r => comLixeira(rolHtml(r), r.id)).join('') || '<div class="vazio" style="font-size:15px">As rolagens dos jogadores aparecem aqui.</div>', autor: () => ({ autor: 'Mestre', foto: '' }),
     rodapeRol: `<div class="btns feed-rodape"><a class="btn mini sec" href="#historico-${esc(id)}" style="text-decoration:none">Histórico completo</a><button class="btn mini sec" data-limpar-hist>🗑 Limpar</button></div>` };
   const salvarMesaE = async p => { st.mesa = { ...(st.mesa || {}), ...p }; try { await salvarMesa(id, p); } catch (e) { toast('Não salvou: ' + (e.message || e.code)); } };
-  const desenharVivaE = () => { const A = $('#aba-viva-e'); if (!A) return false; const DETS = Object.values(st.fichas).filter(Boolean).map(f => ({ id: f.id, nome: f.nome, foto: fotoEf(f) }));
+  const desenharVivaE = () => { const A = $('#aba-viva-e'); if (!A) return false; const DETS = Object.values(st.fichas).filter(Boolean).map(f => ({ id: f.id, nome: f.nome, foto: fotoEf(f), oculto: ocultosDe(st).has(f.dono) }));
     if (aba === 'mapa') { desenharMapa(A, () => st.mesa || {}, { mestre: true, salvarC: salvarMesaE, DETS, ...opcoesMapa(id, () => st.quadro || {}, [], true, 'Mestre') }); return true; }
     if (aba === 'npcs') { desenharNpcs(A, () => st.mesa || {}, { mestre: true, salvarC: salvarMesaE }); return true; }
     return false; };

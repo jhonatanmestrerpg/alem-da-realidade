@@ -164,7 +164,7 @@
     const pinosAt = () => [...(atual()?.pinos || [])];
     A.querySelector('[data-m="sobs"]')?.addEventListener('click', async () => {
       const l = pinosAt(); let n = 0;
-      DETS.filter(f => !f.fora && !l.some(p => p.ficha === f.id)).forEach((f, i) => { n++; l.push({ id: novoId('p'), ficha: f.id, nome: f.nome, foto: f.foto || '', cor: '#5d86c4', ic: '📍', x: 12 + (i % 6) * 8, y: 88, fixo: true }); });
+      DETS.filter(f => !f.fora && !l.some(p => p.ficha === f.id)).forEach((f, i) => { n++; l.push({ id: novoId('p'), ficha: f.id, nome: f.nome, foto: f.foto || '', cor: '#5d86c4', ic: '📍', x: 12 + (i % 6) * 8, y: 88, fixo: true, ...(f.oculto ? { oculto: true } : {}) }); });
       if (!n) return toast(`Todo mundo já tem pino nesta cena.`); await salvarPinos(l); refazer(); });
     A.querySelector('[data-m="npc"]')?.addEventListener('click', () => {
       const npcs = (getC().npcs || []).slice().sort((a, b) => (b.t || 0) - (a.t || 0)), ja = new Set(pinosAt().filter(p => p.npc).map(p => p.npc));
