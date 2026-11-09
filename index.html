@@ -219,7 +219,9 @@ hr.sep-at { border: 0; border-top: 1px dashed var(--linha-2); margin: 8px 0; }
 .grade-campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 
 /* abas */
-.abas { display: flex; gap: 2px 18px; border-bottom: 1px solid var(--linha); overflow-x: auto; flex-wrap: nowrap; }
+.abas { display: flex; gap: 0 18px; border-bottom: 1px solid var(--linha); flex-wrap: wrap; scrollbar-width: none; }
+.abas::-webkit-scrollbar { display: none; }
+.abas-inv { justify-content: flex-start; margin-top: -8px; gap: 0 16px; } .abas-inv button { font-size: 15px !important; padding: 8px 0; }
 .abas button { background: none; border: none; padding: 10px 0; color: var(--lua-dim); font: 400 17px/1 var(--f-disp); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .abas button:hover { color: var(--lua); }
 .abas button.aqui { color: var(--lua); border-bottom-color: var(--sangue); }
@@ -765,7 +767,7 @@ button, a, input, select, textarea { touch-action: manipulation; }
   .btn.mini { padding: 7px 11px; font-size: 12.5px; }
   .vbtn { width: 36px; height: 36px; }
   .btn-x { font-size: 22px; padding: 6px 10px; }
-  .abas { gap: 2px 16px; scrollbar-width: none; }
+  .abas { gap: 2px 16px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); padding-right: 24px; }
   .abas::-webkit-scrollbar { display: none; }
   .abas button { padding: 12px 0; }
   .grade-cards, .grade-hab, .grade-per { grid-template-columns: 1fr; }
@@ -872,7 +874,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261109213907';
+const BUILD = '20261109214323';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -4078,7 +4080,8 @@ ROTAS.campanha = async id => {
   const listaRol = () => st.rolagens.map(rolHtml).join('') || '<div class="vazio" style="font-size:15px">Nenhuma rolagem ainda.</div>';
   let cfgFeed = null;
   // mapa, quadro, NPCs e suspeitos se redesenham sozinhos (sem refazer a página inteira e perder zoom ou arrasto)
-  let ABA_EL = null, QUADRO = null;
+  let ABA_EL = null, QUADRO = null, abaInv = 'pistas';
+  const ABAS_INV = ['pistas', 'suspeitos', 'quadro', 'arquivo', 'calendario'];
   const getMesa = () => st.mesa || {}, getQd = () => st.quadro || {}, pistasQuadro = () => (st.pistas || []).filter(p => p.tipo !== 'arquivo');
   const salvarMesaC = async p => { st.mesa = { ...(st.mesa || {}), ...p }; try { await salvarMesa(id, p); } catch (e) { toast('Não salvou: ' + (e.message || e.code)); } };
   const desenharAbaViva = () => { const A = ABA_EL; if (!A?.isConnected || !st.camp) return false; const mestre = st.camp.mestre === ME;
@@ -4107,6 +4110,8 @@ ROTAS.campanha = async id => {
       <section class="ini-lista" style="max-width:560px">${(st.combate.ordem || []).map((o, i) => { const f = o.tipo === 'agente' ? st.fichas[o.ref] : null; const K = f ? calc(f) : null; const a = f ? { ...K.max, ...(f.atual || {}) } : null;
         return cardIni({ i, nome: o.nome, foto: f ? fotoEf(f) : (o.img || ''), ameaca: o.tipo !== 'agente', pv: a?.pv, pvM: K?.max.pv, ps: a?.ps, psM: K?.max.ps, conds: o.cond || [], ini: o.ini, vez: i === st.combate.turno, meu: f?.dono === ME, morto: !!f?.morto, mostrarPV: !!f, rotTipo: o.tipo === 'ameaca' ? 'Ameaça' : o.tipo === 'npc' ? 'NPC' : '' }); }).join('')}</section>`
       : '<div class="vazio">Nenhum combate em andamento.</div>';
+    const nSus = suspeitosDe(st.mesa).filter(x => !inocentado(x, st.quadro)).length;
+    if (ABAS_INV.includes(aba)) abaInv = aba;
     const sessao = +(st.mesa?.sessao || 1), pistasV = (st.pistas || []).filter(p => p.tipo !== 'arquivo');
     if (aba === 'pistas') { const hoje = pistasV.filter(p => !p.sessao); corpo = `<div class="caixa bloco"><div class="hoje">📌 Pistas da sessão ${sessao}</div><div class="mural">${hoje.map(papelPista).join('') || '<div class="vazio">Nenhuma pista nesta sessão. Ainda.</div>'}</div><p class="tag" style="white-space:normal">Pistas de sessões anteriores ficam no Calendário.</p></div>`; }
     if (aba === 'arquivo') { const H = (st.pistas || []).filter(p => p.tipo === 'arquivo'); corpo = `<div class="caixa bloco"><h3>📜 Arquivo</h3><p class="tag" style="white-space:normal">Pedaços da história que vocês desenterraram: documentos, fotos e gravações.</p><div class="mural">${H.map(pedacoHTML).join('') || '<div class="vazio">Nada desenterrado ainda. Revirem as coisas.</div>'}</div></div>`; }
@@ -4129,8 +4134,8 @@ ROTAS.campanha = async id => {
         <div style="display:grid; gap:10px"><span class="rotulo">Mestre: ${esc(nomes[C.mestre])}</span><h1>${esc(C.nome)}</h1>${C.descricao ? `<p class="dim" style="font-size:17px; max-width:60ch">${nl(C.descricao)}</p>` : ''}</div>
       </section>
       <div class="escudo"><aside class="feed" id="feed-j"></aside>
-      <div style="display:grid; gap:16px; min-width:0; align-content:start"><div class="abas">${[['agentes', 'Agentes'], ['jogadores', 'Jogadores'], ['combate', st.combate?.ativo ? 'Combate ●' : 'Combate'], ['npcs', 'NPCs'], ['mapa', 'Mapa'], ['pistas', 'Pistas'], ['suspeitos', `Suspeitos${suspeitosDe(st.mesa).filter(x => !inocentado(x, st.quadro)).length ? ' (' + suspeitosDe(st.mesa).filter(x => !inocentado(x, st.quadro)).length + ')' : ''}`], ['quadro', 'Quadro'], ['arquivo', 'Arquivo'], ['calendario', 'Calendário'], ['relatorios', 'Relatórios'], ...(temRegras(id) ? [['regras', 'Regras da casa']] : []), ['ligacao', Object.keys(CH.sala === id ? CH.presenca : {}).length ? `Ligação ● ${Object.keys(CH.presenca).length}` : 'Ligação']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>${corpo}</div></div>`;
-    $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; lembrarAba(aba); render(); });
+      <div style="display:grid; gap:16px; min-width:0; align-content:start"><div class="abas">${[['agentes', 'Agentes'], ['jogadores', 'Jogadores'], ['combate', st.combate?.ativo ? 'Combate ●' : 'Combate'], ['npcs', 'NPCs'], ['mapa', 'Mapa'], ['investigacao', 'Investigação'], ['relatorios', 'Relatórios'], ...(temRegras(id) ? [['regras', 'Regras da casa']] : []), ['ligacao', Object.keys(CH.sala === id ? CH.presenca : {}).length ? `Ligação ● ${Object.keys(CH.presenca).length}` : 'Ligação']].map(([k, n]) => `<button class="${aba === k || (k === 'investigacao' && ABAS_INV.includes(aba)) ? 'aqui' : ''}" data-aba="${k === 'investigacao' ? (ABAS_INV.includes(aba) ? aba : abaInv) : k}">${n}</button>`).join('')}</div>${ABAS_INV.includes(aba) ? `<div class="abas abas-mini abas-inv">${[['pistas', 'Pistas'], ['suspeitos', `Suspeitos${nSus ? ` (${nSus})` : ''}`], ['quadro', 'Quadro'], ['arquivo', 'Arquivo'], ['calendario', 'Calendário']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>` : ''}${corpo}</div></div>`;
+    $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; if (ABAS_INV.includes(aba)) abaInv = aba; lembrarAba(aba); render(); });
     ABA_EL = $('#aba-viva'); QUADRO = null; desenharAbaViva();
     atualizarPersona(st);
     if (aba === 'ligacao' && membro) montarLigacao(id, C, st);
