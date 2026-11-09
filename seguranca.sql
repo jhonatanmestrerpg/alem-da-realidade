@@ -81,6 +81,10 @@ begin
     if s[3] in ('rolagens', 'chat') then return velho is null and d->>'uid' = u; end if;
     -- membros: cada um entra e sai sozinho
     if s[3] = 'membros' then return s[4] = u; end if;
+    -- quadro da equipe (suspeitos inocentados, barbantes e anotações): qualquer membro da campanha
+    if s[3] = 'quadro' then
+      return exists (select 1 from public.docs m where m.path = 'campanhas/' || s[2] || '/membros/' || u);
+    end if;
     -- agentes da campanha: quem adicionou ou o dono da ficha
     if s[3] = 'agentes' then
       return coalesce(velho->>'por', d->>'por') = u

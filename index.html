@@ -21,6 +21,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="banco.js"></script>
+<script src="mapa-mesa.js"></script>
+<script src="mesa-extra.js"></script>
 <style>
 /* Layout: barra fixa no topo com a "linha do destino" (ouro > sangue > violeta), páginas em coluna
    central larga. Escudo do mestre: feed de rolagens à esquerda, abas à direita. Visual escuro único. */
@@ -123,7 +125,7 @@ img { max-width: 100%; }
 .tag.canon { color: var(--ouro); border-color: var(--ouro); }
 .caixa-dano { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--sangue); background: color-mix(in srgb, var(--sangue) 8%, var(--painel-2)); }
 .volta-camp:hover { border-color: var(--ouro); }
-.volta-camp[hidden] { display: none; }
+.volta-camp[hidden] { display: none; } .mapa-camp { padding: 6px 10px; cursor: pointer; font-size: 15px; } @media (max-width: 760px) { .mapa-camp { order: 2; } }
 .volta-camp svg { flex: none; width: 15px; height: 15px; color: var(--ouro); }
 .volta-camp span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nav a { color: var(--lua-dim); text-decoration: none; font: 400 19px/1 var(--f-disp); padding: 8px 0; border-bottom: 1px solid transparent; }
@@ -461,7 +463,7 @@ hr.sep-at { border: 0; border-top: 1px dashed var(--linha-2); margin: 8px 0; }
   .puxador.esq span { transform: rotate(180deg); }
   .puxador b { font: 700 14px var(--f-mono); color: var(--sangue-hi); }
 }
-.feed-abas { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--linha); position: sticky; top: 0; z-index: 2; background: var(--painel); }
+.feed-abas { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--linha); position: sticky; top: 0; z-index: 2; background: var(--painel); }
 .feed-abas button { background: none; border: 0; border-bottom: 2px solid transparent; color: var(--lua-dim); padding: 12px 8px; font: 700 14px var(--f-body); cursor: pointer; display: flex; gap: 6px; justify-content: center; align-items: center; }
 .feed-abas button.aqui { color: var(--lua); border-bottom-color: var(--sangue); }
 .badge { background: var(--sangue); color: #fff; font: 700 11px var(--f-mono); border-radius: 999px; padding: 1px 7px; } .badge[hidden] { display: none; }
@@ -831,7 +833,7 @@ button, a, input, select, textarea { touch-action: manipulation; }
       <a href="#patente" data-sec="patente">Patente</a>
       <a href="#livro" data-sec="livro">Livro</a>
     </nav>
-    <a class="volta-camp" id="volta-camp" hidden></a>
+    <a class="volta-camp" id="volta-camp" hidden></a><button type="button" class="volta-camp mapa-camp" id="mapa-camp" hidden title="Mapa da campanha" aria-label="Abrir o mapa da campanha">🗺</button>
     <div class="quem" id="quem"></div>
   </div>
   <div class="linha-destino"></div>
@@ -870,7 +872,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261109212819';
+const BUILD = '20261109213907';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1585,7 +1587,7 @@ async function rotear() {
   if (typeof fecharSala === 'function' && !CH.dentro) { fecharSala(); CH.ctxLig = null; }
   const h = location.hash.slice(1) || 'inicio';
   const [base, ...resto] = h.split('-'); const arg = resto.join('-');
-  const sec = { entrar: 'entrar', agente: 'agentes', 'novo': 'agentes', campanha: 'campanhas', escudo: 'campanhas', regras: 'campanhas', admin: 'entrar', usuario: 'entrar', ameaca: 'ameacas', dossie: 'ameacas' }[base] || base;
+  const sec = { entrar: 'entrar', agente: 'agentes', 'novo': 'agentes', campanha: 'campanhas', escudo: 'campanhas', regras: 'campanhas', historico: 'campanhas', admin: 'entrar', usuario: 'entrar', ameaca: 'ameacas', dossie: 'ameacas' }[base] || base;
   $$('#nav a').forEach(a => a.classList.toggle('aqui', a.dataset.sec === sec));
   const fn = ROTAS[base] || ROTAS.inicio;
   app.className = 'pagina';
@@ -1601,6 +1603,7 @@ function guardarUltima(id, nome, escudo) { try { localStorage.setItem('ultimaCam
 function desenharVolta() {
   const el = $('#volta-camp'); if (!el) return; let u = null; try { u = JSON.parse(localStorage.getItem('ultimaCampanha') || 'null'); } catch (e) {}
   const [base, ...resto] = (location.hash.slice(1) || '').split('-'), arg = resto.join('-');
+  const mb = $('#mapa-camp'); if (mb) { mb.hidden = !u || !ME || u.uid !== ME; if (u) mb.dataset.abrirMapa = `campanhas/${u.id}/publico|mesa`; }
   if (!u || !ME || u.uid !== ME || ((base === 'campanha' || base === 'escudo') && arg === u.id)) { el.hidden = true; return; }
   el.hidden = false; el.href = `#${u.escudo ? 'escudo' : 'campanha'}-${u.id}`; el.title = `Voltar para ${u.nome}`;
   el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg><span>${esc(u.nome)}</span>`;
@@ -3578,7 +3581,7 @@ async function entrarCampanha(id) {
    CAMPANHA: VISÃO DO JOGADOR
    ================================================================= */
 function ouvirCampanha(id, aoMudar) {
-  const st = { camp: null, agentes: {}, fichas: {}, membros: [], rolagens: [], pistas: [], relatorios: [], combate: null };
+  const st = { camp: null, agentes: {}, fichas: {}, membros: [], rolagens: [], pistas: [], relatorios: [], combate: null, mesa: {}, quadro: {} };
   const subsFicha = {};
   assinar(db.doc('campanhas/' + id).onSnapshot(s => { st.camp = s.exists ? { id, ...s.data() } : false; aoMudar(st); }));
   assinar(db.collection(`campanhas/${id}/agentes`).onSnapshot(s => {
@@ -3592,6 +3595,9 @@ function ouvirCampanha(id, aoMudar) {
   assinar(db.doc(`campanhas/${id}/publico/pistas`).onSnapshot(s => { st.pistas = s.exists ? s.data().itens || [] : []; aoMudar(st); }));
   assinar(db.doc(`campanhas/${id}/publico/relatorios`).onSnapshot(s => { st.relatorios = s.exists ? s.data().itens || [] : []; aoMudar(st); }));
   assinar(db.doc(`campanhas/${id}/publico/combate`).onSnapshot(s => { st.combate = s.exists ? s.data() : null; aoMudar(st); }));
+  // mapa, NPCs, sessão e voz automática (do mestre) e o quadro da equipe (de todos)
+  assinar(db.doc(`campanhas/${id}/publico/mesa`).onSnapshot(s => { st.mesa = s.exists ? s.data() || {} : {}; aoMudar(st, 'mesa'); }));
+  assinar(db.doc(`campanhas/${id}/quadro/estado`).onSnapshot(s => { st.quadro = s.exists ? s.data() || {} : {}; aoMudar(st, 'quadro'); }));
   st.chat = [];
   assinar(db.collection(`campanhas/${id}/chat`).orderBy('t', 'desc').limit(80).onSnapshot(s => { st.chat = s.docs.map(x => ({ id: x.id, ...x.data() })); aoMudar(st, 'chat'); }));
   return st;
@@ -3602,21 +3608,29 @@ const vistoChat = id => { try { return +(localStorage.getItem('chatVisto|' + id)
 const marcarVisto = id => { try { localStorage.setItem('chatVisto|' + id, Date.now()); } catch (e) {} };
 const fmtChat = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
 function chatLista(st) {
-  const msgs = (st.chat || []).slice().reverse();
+  const msgs = (st.chat || []).filter(m => !m.rp).slice().reverse();
   return msgs.map(m => { const meu = m.uid === ME;
     return `<div class="msg ${meu ? 'meu' : ''}">${meu ? '' : `<div class="rol-av" style="${m.foto ? `background-image:url('${esc(m.foto)}')` : `background-color:${corDe(m.uid)}; color:#0b0d14`}">${m.foto ? '' : esc(iniciais(m.autor))}</div>`}
       <div class="msg-b"><div class="msg-cab"><b>${esc(m.autor || 'Alguém')}</b><span>${horaBR(m.t)}</span></div>
       <div class="msg-tx">${m.rolagem ? `<span class="msg-rol">${DADO_SVG} ${esc(m.rolagem.expr)} → ${esc(m.rolagem.detalhe)} = <b>${esc(m.rolagem.total)}</b></span>` : fmtChat(m.texto || '')}</div></div></div>`; }).join('') || '<div class="vazio" style="font-size:15px">Ninguém falou nada ainda.</div>';
 }
-const novasChat = (st, id) => (st.chat || []).filter(m => m.uid !== ME && m.t > vistoChat(id)).length;
+const novasChat = (st, id) => (st.chat || []).filter(m => !m.rp && m.uid !== ME && m.t > vistoChat(id)).length;
+const vistoRP = id => { try { return +(localStorage.getItem('rpVisto|' + id) || 0); } catch (e) { return 0; } };
+const novasRP = (st, id) => RPX.novas(st.chat, vistoRP(id));
 function montarFeed(el, cfg) {
   if (!el) return; const { id, st } = cfg, aba = FEED_ABA[id] || 'rol';
   if (aba === 'chat') marcarVisto(id);
-  const nv = novasChat(st, id);
-  el.innerHTML = `<div class="feed-abas"><button type="button" class="${aba === 'rol' ? 'aqui' : ''}" data-fa="rol">Rolagens <span class="faint" data-nrol>${cfg.nRol()}</span></button><button type="button" class="${aba === 'chat' ? 'aqui' : ''}" data-fa="chat">Chat <span class="badge" data-nchat ${nv && aba !== 'chat' ? '' : 'hidden'}>${nv}</span></button></div>
-    ${aba === 'rol' ? `${cfg.extraRol || ''}<div class="feed-lista">${cfg.listaRol()}</div>` : `<div class="chat-lista">${chatLista(st)}</div><form class="chat-form"><input type="text" class="chat-txt" maxlength="600" placeholder="Mensagem, ou /r 2d6+3 para rolar" autocomplete="off" aria-label="Mensagem"><button class="btn mini">Enviar</button></form>`}`;
+  if (aba === 'rp') { try { localStorage.setItem('rpVisto|' + id, Date.now()); } catch (e) {} }
+  const nv = novasChat(st, id), nrp = aba === 'rp' ? 0 : novasRP(st, id);
+  RPX.reiniciar(id);
+  el.innerHTML = `<div class="feed-abas"><button type="button" class="${aba === 'rol' ? 'aqui' : ''}" data-fa="rol">Rolagens <span class="faint" data-nrol>${cfg.nRol()}</span></button><button type="button" class="${aba === 'chat' ? 'aqui' : ''}" data-fa="chat">Chat <span class="badge" data-nchat ${nv && aba !== 'chat' ? '' : 'hidden'}>${nv}</span></button><button type="button" class="${aba === 'rp' ? 'aqui' : ''}" data-fa="rp">Roleplay <span class="badge" data-nrp ${nrp ? '' : 'hidden'}>${nrp}</span></button></div>
+    ${aba === 'rp' ? RPX.painel() : aba === 'rol' ? `${cfg.extraRol || ''}<div class="feed-lista">${cfg.listaRol()}</div>${cfg.rodapeRol || ''}` : `<div class="chat-lista">${chatLista(st)}</div><form class="chat-form"><input type="text" class="chat-txt" maxlength="600" placeholder="Mensagem, ou /r 2d6+3 para rolar" autocomplete="off" aria-label="Mensagem"><button class="btn mini">Enviar</button></form>`}`;
   el.querySelectorAll('[data-fa]').forEach(b => b.onclick = () => { FEED_ABA[id] = b.dataset.fa; montarFeed(el, cfg); if (b.dataset.fa === 'chat') el.querySelector('.chat-txt')?.focus(); });
   const lista = el.querySelector('.chat-lista'); if (lista) requestAnimationFrame(() => { lista.scrollTop = lista.scrollHeight; });
+  if (aba === 'rp') RPX.ligar(el, { mesa: id, mestre: st.camp?.mestre, persona: () => { const a = cfg.autor(); return { nome: a.autor, foto: a.foto, jogador: a.jogador || '' }; } });
+  RPX.atualizar(st.chat, st.mesa);
+  el.querySelector('.feed-lista')?.addEventListener('click', e => { const b = e.target.closest('[data-del-rol]'); if (b && st.camp?.mestre === ME) apagarRolagem(id, b.dataset.delRol); });
+  el.querySelector('[data-limpar-hist]')?.addEventListener('click', () => limparHistorico(id));
   const form = el.querySelector('.chat-form');
   form?.addEventListener('submit', async e => { e.preventDefault(); const inp = form.querySelector('.chat-txt'), tx = inp.value.trim(); if (!tx) return;
     const msg = { uid: ME, ...cfg.autor(), t: Date.now() }, mr = /^\/r(?:olar)?\s+(.+)$/i.exec(tx);
@@ -3628,10 +3642,15 @@ function montarFeed(el, cfg) {
 function atualizarFeed(el, cfg, tipo) {
   if (!el || !el.querySelector('.feed-abas')) return montarFeed(el, cfg);
   const { id, st } = cfg, aba = FEED_ABA[id] || 'rol';
+  if (tipo === 'chat' || tipo === 'mesa') {
+    RPX.atualizar(st.chat, st.mesa);
+    const brp = el.querySelector('[data-nrp]'); if (brp) { if (aba === 'rp') { try { localStorage.setItem('rpVisto|' + id, Date.now()); } catch (e) {} } const n = aba === 'rp' ? 0 : novasRP(st, id); brp.textContent = n; brp.hidden = !n; }
+    if (tipo === 'mesa') return marcarPuxador(st, id);
+  }
   if (tipo === 'chat') {
     const lista = el.querySelector('.chat-lista');
     if (lista) { const noFim = lista.scrollHeight - lista.scrollTop - lista.clientHeight < 60; lista.innerHTML = chatLista(st); if (noFim) lista.scrollTop = lista.scrollHeight; marcarVisto(id); }
-    else { const n = novasChat(st, id), bd = el.querySelector('[data-nchat]'); if (bd) { bd.textContent = n; bd.hidden = !n; } const ult = st.chat?.[0]; if (ult && ult.uid !== ME && Date.now() - ult.t < 8000) toast(`${ult.autor}: ${ult.rolagem ? `rolou ${ult.rolagem.total}` : String(ult.texto || '').slice(0, 80)}`); }
+    else { const n = novasChat(st, id), bd = el.querySelector('[data-nchat]'); if (bd) { bd.textContent = n; bd.hidden = !n; } const ult = st.chat?.[0]; if (ult && ult.uid !== ME && Date.now() - ult.t < 8000 && !(ult.rp && aba === 'rp')) toast(`${ult.rp ? '🎭 ' : ''}${ult.autor}: ${ult.rolagem ? `rolou ${ult.rolagem.total}` : String(ult.texto || '').slice(0, 80)}`); }
   } else if (aba === 'rol') { const l = el.querySelector('.feed-lista'); if (l) l.innerHTML = cfg.listaRol(); const n = el.querySelector('[data-nrol]'); if (n) n.textContent = cfg.nRol(); }
   marcarPuxador(st, id);
 }
@@ -4058,7 +4077,21 @@ ROTAS.campanha = async id => {
   await carregarRegras([id], () => render());
   const listaRol = () => st.rolagens.map(rolHtml).join('') || '<div class="vazio" style="font-size:15px">Nenhuma rolagem ainda.</div>';
   let cfgFeed = null;
-  const st = ouvirCampanha(id, (s, tipo) => { if ((tipo === 'rolagens' || tipo === 'chat') && $('#feed-j')) return atualizarFeed($('#feed-j'), cfgFeed, tipo); if (!document.activeElement?.matches?.('#dados-expr, .chat-txt')) render(); });
+  // mapa, quadro, NPCs e suspeitos se redesenham sozinhos (sem refazer a página inteira e perder zoom ou arrasto)
+  let ABA_EL = null, QUADRO = null;
+  const getMesa = () => st.mesa || {}, getQd = () => st.quadro || {}, pistasQuadro = () => (st.pistas || []).filter(p => p.tipo !== 'arquivo');
+  const salvarMesaC = async p => { st.mesa = { ...(st.mesa || {}), ...p }; try { await salvarMesa(id, p); } catch (e) { toast('Não salvou: ' + (e.message || e.code)); } };
+  const desenharAbaViva = () => { const A = ABA_EL; if (!A?.isConnected || !st.camp) return false; const mestre = st.camp.mestre === ME;
+    if (aba === 'mapa') { desenharMapa(A, getMesa, { mestre, salvarC: salvarMesaC, DETS: Object.values(st.fichas).filter(Boolean).map(f => ({ id: f.id, nome: f.nome, foto: fotoEf(f) })) }); return true; }
+    if (aba === 'npcs') { desenharNpcs(A, getMesa, { mestre, salvarC: salvarMesaC }); return true; }
+    if (aba === 'suspeitos') { desenharSuspeitos(A, getMesa, getQd, id); return true; }
+    if (aba === 'quadro') { if (!QUADRO || !A.querySelector('#q-quadro')) QUADRO = abrirAbaQuadro(A, id, getMesa, getQd, pistasQuadro); else QUADRO.desenhar(); return true; }
+    return false; };
+  const st = ouvirCampanha(id, (s, tipo) => { if ((tipo === 'rolagens' || tipo === 'chat' || tipo === 'mesa') && $('#feed-j')) { atualizarFeed($('#feed-j'), cfgFeed, tipo); if (tipo !== 'mesa') return; }
+    if ((tipo === 'mesa' || tipo === 'quadro') && ['mapa', 'npcs', 'suspeitos', 'quadro'].includes(aba)) { if (desenharAbaViva()) return; }
+    if (tipo === 'quadro') return;
+    if (['mapa', 'quadro'].includes(aba) && ABA_EL?.isConnected && tipo !== 'mesa') return;
+    if (!document.activeElement?.matches?.('#dados-expr, .chat-txt, .ms-rp-form textarea, .ms-rp-quem, #corpo-c input, #corpo-c textarea')) render(); });
   async function render() {
     if (st.camp === null) { app.innerHTML = '<div class="vazio">Abrindo a campanha…</div>'; return; }
     if (st.camp === false) { app.innerHTML = '<div class="vazio">Campanha não encontrada.</div>'; return; }
@@ -4074,7 +4107,13 @@ ROTAS.campanha = async id => {
       <section class="ini-lista" style="max-width:560px">${(st.combate.ordem || []).map((o, i) => { const f = o.tipo === 'agente' ? st.fichas[o.ref] : null; const K = f ? calc(f) : null; const a = f ? { ...K.max, ...(f.atual || {}) } : null;
         return cardIni({ i, nome: o.nome, foto: f ? fotoEf(f) : (o.img || ''), ameaca: o.tipo !== 'agente', pv: a?.pv, pvM: K?.max.pv, ps: a?.ps, psM: K?.max.ps, conds: o.cond || [], ini: o.ini, vez: i === st.combate.turno, meu: f?.dono === ME, morto: !!f?.morto, mostrarPV: !!f, rotTipo: o.tipo === 'ameaca' ? 'Ameaça' : o.tipo === 'npc' ? 'NPC' : '' }); }).join('')}</section>`
       : '<div class="vazio">Nenhum combate em andamento.</div>';
-    if (aba === 'pistas') corpo = `<div class="lista">${st.pistas.map(p => `<div class="item"><span class="nm">${esc(p.titulo)}</span><p class="dim">${nl(p.texto)}</p>${p.imagem ? `<img src="${esc(p.imagem)}" alt="" style="max-width:420px">` : ''}</div>`).join('') || '<div class="vazio">Nenhuma pista revelada.</div>'}</div>`;
+    const sessao = +(st.mesa?.sessao || 1), pistasV = (st.pistas || []).filter(p => p.tipo !== 'arquivo');
+    if (aba === 'pistas') { const hoje = pistasV.filter(p => !p.sessao); corpo = `<div class="caixa bloco"><div class="hoje">📌 Pistas da sessão ${sessao}</div><div class="mural">${hoje.map(papelPista).join('') || '<div class="vazio">Nenhuma pista nesta sessão. Ainda.</div>'}</div><p class="tag" style="white-space:normal">Pistas de sessões anteriores ficam no Calendário.</p></div>`; }
+    if (aba === 'arquivo') { const H = (st.pistas || []).filter(p => p.tipo === 'arquivo'); corpo = `<div class="caixa bloco"><h3>📜 Arquivo</h3><p class="tag" style="white-space:normal">Pedaços da história que vocês desenterraram: documentos, fotos e gravações.</p><div class="mural">${H.map(pedacoHTML).join('') || '<div class="vazio">Nada desenterrado ainda. Revirem as coisas.</div>'}</div></div>`; }
+    if (aba === 'calendario') { const ss = {}; pistasV.filter(p => p.sessao).forEach(p => (ss[p.sessao] = ss[p.sessao] || []).push(p)); const ns = Object.keys(ss).map(Number).sort((a, b) => b - a);
+      corpo = `<div class="caixa bloco"><div class="hoje">📅 Agora é a sessão ${sessao}</div><p class="tag" style="white-space:normal">Cada sessão de jogo é um dia. Quando o mestre encerra a sessão, as pistas dela vêm para cá.</p>
+        ${ns.map(n => `<details class="dia" ${n === ns[0] ? 'open' : ''}><summary>Sessão ${n}<span>${ss[n].length} pista(s)${st.mesa?.sessoesFim?.[n] ? ' · encerrada em ' + dataBR(st.mesa.sessoesFim[n]) : ''}</span></summary><div class="mural">${ss[n].map(papelPista).join('')}</div></details>`).join('') || '<div class="vazio">Nenhuma sessão encerrada ainda.</div>'}</div>`; }
+    if (['mapa', 'npcs', 'suspeitos', 'quadro'].includes(aba)) corpo = '<div id="aba-viva"></div>';
     if (aba === 'relatorios') corpo = `<div class="lista">${st.relatorios.slice().reverse().map(r => `<div class="item"><div class="cab"><span class="nm">${esc(r.titulo)}</span><span class="faint">${dataBR(r.t)}</span></div><p class="dim">${nl(r.texto)}</p></div>`).join('') || '<div class="vazio">Nenhum relatório de missão ainda.</div>'}</div>`;
     if (aba === 'regras') { const RG = REGRAS[id] || regrasVazias(), exF = { nome: 'Exemplo', nivel: 5, atributos: {}, classe: '', mec: {} };
       corpo = `<div style="display:grid; gap:16px">${RG.mecanicas.length ? `<h2 style="margin:0">Mecânicas</h2><div class="grade-mecs">${RG.mecanicas.map(m => `<div style="display:grid; gap:6px"><span class="tag" style="justify-self:start">${esc(({ todos: 'Todos os agentes', classes: 'Só ' + (m.quem?.classes || []).join(', '), nivel: 'A partir do nível ' + (m.quem?.nivel || 1), liberado: 'O mestre libera' })[m.quem?.modo || 'todos'])}</span>${htmlMecanica({ ...m, quem: { modo: 'todos' } }, exF)}</div>`).join('')}</div>` : ''}
@@ -4083,15 +4122,16 @@ ROTAS.campanha = async id => {
     if (aba === 'ligacao') corpo = membro ? '<div id="ligacao"></div>' : '<div class="vazio">Entre na campanha para usar a ligação.</div>';
     app.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
         ${mestre ? `<button class="btn sec" id="editar-c">Editar campanha</button><a class="btn sec" href="#regras-${esc(id)}" style="text-decoration:none">Homebrew da campanha</a><a class="btn ouro" href="#escudo-${esc(id)}" style="text-decoration:none">Escudo do mestre</a><button class="btn sec" id="x-camp" title="Apagar campanha">🗑 Apagar</button>` : ''}
-        ${membro ? `<a class="btn" href="#novo-${esc(id)}" style="text-decoration:none">Criar agente da campanha</a>` : ''}${membro ? '<button class="btn sec" id="add-ag">Adicionar agente</button><button class="btn sec" id="convidar">Convidar jogadores</button>' : '<button class="btn" id="entrar-c">Entrar nesta campanha</button>'}
+        ${membro ? `<button class="btn sec" data-abrir-mapa="campanhas/${esc(id)}/publico|mesa">🗺 Mapa</button><a class="btn" href="#novo-${esc(id)}" style="text-decoration:none">Criar agente da campanha</a>` : ''}${membro ? '<button class="btn sec" id="add-ag">Adicionar agente</button><button class="btn sec" id="convidar">Convidar jogadores</button>' : '<button class="btn" id="entrar-c">Entrar nesta campanha</button>'}
         ${membro && !mestre ? '<button class="btn sec" id="sair">Sair da campanha</button>' : ''}</div>
       <section class="camp-topo ${C.capa ? 'com-capa' : ''}">
         ${C.capa ? `<img src="${esc(C.capa)}" alt="" style="border:1px solid var(--linha-2); width:100%">` : ''}
         <div style="display:grid; gap:10px"><span class="rotulo">Mestre: ${esc(nomes[C.mestre])}</span><h1>${esc(C.nome)}</h1>${C.descricao ? `<p class="dim" style="font-size:17px; max-width:60ch">${nl(C.descricao)}</p>` : ''}</div>
       </section>
       <div class="escudo"><aside class="feed" id="feed-j"></aside>
-      <div style="display:grid; gap:16px; min-width:0; align-content:start"><div class="abas">${[['agentes', 'Agentes'], ['jogadores', 'Jogadores'], ['combate', st.combate?.ativo ? 'Combate ●' : 'Combate'], ['pistas', 'Pistas'], ['relatorios', 'Relatórios'], ...(temRegras(id) ? [['regras', 'Regras da casa']] : []), ['ligacao', Object.keys(CH.sala === id ? CH.presenca : {}).length ? `Ligação ● ${Object.keys(CH.presenca).length}` : 'Ligação']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>${corpo}</div></div>`;
+      <div style="display:grid; gap:16px; min-width:0; align-content:start"><div class="abas">${[['agentes', 'Agentes'], ['jogadores', 'Jogadores'], ['combate', st.combate?.ativo ? 'Combate ●' : 'Combate'], ['npcs', 'NPCs'], ['mapa', 'Mapa'], ['pistas', 'Pistas'], ['suspeitos', `Suspeitos${suspeitosDe(st.mesa).filter(x => !inocentado(x, st.quadro)).length ? ' (' + suspeitosDe(st.mesa).filter(x => !inocentado(x, st.quadro)).length + ')' : ''}`], ['quadro', 'Quadro'], ['arquivo', 'Arquivo'], ['calendario', 'Calendário'], ['relatorios', 'Relatórios'], ...(temRegras(id) ? [['regras', 'Regras da casa']] : []), ['ligacao', Object.keys(CH.sala === id ? CH.presenca : {}).length ? `Ligação ● ${Object.keys(CH.presenca).length}` : 'Ligação']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>${corpo}</div></div>`;
     $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; lembrarAba(aba); render(); });
+    ABA_EL = $('#aba-viva'); QUADRO = null; desenharAbaViva();
     atualizarPersona(st);
     if (aba === 'ligacao' && membro) montarLigacao(id, C, st);
     $('#entrar-c')?.addEventListener('click', () => entrarCampanha(id));
@@ -4112,7 +4152,8 @@ ROTAS.campanha = async id => {
         try { await db.doc(`campanhas/${id}/agentes/${f.id}`).set({ ficha: f.id, por: ME, t: Date.now() }); await db.doc('fichas/' + f.id).update({ campanhas: [...new Set([...(f.campanhas || []), id])] }); } catch (e) { toast('Não deu para adicionar: ' + (e.message || e.code)); } });
     });
     const meuAg = fichas.find(f => f.dono === ME && f.id === MEU_PRINCIPAL) || fichas.find(f => f.dono === ME);
-    cfgFeed = { id, st, nRol: () => st.rolagens.length, listaRol,
+    cfgFeed = { id, st, nRol: () => st.rolagens.length, listaRol: mestre ? () => st.rolagens.map(r => comLixeira(rolHtml(r), r.id)).join('') || listaRol() : listaRol,
+      rodapeRol: `<div class="btns feed-rodape"><a class="btn mini sec" href="#historico-${esc(id)}" style="text-decoration:none">Histórico completo</a>${mestre ? '<button class="btn mini sec" data-limpar-hist>🗑 Limpar</button>' : ''}</div>`,
       extraRol: membro ? `<div class="feed-dados"><input type="text" id="dados-expr" placeholder="Rolar na mesa: 2d6+3" style="min-width:0"><button class="btn mini" id="dados-ok">Rolar</button></div>` : '',
       autor: () => mestre ? { autor: 'Mestre', foto: '' } : meuAg ? { autor: meuAg.nome, foto: fotoEf(meuAg) } : { autor: nomes[ME] || 'Jogador', foto: '' },
       aoMontar: () => {
@@ -4124,6 +4165,34 @@ ROTAS.campanha = async id => {
     laterais({ esq: $('#feed-j'), rot: { esq: 'Mesa' } }); marcarPuxador(st, id);
   }
   render();
+};
+
+/* ---------- histórico completo de rolagens (todos da campanha veem; o mestre apaga) ---------- */
+ROTAS.historico = async id => {
+  if (!db) { app.innerHTML = semBanco(); return; }
+  const s0 = await db.doc('campanhas/' + id).get();
+  if (!s0.exists) { app.innerHTML = '<div class="vazio">Campanha não encontrada.</div>'; return; }
+  const C = s0.data(), mestre = C.mestre === ME;
+  let ROLS = [], fAut = 'todos';
+  app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Histórico</span><h1>${esc(C.nome)}</h1><p class="dim">Todas as rolagens da campanha, da mais nova para a mais antiga.</p></div>
+    <div class="btns">${mestre ? '<button class="btn sec" id="h-limpar">🗑 Limpar histórico</button>' : ''}<a class="btn sec" href="#${mestre ? 'escudo' : 'campanha'}-${esc(id)}" style="text-decoration:none">Voltar para a campanha</a></div></div>
+    <div class="caixa hist-filtros"><div class="campo"><label class="rotulo" for="h-aut">Quem rolou</label><select id="h-aut"></select></div><span class="faint" id="h-n"></span></div>
+    <div class="feed-lista hist-lista" id="h-feed"><div class="vazio">Desenterrando os registros…</div></div>`;
+  const desenhar = () => {
+    const autores = [...new Set(ROLS.map(r => r.autor || 'Alguém'))].sort((a, b) => a.localeCompare(b));
+    $('#h-aut').innerHTML = `<option value="todos">Todos</option>${autores.map(a => `<option ${a === fAut ? 'selected' : ''}>${esc(a)}</option>`).join('')}`;
+    const lista = ROLS.filter(r => fAut === 'todos' || (r.autor || 'Alguém') === fAut);
+    $('#h-n').textContent = `${lista.length} rolagem(ns)`;
+    let dia = '', html = '';
+    for (const r of lista) { const d = new Date(r.t).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+      if (d !== dia) { dia = d; html += `<div class="hist-dia">${esc(d)}</div>`; }
+      html += mestre ? comLixeira(rolHtml(r), r.id) : rolHtml(r); }
+    $('#h-feed').innerHTML = html || '<div class="vazio">Nada por aqui.</div>';
+  };
+  $('#h-aut').onchange = e => { fAut = e.target.value; desenhar(); };
+  $('#h-feed').addEventListener('click', e => { const b = e.target.closest('[data-del-rol]'); if (b && mestre) apagarRolagem(id, b.dataset.delRol); });
+  $('#h-limpar')?.addEventListener('click', () => limparHistorico(id));
+  assinar(db.collection(`campanhas/${id}/rolagens`).orderBy('t', 'desc').limit(1000).onSnapshot(sn => { ROLS = sn.docs.map(d => ({ id: d.id, ...d.data() })); desenhar(); }));
 };
 
 /* =================================================================
@@ -4163,7 +4232,7 @@ ROTAS.escudo = async id => {
     const c = E.combate; const ordem = c.lista.map(x => ({ nome: x.nome, tipo: x.tipo, ini: x.ini, cond: (x.cond || []).map(cd => condObj(cd).nome), ref: x.tipo === 'agente' ? x.ref : '', img: x.tipo === 'ameaca' ? (x.imagem || CRI.find(k => String(k.id) === String(x.ref))?.imagem || '') : x.tipo === 'npc' ? (x.imagem || '') : '' }));
     db.doc(`campanhas/${id}/publico/combate`).set({ ativo: !!c.ativo && c.lista.length > 0, rodada: c.rodada, turno: c.turno, ordem }).catch(() => {});
   }, 400);
-  const publicarPistas = () => db.doc(`campanhas/${id}/publico/pistas`).set({ itens: E.pistas.filter(p => p.revelada).map(({ titulo, texto, imagem }) => ({ titulo, texto, imagem: imagem || '' })) }).catch(() => toast('Não deu para publicar as pistas.'));
+  const publicarPistas = () => db.doc(`campanhas/${id}/publico/pistas`).set({ itens: E.pistas.filter(p => p.revelada).map(({ id: pid, titulo, texto, imagem, audio, tipo, sessao }) => ({ id: pid || '', titulo, texto, imagem: imagem || '', audio: audio || '', tipo: tipo || 'pista', sessao: sessao || 0 })) }).catch(() => toast('Não deu para publicar as pistas.'));
   let st;
   const rolarMestre = async (rotulo, r, oculta) => {
     if (oculta) { E.ocultas = [{ autor: 'Mestre', rotulo, detalhe: r.detalhe, total: r.total, t: Date.now(), oculta: true }, ...(E.ocultas || [])].slice(0, 30); salvarE(); desenharFeed(); }
@@ -4174,18 +4243,28 @@ ROTAS.escudo = async id => {
   app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Escudo do mestre</span><h1>${esc(camp.data().nome)}</h1></div><div style="display:flex; gap:8px; flex-wrap:wrap"><a class="btn sec" href="#regras-${esc(id)}" style="text-decoration:none">Homebrew da campanha</a><a class="btn sec" href="#campanha-${esc(id)}" style="text-decoration:none">Ver como jogador</a></div></div>
     <div class="escudo" id="escudo"><aside class="feed" id="feed"></aside><div style="display:grid; gap:16px; min-width:0"><div class="abas" id="abas-e"></div><div id="corpo-e"></div></div></div>`;
   const todasRol = () => [...(st?.rolagens || []), ...(E.ocultas || [])].sort((a, b) => b.t - a.t).slice(0, 40);
-  const cfgFeedE = { id, get st() { return st; }, nRol: () => todasRol().length, listaRol: () => todasRol().map(rolHtml).join('') || '<div class="vazio" style="font-size:15px">As rolagens dos jogadores aparecem aqui.</div>', autor: () => ({ autor: 'Mestre', foto: '' }) };
+  const cfgFeedE = { id, get st() { return st; }, nRol: () => todasRol().length, listaRol: () => todasRol().map(r => comLixeira(rolHtml(r), r.id)).join('') || '<div class="vazio" style="font-size:15px">As rolagens dos jogadores aparecem aqui.</div>', autor: () => ({ autor: 'Mestre', foto: '' }),
+    rodapeRol: `<div class="btns feed-rodape"><a class="btn mini sec" href="#historico-${esc(id)}" style="text-decoration:none">Histórico completo</a><button class="btn mini sec" data-limpar-hist>🗑 Limpar</button></div>` };
+  const salvarMesaE = async p => { st.mesa = { ...(st.mesa || {}), ...p }; try { await salvarMesa(id, p); } catch (e) { toast('Não salvou: ' + (e.message || e.code)); } };
+  const desenharVivaE = () => { const A = $('#aba-viva-e'); if (!A) return false; const DETS = Object.values(st.fichas).filter(Boolean).map(f => ({ id: f.id, nome: f.nome, foto: fotoEf(f) }));
+    if (aba === 'mapa') { desenharMapa(A, () => st.mesa || {}, { mestre: true, salvarC: salvarMesaE, DETS }); return true; }
+    if (aba === 'npcs') { desenharNpcs(A, () => st.mesa || {}, { mestre: true, salvarC: salvarMesaE }); return true; }
+    return false; };
   function desenharFeed(tipo) { if (!st) return; atualizarFeed($('#feed'), cfgFeedE, tipo); }
-  st = ouvirCampanha(id, (s, tipo) => { desenharFeed(tipo); if (tipo === 'chat') return; if (tipo === 'rolagens') return; if (!document.activeElement?.closest?.('#corpo-e input, #corpo-e textarea, #corpo-e select')) render(); });
+  st = ouvirCampanha(id, (s, tipo) => { desenharFeed(tipo); if (tipo === 'chat' || tipo === 'rolagens' || tipo === 'quadro') return;
+    if (aba === 'mapa' || aba === 'npcs') { if (tipo === 'mesa') desenharVivaE(); return; }
+    if (tipo === 'mesa' && aba !== 'investigacao') return;
+    if (!document.activeElement?.closest?.('#corpo-e input, #corpo-e textarea, #corpo-e select')) render(); });
   desenharFeed();
 
   function render() { renderE(); if (!$('#escudo')) return; laterais({ esq: $('#feed'), dir: aba === 'combate' ? $('#cb-det') : null, rot: { esq: 'Mesa', dir: 'Ficha' } }); marcarPuxador(st, id); }
   function renderE() {
-    const ABAS = [['agentes', 'Agentes'], ['combate', 'Combate'], ['investigacao', 'Investigação'], ['relatorios', 'Relatórios'], ['dados', 'Dados'], ['vetores', 'Vetores'], ['anotacoes', 'Anotações'], ['ligacao', 'Ligação']];
+    const ABAS = [['agentes', 'Agentes'], ['combate', 'Combate'], ['npcs', 'NPCs'], ['mapa', 'Mapa'], ['investigacao', 'Investigação'], ['relatorios', 'Relatórios'], ['dados', 'Dados'], ['vetores', 'Vetores'], ['anotacoes', 'Anotações'], ['ligacao', 'Ligação']];
     $('#abas-e').innerHTML = ABAS.map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('');
     $$('#abas-e [data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; lembrarAba(aba); render(); });
     const fichas = Object.values(st.fichas).filter(Boolean);
     const corpo = $('#corpo-e');
+    if (aba === 'mapa' || aba === 'npcs') { corpo.innerHTML = '<div id="aba-viva-e"></div>'; desenharVivaE(); return; }
     if (aba === 'agentes') {
       corpo.innerHTML = `<div class="grade-cards">${fichas.map(f => { const K = calc(f), a = f.atual || K.max;
         return `<div class="ag-escudo"><div class="cab"><div class="mini-f" style="${fotoEf(f) ? `background-image:url('${esc(fotoEf(f))}')` : ''}">${fotoEf(f) ? '' : esc(iniciais(f.nome))}</div><div style="min-width:0"><b style="font: 400 19px var(--f-disp)">${esc(f.nome)}</b><div class="dim" style="font-size:12.5px">${esc(f.classe)} · ${esc(f.subclasse)} · Nv ${f.nivel}</div></div></div>
@@ -4335,14 +4414,19 @@ ROTAS.escudo = async id => {
           aoPV: v => { x.pv = v; salvarE(); render(); }, aoRolar: (rot, r) => rolarMestre(`${x.nome}: ${rot}`, r, true) }); });
     }
     if (aba === 'investigacao') {
-      corpo.innerHTML = `<div class="cab-pagina"><h2>Fichas de investigação</h2><button class="btn" id="nova-p">Adicionar</button></div><p class="dim">Pistas ficam escondidas até você revelar. Reveladas aparecem para os jogadores na aba Pistas.</p>
-        <div class="lista">${E.pistas.map((p, i) => `<div class="item"><div class="cab"><span class="nm">${esc(p.titulo)}</span><span style="display:flex; gap:8px; align-items:center"><button class="btn mini ${p.revelada ? 'sec' : 'ouro'}" data-rev="${i}">${p.revelada ? 'Esconder' : 'Revelar'}</button><button class="btn mini sec" data-edp="${i}">Editar</button><button class="btn-x" data-rmp="${i}" aria-label="Apagar">×</button></span></div><p class="dim">${nl(p.texto)}</p>${p.revelada ? '<span class="tag crit" style="justify-self:start">Visível aos jogadores</span>' : ''}</div>`).join('') || '<div class="vazio">Nenhuma pista ainda.</div>'}</div>`;
-      const formP = (p, aoSalvar) => abrirModal(p ? 'Editar pista' : 'Nova pista', `<div class="campo"><label class="rotulo" for="p-t">Título</label><input type="text" id="p-t" value="${esc(p?.titulo)}"></div><div class="campo"><label class="rotulo" for="p-x">Conteúdo</label><textarea id="p-x">${esc(p?.texto)}</textarea></div><div class="campo"><label class="rotulo" for="p-i">Imagem (opcional)</label><input type="file" id="p-i" accept="image/*"></div><button class="btn" id="p-ok">Salvar</button>`, (m, fechar) => {
-        let img = p?.imagem || ''; m.querySelector('#p-i').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0], 'capa'); e.target.value = ''; if (u) img = u; };
-        m.querySelector('#p-ok').onclick = () => { const t = m.querySelector('#p-t').value.trim(); if (!t) return toast('Dê um título.'); aoSalvar({ ...(p || { id: uid8(), revelada: false }), titulo: t, texto: m.querySelector('#p-x').value, imagem: img }); fechar(); }; });
+      const sessao = +(st.mesa?.sessao || 1), abertas = E.pistas.filter(p => p.revelada && p.tipo !== 'arquivo' && !p.sessao).length;
+      corpo.innerHTML = `<div class="cab-pagina"><h2>Fichas de investigação</h2><div class="btns"><button class="btn sec" id="fim-sessao" title="As pistas reveladas nesta sessão vão para o Calendário dos jogadores">📅 Encerrar sessão ${sessao}${abertas ? ` (${abertas})` : ''}</button><button class="btn" id="nova-p">Adicionar</button></div></div><p class="dim">Pistas ficam escondidas até você revelar. Reveladas aparecem para os jogadores na aba Pistas; as do tipo Arquivo (documento, foto ou gravação) vão para a aba Arquivo.</p>
+        <div class="lista">${E.pistas.map((p, i) => `<div class="item"><div class="cab"><span class="nm">${p.tipo === 'arquivo' ? '📜 ' : ''}${p.audio ? '🎧 ' : ''}${esc(p.titulo)}${p.sessao ? ` <span class="tag">Sessão ${p.sessao}</span>` : ''}</span><span style="display:flex; gap:8px; align-items:center"><button class="btn mini ${p.revelada ? 'sec' : 'ouro'}" data-rev="${i}">${p.revelada ? 'Esconder' : 'Revelar'}</button><button class="btn mini sec" data-edp="${i}">Editar</button><button class="btn-x" data-rmp="${i}" aria-label="Apagar">×</button></span></div><p class="dim">${nl(p.texto)}</p>${p.revelada ? '<span class="tag crit" style="justify-self:start">Visível aos jogadores</span>' : ''}</div>`).join('') || '<div class="vazio">Nenhuma pista ainda.</div>'}</div>`;
+      const formP = (p, aoSalvar) => abrirModal(p ? 'Editar pista' : 'Nova pista', `<div class="campo"><label class="rotulo" for="p-t">Título</label><input type="text" id="p-t" value="${esc(p?.titulo)}"></div><div class="campo"><label class="rotulo" for="p-x">Conteúdo</label><textarea id="p-x">${esc(p?.texto)}</textarea></div><div class="campo"><label class="rotulo" for="p-tp">Tipo</label><select id="p-tp"><option value="pista" ${p?.tipo !== 'arquivo' ? 'selected' : ''}>Pista (aba Pistas e quadro da equipe)</option><option value="arquivo" ${p?.tipo === 'arquivo' ? 'selected' : ''}>Arquivo: pedaço da história (aba Arquivo)</option></select></div><div class="campo"><label class="rotulo" for="p-i">Imagem (opcional)</label><input type="file" id="p-i" accept="image/*"></div><div class="campo"><label class="rotulo" for="p-a">Áudio (opcional, até 25 MB)</label><input type="file" id="p-a" accept="audio/*"><span class="faint" id="p-a-st" style="font-size:12.5px">${p?.audio ? 'Já tem áudio. Escolha outro para trocar.' : ''}</span></div><button class="btn" id="p-ok">Salvar</button>`, (m, fechar) => {
+        let img = p?.imagem || '', audio = p?.audio || '', subindo = null; m.querySelector('#p-i').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0], 'capa'); e.target.value = ''; if (u) img = u; };
+        m.querySelector('#p-a').onchange = e => { const f = e.target.files[0]; if (!f) return; const stA = m.querySelector('#p-a-st'); stA.textContent = 'Enviando o áudio…'; subindo = enviarArquivo(f).then(u => { if (u) { audio = u; stA.textContent = 'Áudio pronto.'; } else stA.textContent = 'Não foi.'; subindo = null; }); };
+        m.querySelector('#p-ok').onclick = async () => { const t = m.querySelector('#p-t').value.trim(); if (!t) return toast('Dê um título.'); if (subindo) { m.querySelector('#p-ok').textContent = 'Esperando o áudio…'; await subindo; } aoSalvar({ ...(p || { id: uid8(), revelada: false }), titulo: t, texto: m.querySelector('#p-x').value, imagem: img, audio, tipo: m.querySelector('#p-tp').value }); fechar(); }; });
+      $('#fim-sessao').onclick = async () => { const n = +(st.mesa?.sessao || 1), l = E.pistas.filter(p => p.revelada && p.tipo !== 'arquivo' && !p.sessao);
+        if (!await confirmar(`Encerrar a sessão ${n}? ${l.length ? `As ${l.length} pista(s) reveladas nela vão para o Calendário dos jogadores.` : 'Nenhuma pista revelada nela.'} A próxima vira a sessão ${n + 1}.`, { titulo: 'Encerrar sessão', ok: 'Encerrar' })) return;
+        l.forEach(p => { p.sessao = n; }); salvarE(); publicarPistas(); await salvarMesaE({ sessao: n + 1, sessoesFim: { ...(st.mesa?.sessoesFim || {}), [n]: Date.now() } }); toast(`Sessão ${n} encerrada.`); render(); };
       $('#nova-p').onclick = () => formP(null, p => { E.pistas.push(p); salvarE(); render(); });
       $$('[data-edp]').forEach(b => b.onclick = () => formP(E.pistas[+b.dataset.edp], p => { E.pistas[+b.dataset.edp] = p; salvarE(); if (p.revelada) publicarPistas(); render(); }));
-      $$('[data-rev]').forEach(b => b.onclick = () => { const p = E.pistas[+b.dataset.rev]; p.revelada = !p.revelada; salvarE(); publicarPistas(); render(); });
+      $$('[data-rev]').forEach(b => b.onclick = () => { const p = E.pistas[+b.dataset.rev]; p.revelada = !p.revelada; if (!p.revelada) delete p.sessao; salvarE(); publicarPistas(); render(); });
       $$('[data-rmp]').forEach(b => b.onclick = () => { const p = E.pistas.splice(+b.dataset.rmp, 1)[0]; salvarE(); if (p.revelada) publicarPistas(); render(); });
     }
     if (aba === 'relatorios') {

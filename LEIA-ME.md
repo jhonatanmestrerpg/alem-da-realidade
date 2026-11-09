@@ -71,3 +71,9 @@ Para trocar por um TURN próprio (Metered com conta, Cloudflare, coturn), ponha 
 ```js
 turn: [{ urls: ['turn:seu-servidor:3478', 'turns:seu-servidor:443?transport=tcp'], username: '...', credential: '...' }],
 ```
+
+## Mesa (vindo do site do Brutal)
+
+- `mapa-mesa.js`: mapa da campanha com cenas, pinos, névoa com pincel, zoom e mapa flutuante (botão 🗺). Fica em `campanhas/<id>/publico/mesa`.
+- `mesa-extra.js`: NPCs, suspeitos, quadro da equipe com barbante, arquivo (papel, foto e áudio), calendário de sessões, roleplay com vozes, apagar rolagens e histórico completo (`#historico-<id>`).
+- O quadro da equipe grava em `campanhas/<id>/quadro/estado`, que qualquer membro pode alterar. Para isso valer no banco, rode o `seguranca.sql` de novo no SQL Editor do Supabase.
