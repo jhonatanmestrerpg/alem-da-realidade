@@ -221,6 +221,16 @@ hr.sep-at { border: 0; border-top: 1px dashed var(--linha-2); margin: 8px 0; }
 /* abas */
 .abas { display: flex; gap: 0 18px; border-bottom: 1px solid var(--linha); flex-wrap: wrap; scrollbar-width: none; }
 .abas::-webkit-scrollbar { display: none; }
+.grade-ars { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.ars-card { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding: 12px; background: var(--painel); border: 1px solid var(--linha); border-left: 3px solid var(--violeta); }
+.ars-card.ativa { border-left-color: var(--sangue-hi); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sangue-hi) 30%, transparent); }
+.ars-img { width: 96px; height: 96px; background: var(--painel-3) center/cover no-repeat; display: grid; place-items: center; font-size: 34px; border: 1px solid var(--linha-2); }
+.ars-img.mini { width: 56px; height: 56px; font-size: 22px; flex: none; }
+.ars-tx { display: grid; gap: 8px; align-content: start; min-width: 0; } .ars-tx b { font: 400 19px var(--f-disp); } .ars-tags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.ars-tx .acoes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.inv-rol { border-left: 3px solid var(--violeta); } .inv-rol .inv-corpo { display: flex; gap: 10px; align-items: flex-start; padding: 8px 12px 12px; } .inv-rol .inv-corpo > div:last-child { display: grid; gap: 6px; min-width: 0; }
+.inv-acoes { display: none; gap: 6px; } .sou-mestre .inv-acoes, .sou-mestre-card .inv-acoes { display: flex; } .sou-mestre .inv-espera, .sou-mestre-card .inv-espera { display: none; }
+.inv-rol.aceito { border-left-color: var(--fole); } .inv-rol.negado { opacity: .7; }
 .tag-oculta { color: #c9b8ff; border-color: color-mix(in srgb, #9a86f0 60%, transparent); }
 .abas-inv { justify-content: flex-start; margin-top: -8px; gap: 0 16px; } .abas-inv button { font-size: 15px !important; padding: 8px 0; }
 .abas button { background: none; border: none; padding: 10px 0; color: var(--lua-dim); font: 400 17px/1 var(--f-disp); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
@@ -875,7 +885,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261109220838';
+const BUILD = '20261109221726';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -2036,7 +2046,7 @@ ROTAS.agente = async id => {
       </div>
     </section>
 
-    <div class="abas" role="tablist">${[['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ...(sabeFeitico(F) ? [['feiticos', 'Feitiços']] : []), ...(ehBruxa(F) ? [['maldicoes', 'Maldições']] : []), ...(mecsFicha().length ? [['campanha', 'Campanha']] : []), ...(vampDe(F) ? [['vampiro', 'Vampiro']] : []), ['inventario', 'Inventário'], ['descricao', 'Descrição']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
+    <div class="abas" role="tablist">${[['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ...(sabeFeitico(F) ? [['feiticos', 'Feitiços']] : []), ...(ehBruxa(F) ? [['maldicoes', 'Maldições']] : []), ...(F.subclasse === 'Manipuladora' ? [['arsenal', 'Arsenal']] : []), ...(mecsFicha().length ? [['campanha', 'Campanha']] : []), ...(vampDe(F) ? [['vampiro', 'Vampiro']] : []), ['inventario', 'Inventário'], ['descricao', 'Descrição']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
     <section id="sec">${secao(K, C, S)}</section>
     </div>`;
     ligarFicha(K);
@@ -2085,6 +2095,15 @@ ROTAS.agente = async id => {
         <div class="acoes"><button class="btn mini" data-atacar="${i}" title="Rola acerto e dano juntos${BA.ataques > 1 ? `, ${BA.ataques} vezes` : ''}">Atacar${BA.ataques > 1 ? ` ×${BA.ataques}` : ''}</button><button class="btn sec mini" data-acerto="${i}">Acerto</button>${seletorGiro(id + '|a|' + i, P.atr, 'Atributo')}<button class="btn ouro mini" data-dano="${i}">Dano</button><label class="chk"><input type="checkbox" id="crit-${i}" data-crit="${i}" ${UI_ARMA[id + '|c|' + i] ? 'checked' : ''}> Crítico ×${E.mult}</label>${E.mx === 1 && +it.multExtra && +it.multExtra !== 1 ? `<label class="chk" title="Multiplica todos os dados de dano, inclusive os extras (crítico Brutal, dano extra, habilidade)"><input type="checkbox" data-mx="${i}" ${it.multExtraOn ? 'checked' : ''}> Dano ×${fmtMult(it.multExtra)}</label>` : ''}<label class="chk">+ dano extra <input type="text" id="extra-${i}" data-extra="${i}" value="${esc(UI_ARMA[id + '|x|' + i] ?? it.extra ?? '')}" placeholder="1d6+3" style="width:90px; padding:3px 6px"></label>${podeEditar && !it.natural && temFav(F) ? `<button class="btn sec mini ${E.fav ? 'fav-on' : ''}" data-fav="${i}" title="${E.fav ? 'Tirar a favorita' : 'Aplica sozinho tudo que vale para a Arma Favorita'}">${E.fav ? '★ Favorita' : '☆ Tornar favorita'}</button>` : ''}${podeEditar && !it.natural ? `<button class="btn sec mini" data-ed-item="${i}">Editar arma</button>${ehArma(it) ? `<button class="btn sec mini" data-mods="${i}">Melhorias e bênçãos</button>` : ''}` : ''}</div>
         <div class="res" id="res-${i}">${UI_ARMA[id + '|r|' + i] || ''}</div></div>`; }).join('')}</div>` : '<div class="vazio">Nenhuma arma no inventário.</div>'}
         <div class="caixa" style="display:grid; gap:8px"><span class="rotulo">Rolagem livre</span><div style="display:flex; gap:8px"><input type="text" id="livre" placeholder="2d6+3, 3d20m+4 (m = fica o maior) ou 3#2d10+6 (# = rola 3 vezes e soma)"><button class="btn" id="rolar-livre">Rolar</button></div><div class="res" id="res-livre"></div></div></div>`;
+    }
+    if (aba === 'arsenal') {
+      const L = F.arsenal || [], cap = Math.max(0, atrEf(F).inteligencia || 0), nv = +F.nivel || 1, lim = nv >= 7 ? 2 : 1, ativos = L.filter(x => x.invocada).length;
+      return `<div style="display:grid; gap:14px"><div class="cab-pagina"><div><h2 style="margin:0">Arsenal</h2><p class="dim" style="margin:4px 0 0; max-width:70ch">Criaturas absorvidas com Absorção de Maldição. Cabem ${cap} (seu Intelecto). Usar manda o pedido ao mestre; se ele aceitar, a criatura entra no combate e você paga 5 PS. ${nv >= 7 ? 'Até 2 em combate ao mesmo tempo (Enxame de Maldições).' : 'Uma em combate por vez.'}</p></div>${podeEditar ? `<button class="btn" id="ars-add" ${L.length >= cap ? 'disabled title="Arsenal cheio"' : ''}>Absorver criatura</button>` : ''}</div>
+        <span class="rotulo">${L.length}/${cap} no arsenal · ${ativos}/${lim} em combate</span>
+        ${nv < 3 ? '<div class="vazio">Absorção de Maldição chega no nível 3.</div>' : ''}
+        <div class="grade-ars">${L.map((x, i) => `<article class="ars-card ${x.invocada ? 'ativa' : ''}"><div class="ars-img" style="${x.imagem ? `background-image:url('${esc(x.imagem)}')` : ''}">${x.imagem ? '' : '🐾'}</div><div class="ars-tx"><b>${esc(x.nome)}</b>
+          <div class="ars-tags">${elTag(x.elemento)}<span class="tag">Nv ${esc(x.nivel)}</span><span class="tag">PV ${esc(x.pv)}</span>${x.defesa ? `<span class="tag">Defesa ${esc(x.defesa)}</span>` : ''}${x.invocada ? '<span class="tag crit">Em combate</span>' : x.pedido ? '<span class="tag">Esperando o mestre</span>' : ''}</div>
+          <div class="acoes">${podeEditar ? (x.invocada ? `<button class="btn sec mini" data-ars-dis="${i}">Dispensar</button>` : `<button class="btn ouro mini" data-ars-usar="${i}" ${x.pedido ? 'disabled' : ''}>Usar</button>`) : ''}<a class="btn sec mini" href="#ameaca-${esc(x.ref)}" style="text-decoration:none">Bestiário</a>${podeEditar ? `<button class="btn-x" data-ars-rm="${i}" aria-label="Soltar ${esc(x.nome)}" title="Soltar do arsenal">×</button>` : ''}</div></div></article>`).join('') || '<div class="vazio">Nenhuma criatura absorvida ainda.</div>'}</div></div>`;
     }
     if (aba === 'habilidades') {
       const habCl = (S?.habilidades || []);
@@ -2449,6 +2468,19 @@ ROTAS.agente = async id => {
     $$('[data-mx]').forEach(c => c.onchange = () => { const it = F.equipamentos[+c.dataset.mx]; it.multExtraOn = c.checked; salvar({ equipamentos: F.equipamentos }); });
     $$('[data-auto-hab]').forEach(b => b.onclick = () => formAuto(b.dataset.autoHab));
     $$('[data-usar-hab]').forEach(b => b.onclick = () => usarHab(b.dataset.usarHab));
+    // Arsenal da Manipuladora: absorver, soltar, pedir para invocar (o mestre aceita ou nega)
+    $('#ars-add')?.addEventListener('click', async () => { const hb = (await homebrewVisivel('ameaca')).map(x => ({ ...x, id: 'hb' + x.id }));
+      seletor('Absorver criatura', [...CRI.filter(a => !a.npc), ...hb], a => `<b>${esc(a.nome)}</b> ${elTag(a.elemento)} <span class="tag">Nv ${esc(a.nivel)}</span> <span class="tag">PV ${esc(a.ficha?.pv)}</span>`, a => {
+        const L = [...(F.arsenal || [])], cap = Math.max(0, atrEf(F).inteligencia || 0); if (L.length >= cap) return toast(`Arsenal cheio: cabem ${cap} (Intelecto).`);
+        L.push({ id: uid8(), ref: String(a.id), nome: a.nome, imagem: a.imagem || '', nivel: a.nivel, elemento: a.elemento || '', pv: a.ficha?.pv || 1, defesa: a.ficha?.defesa || '' }); F.arsenal = L; salvar({ arsenal: L }); toast(`${a.nome} entrou no arsenal.`); render(); }); });
+    $$('[data-ars-rm]').forEach(b => b.onclick = async () => { const x = F.arsenal[+b.dataset.arsRm]; if (!await confirmar(`Soltar ${esc(x.nome)} do arsenal? Ela some para sempre.`, { titulo: 'Soltar criatura', ok: 'Soltar' })) return; F.arsenal = F.arsenal.filter((_, j) => j !== +b.dataset.arsRm); salvar({ arsenal: F.arsenal }); render(); });
+    $$('[data-ars-dis]').forEach(b => b.onclick = () => { F.arsenal[+b.dataset.arsDis] = { ...F.arsenal[+b.dataset.arsDis], invocada: false }; salvar({ arsenal: F.arsenal }); render(); });
+    $$('[data-ars-usar]').forEach(b => b.onclick = async () => { const i = +b.dataset.arsUsar, x = F.arsenal[i], lim = +F.nivel >= 7 ? 2 : 1;
+      if (!(F.campanhas || []).length) return toast('Coloque o agente numa campanha para invocar no combate.');
+      if (F.arsenal.filter(y => y.invocada).length >= lim) return toast(lim > 1 ? 'Já tem 2 criaturas em combate.' : 'Já tem uma criatura em combate. Dispense antes.');
+      const ps = { ...calc(F).max, ...(F.atual || {}) }.ps; if (ps < 5) return toast('Sem PS: invocar custa 5.');
+      for (const c of F.campanhas) { try { await db.collection(`campanhas/${c}/rolagens`).add({ uid: ME, tipo: 'invocacao', status: 'pendente', autor: F.nome || 'Agente', foto: fotoEf(F) || '', ficha: F.id || id, item: x.id, criatura: { ref: x.ref, nome: x.nome, imagem: x.imagem || '', nivel: x.nivel, elemento: x.elemento || '', pv: x.pv }, rotulo: `Invocar ${x.nome}`, detalhe: '', total: '', t: Date.now() }); } catch (e) { toast('Não deu para pedir: ' + (e.message || e.code)); return; } }
+      F.arsenal[i] = { ...x, pedido: Date.now() }; salvar({ arsenal: F.arsenal }); toast(`Pedido enviado: o mestre decide se ${x.nome} entra no combate.`); render(); });
     // Arma Favorita (Técnico Inventor / Vampiro Encouraçado)
     $$('[data-fav]').forEach(b => b.onclick = e => { e.preventDefault(); e.stopPropagation(); const it = F.equipamentos[+b.dataset.fav]; if (!it) return;
       const novo = ehFavorita(F, it) ? '' : it.nome; F.armaFavorita = novo; const up = { armaFavorita: novo };
@@ -3637,6 +3669,8 @@ function montarFeed(el, cfg) {
   RPX.atualizar(st.chat, st.mesa);
   el.querySelector('.feed-lista')?.addEventListener('click', e => { const b = e.target.closest('[data-del-rol]'); if (b && st.camp?.mestre === ME) apagarRolagem(id, b.dataset.delRol); });
   el.querySelector('[data-limpar-hist]')?.addEventListener('click', () => limparHistorico(id));
+  el.classList.toggle('sou-mestre', st.camp?.mestre === ME);
+  if (el.id === 'feed-j') el.querySelector('.feed-lista')?.addEventListener('click', e => { if (e.target.closest('[data-inv-ok], [data-inv-nao]')) { toast('Responda pelo Escudo do mestre.'); location.hash = 'escudo-' + id; } });
   const form = el.querySelector('.chat-form');
   form?.addEventListener('submit', async e => { e.preventDefault(); const inp = form.querySelector('.chat-txt'), tx = inp.value.trim(); if (!tx) return;
     const msg = { uid: ME, ...cfg.autor(), t: Date.now() }, mr = /^\/r(?:olar)?\s+(.+)$/i.exec(tx);
@@ -3663,7 +3697,11 @@ function atualizarFeed(el, cfg, tipo) {
 const marcarPuxador = (st, id) => { const p = app.querySelector('.puxador.esq'); if (!p) return; const n = (FEED_ABA[id] || 'rol') === 'chat' && LADO === 'esq' ? 0 : novasChat(st, id); p.dataset.n = n || ''; };
 // detalhe de rolagem vem do banco: só deixa passar as marcas que o próprio site gera
 const htmlSeguro = h => String(h ?? '').replace(/<(\/?)([a-z0-9]+)([^>]*)>/gi, (m, f, t, at) => { t = t.toLowerCase(); if (!['span', 'b', 'i', 'br'].includes(t)) return ''; const c = /class="([\w -]*)"/.exec(at); return `<${f}${t}${!f && c ? ` class="${c[1]}"` : ''}>`; });
-const rolHtml = r => { const tit = r.titulo || String(r.rotulo || '').replace(/^(Acerto|Dano) · /, '');
+const invHtml = r => { const c = r.criatura || {}, st = r.status || 'pendente';
+  return `<div class="rol2 inv-rol ${st}"><div class="rc-autor">${esc(r.autor)}</div><div class="inv-corpo"><div class="ars-img mini" style="${c.imagem ? `background-image:url('${esc(c.imagem)}')` : ''}">${c.imagem ? '' : '🐾'}</div>
+    <div><b>${esc(r.autor)} quer colocar ${esc(c.nome || 'uma criatura')} no combate</b><div class="ars-tags">${elTag(c.elemento)}<span class="tag">Nv ${esc(c.nivel)}</span><span class="tag">PV ${esc(c.pv)}</span></div>
+    ${st === 'pendente' ? `<div class="inv-acoes"><button class="btn mini ouro" data-inv-ok="${esc(r.id)}">Aceitar</button><button class="btn mini sec" data-inv-nao="${esc(r.id)}">Negar</button></div><span class="faint inv-espera">Esperando o mestre…</span>` : `<span class="tag ${st === 'aceito' ? 'crit' : ''}">${st === 'aceito' ? '✔ Aceito: entrou no combate' : '✖ Negado pelo mestre'}</span>`}</div></div></div>`; };
+const rolHtml = r => { if (r.tipo === 'invocacao') return invHtml(r); const tit = r.titulo || String(r.rotulo || '').replace(/^(Acerto|Dano) · /, '');
   const tipo = r.tipo || (/^Acerto · /.test(r.rotulo || '') ? 'acerto' : /^Dano · /.test(r.rotulo || '') ? 'dano' : '');
   const aviso = !tipo && (r.total === '' || r.total == null);
   const corpo = aviso ? `<div class="rc-aviso">${htmlSeguro(r.detalhe)}</div>` : tipo === 'ataque'
@@ -4265,7 +4303,28 @@ ROTAS.escudo = async id => {
     if (aba === 'mapa') { desenharMapa(A, () => st.mesa || {}, { mestre: true, salvarC: salvarMesaE, DETS, ...opcoesMapa(id, () => st.quadro || {}, [], true, 'Mestre') }); return true; }
     if (aba === 'npcs') { desenharNpcs(A, () => st.mesa || {}, { mestre: true, salvarC: salvarMesaE }); return true; }
     return false; };
-  function desenharFeed(tipo) { if (!st) return; atualizarFeed($('#feed'), cfgFeedE, tipo); }
+  function desenharFeed(tipo) { if (!st) return; atualizarFeed($('#feed'), cfgFeedE, tipo); $('#feed')?.classList.add('sou-mestre'); if (tipo === 'rolagens' || !tipo) avisarInvocacoes(); }
+  // pedidos de invocação (Arsenal da Manipuladora): aparece na hora para o mestre aceitar ou negar
+  const INV_VISTO = new Set();
+  const decidirInvocacao = async (rid, ok) => { const r = (st.rolagens || []).find(x => x.id === rid); if (!r || r.status && r.status !== 'pendente') return;
+    try {
+      if (ok) { const c = r.criatura || {}, base = CRI.find(k => String(k.id) === String(c.ref)), ficha = base?.ficha || { pv: c.pv }, n = E.combate.lista.filter(x => x.ref === c.ref).length;
+        E.combate.lista.push({ tipo: 'ameaca', ref: c.ref, nome: `${c.nome}${n ? ' ' + (n + 1) : ''} (de ${r.autor})`, elemento: c.elemento || '', imagem: c.imagem || '', nivel: c.nivel, pv: +c.pv || ficha.pv || 1, pvMax: +c.pv || ficha.pv || 1, ficha, ini: '', aliado: true, invocador: r.ficha });
+        salvarE(); publicarCombate();
+        const fs = await db.doc('fichas/' + r.ficha).get(); if (fs.exists) { const f = { id: r.ficha, ...fs.data() }, atual = { ...calc(f).max, ...(f.atual || {}) }; atual.ps = Math.max(0, (+atual.ps || 0) - 5);
+          await db.doc('fichas/' + r.ficha).update({ atual, arsenal: (f.arsenal || []).map(x => x.id === r.item ? { ...x, invocada: true, pedido: null } : x) }); } }
+      else { const fs = await db.doc('fichas/' + r.ficha).get(); if (fs.exists) await db.doc('fichas/' + r.ficha).update({ arsenal: (fs.data().arsenal || []).map(x => x.id === r.item ? { ...x, pedido: null } : x) }); }
+      await db.doc(`campanhas/${id}/rolagens/${rid}`).update({ status: ok ? 'aceito' : 'negado' });
+      toast(ok ? `${r.criatura?.nome} entrou no combate. ${r.autor} pagou 5 PS.` : 'Pedido negado.'); if (ok && aba === 'combate') render();
+    } catch (e) { toast('Não deu: ' + (e.message || e.code)); } };
+  function avisarInvocacoes() {
+    const p = (st?.rolagens || []).find(r => r.tipo === 'invocacao' && (r.status || 'pendente') === 'pendente' && !INV_VISTO.has(r.id) && Date.now() - r.t < 30 * 60000);
+    if (!p || $('#camada').innerHTML) return; INV_VISTO.add(p.id);
+    abrirModal('Pedido de invocação', `${invHtml(p).replace('class="rol2', 'class="rol2 sou-mestre-card')}<p class="dim" style="margin:0">Aceitar coloca a criatura no combate como aliada e desconta 5 PS de ${esc(p.autor)}.</p>`, (m, fechar) => {
+      m.querySelector('[data-inv-ok]').onclick = () => { fechar(); decidirInvocacao(p.id, true); };
+      m.querySelector('[data-inv-nao]').onclick = () => { fechar(); decidirInvocacao(p.id, false); }; });
+  }
+  $('#feed').addEventListener('click', e => { const ok = e.target.closest('[data-inv-ok]'), nao = e.target.closest('[data-inv-nao]'); if (ok) decidirInvocacao(ok.dataset.invOk, true); if (nao) decidirInvocacao(nao.dataset.invNao, false); });
   st = ouvirCampanha(id, (s, tipo) => { desenharFeed(tipo); if (tipo === 'quadro' && aba === 'mapa') { desenharVivaE(); return; } if (tipo === 'chat' || tipo === 'rolagens' || tipo === 'quadro') return;
     if (aba === 'mapa' || aba === 'npcs') { if (tipo === 'mesa') desenharVivaE(); return; }
     if (tipo === 'mesa' && aba !== 'investigacao') return;
