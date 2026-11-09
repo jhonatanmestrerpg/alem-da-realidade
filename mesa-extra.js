@@ -59,6 +59,23 @@ window.mapaExtra = (camp, getQ, refazer) => {
   return opcoesMapa(camp, getQ, MAPA_MEUS.ids || [], false, MAPA_MEUS.nome || 'Alguém');
 };
 
+/* ---------- imagem grande: clica na foto de NPC, suspeito ou ameaça e ela abre na tela inteira ---------- */
+function verImagem(url, titulo = '', sub = '') {
+  if (!url) return; document.querySelector('.zoom-img')?.remove();
+  const el = document.createElement('div'); el.className = 'zoom-img'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', titulo || 'Imagem');
+  el.innerHTML = `<figure><img src="${esc(url)}" alt="${esc(titulo)}">${titulo || sub ? `<figcaption><b>${esc(titulo)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</figcaption>` : ''}</figure><button type="button" class="zoom-x" aria-label="Fechar">✕</button>`;
+  const fechar = () => { el.remove(); document.removeEventListener('keydown', tecla, true); };
+  const tecla = e => { if (e.key === 'Escape') { e.stopPropagation(); fechar(); } };
+  el.addEventListener('click', e => { if (!e.target.closest('img')) fechar(); });
+  document.addEventListener('keydown', tecla, true); document.body.appendChild(el); el.querySelector('.zoom-x').focus();
+}
+document.addEventListener('click', e => {
+  const z = e.target.closest('[data-zoom-img]'); if (!z) return;
+  if (z.closest('#escudo .ini-card')) return; // no Escudo o clique no card do combate seleciona
+  e.preventDefault(); e.stopPropagation(); verImagem(z.dataset.zoomImg, z.dataset.zoomTit || '', z.dataset.zoomSub || '');
+}, true);
+document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[data-zoom-img]')) { e.preventDefault(); e.target.click(); } });
+
 /* ---------- pistas e arquivo: papéis no mural ---------- */
 const idPista = p => p.id || 'p' + [...String(p.titulo || '') + String(p.texto || '')].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
 const papelPista = p => `<div class="pista">${p.titulo ? `<b>${esc(p.titulo)}</b>` : ''}${p.imagem ? `<img src="${esc(p.imagem)}" alt="" loading="lazy">` : ''}${p.texto ? `<p>${nl(p.texto)}</p>` : ''}${p.audio ? `<audio controls preload="none" src="${esc(p.audio)}"></audio>` : ''}</div>`;
@@ -71,7 +88,7 @@ function desenharNpcs(A, getC, { mestre, salvarC }) {
   const C = getC() || {}, L = (C.npcs || []).slice().sort((a, b) => (b.t || 0) - (a.t || 0));
   A.innerHTML = `<div class="caixa bloco"><div class="btns" style="justify-content:space-between;align-items:center"><h3>🎭 NPCs</h3>${mestre ? '<button class="btn mini" data-npc="novo">+ NPC</button>' : ''}</div>
     <p class="tag" style="margin:0; white-space:normal">${mestre ? 'Poste aqui quem for aparecendo. "Suspeito" manda a pessoa para a aba Suspeitos e para o quadro da equipe.' : 'Quem já apareceu na história.'}</p>
-    ${L.length ? `<div class="npc-grade">${L.map(n => `<div class="npc-card ${n.suspeito ? 'susp' : ''}"><span class="foto-s p" style="${n.foto ? `background-image:url('${esc(n.foto)}')` : ''}">${n.foto ? '' : esc(iniciais(n.nome))}</span>
+    ${L.length ? `<div class="npc-grade">${L.map(n => `<div class="npc-card ${n.suspeito ? 'susp' : ''}"><span class="foto-s p" ${n.foto ? `data-zoom-img="${esc(n.foto)}" data-zoom-tit="${esc(n.nome)}" data-zoom-sub="${esc(n.papel || '')}" role="button" tabindex="0" title="Ver maior"` : ''} style="${n.foto ? `background-image:url('${esc(n.foto)}')` : ''}">${n.foto ? '' : esc(iniciais(n.nome))}</span>
       <div class="npc-tx"><b>${esc(n.nome)}</b>${n.papel ? `<span class="tag">${esc(n.papel)}</span>` : ''}${n.suspeito ? '<span class="tag tag-sus">Suspeito</span>' : ''}${n.txt ? `<p>${esc(n.txt)}</p>` : ''}
       ${mestre ? `<div class="btns"><button class="btn mini ${n.suspeito ? 'sec' : 'perigo'}" data-npc-s="${esc(n.id)}">${n.suspeito ? 'Tirar dos suspeitos' : '🔎 Suspeito'}</button><button class="btn mini sec" data-npc-e="${esc(n.id)}">Editar</button><button class="btn mini sec" data-npc-x="${esc(n.id)}" aria-label="Tirar ${esc(n.nome)}">✕</button></div>` : ''}</div></div>`).join('')}</div>`
       : '<div class="vazio">Ninguém apareceu ainda.</div>'}</div>`;
@@ -101,7 +118,7 @@ function desenharNpcs(A, getC, { mestre, salvarC }) {
 /* ---------- suspeitos: a equipe inocenta e volta atrás (vale para todos da mesa) ---------- */
 const suspeitosDe = C => ((C || {}).npcs || []).filter(n => n.suspeito);
 const inocentado = (s, Q) => !!(Q?.inoc && Q.inoc[s.id]);
-const cardSusp = (s, Q, acao) => `<div class="suspeito ${inocentado(s, Q) ? 'inocente' : ''} ${s.foto ? 'com-foto' : ''}">${s.foto ? `<span class="foto-s p" style="background-image:url('${esc(s.foto)}')"></span>` : ''}<b>${esc(s.nome)}</b><span class="tg">${esc(s.papel || 'NPC')}</span><p>${esc(s.txt || '')}</p>${acao}</div>`;
+const cardSusp = (s, Q, acao) => `<div class="suspeito ${inocentado(s, Q) ? 'inocente' : ''} ${s.foto ? 'com-foto' : ''}">${s.foto ? `<span class="foto-s p" data-zoom-img="${esc(s.foto)}" data-zoom-tit="${esc(s.nome)}" data-zoom-sub="${esc(s.papel || '')}" role="button" tabindex="0" title="Ver maior" style="background-image:url('${esc(s.foto)}')"></span>` : ''}<b>${esc(s.nome)}</b><span class="tg">${esc(s.papel || 'NPC')}</span><p>${esc(s.txt || '')}</p>${acao}</div>`;
 function desenharSuspeitos(A, getC, getQ, id) {
   const C = getC(), Q = getQ() || {}, L = suspeitosDe(C), sus = L.filter(x => !inocentado(x, Q)), ino = L.filter(x => inocentado(x, Q));
   A.innerHTML = `<div class="caixa bloco"><h3>🕵️ Suspeitos</h3><p class="tag" style="white-space:normal">Quem a equipe ainda acha que pode estar por trás de tudo. Inocentar vale para todos da mesa.</p>
@@ -167,7 +184,7 @@ function montarQuadro(el, id, getC, getQ, getPistas) {
   };
   const abrirItem = k => {
     const Q = getQ() || {}, t = k[0], iid = k.slice(2), reabrir = () => abrirItem(k), x = achar(k);
-    if (t === 's') { if (!x) return; abrirModal(x.nome, `<div class="btns" style="align-items:center"><span class="foto-s g" style="${x.foto ? `background-image:url('${esc(x.foto)}')` : ''}">${x.foto ? '' : esc(iniciais(x.nome))}</span><div><span class="tag">${esc(x.papel || 'NPC')}</span>${inocentado(x, Q) ? ' <span class="tag" style="color:var(--fole)">Inocentado</span>' : ''}</div></div><p>${nl(x.txt || '')}</p>${blocoFios(k)}`, m => ligarCortes(m, k, reabrir)); return; }
+    if (t === 's') { if (!x) return; abrirModal(x.nome, `<div class="btns" style="align-items:center"><span class="foto-s g" ${x.foto ? `data-zoom-img="${esc(x.foto)}" data-zoom-tit="${esc(x.nome)}" role="button" tabindex="0" title="Ver maior"` : ''} style="${x.foto ? `background-image:url('${esc(x.foto)}')` : ''}">${x.foto ? '' : esc(iniciais(x.nome))}</span><div><span class="tag">${esc(x.papel || 'NPC')}</span>${inocentado(x, Q) ? ' <span class="tag" style="color:var(--fole)">Inocentado</span>' : ''}</div></div><p>${nl(x.txt || '')}</p>${blocoFios(k)}`, m => ligarCortes(m, k, reabrir)); return; }
     if (t === 'p') { if (!x) return; abrirModal(x.sessao ? `Pista da sessão ${x.sessao}` : 'Pista desta sessão', `<div class="mural">${papelPista(x)}</div>${blocoFios(k)}`, m => ligarCortes(m, k, reabrir)); return; }
     const atual = Q.notas?.[iid]?.txt || '';
     abrirModal('Anotação', `<textarea id="nt-t" style="min-height:120px">${esc(atual)}</textarea><div class="btns"><button class="btn" id="nt-ok">Salvar</button><button class="btn perigo" id="nt-del">Arrancar do quadro</button></div>${blocoFios(k)}`, (m, fechar) => {
@@ -565,6 +582,14 @@ const RPX = (() => {
 .feed .rp-msg { grid-template-columns: 40px minmax(0, 1fr); gap: 8px; } .feed .rp-retrato .ms-av { width: 40px; height: 40px; } .feed .rp-fala { max-width: 100%; } .feed .ms-rp-lista { padding: 14px 10px; }
 .feed-abas button { padding: 12px 4px; }
 .mapa-caixa [hidden], .ms-rp [hidden], .mapa-pop [hidden], .mapa-zoom-lista[hidden], .rp-previa[hidden] { display: none !important; }
+[data-zoom-img] { cursor: zoom-in; }
+.zoom-img { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 24px; background: rgba(5,6,10,.9); backdrop-filter: blur(4px); animation: zoomEntra .18s ease-out; cursor: zoom-out; }
+@keyframes zoomEntra { from { opacity: 0; } }
+.zoom-img figure { margin: 0; display: grid; gap: 10px; justify-items: center; max-width: min(92vw, 1100px); }
+.zoom-img img { width: min(92vw, 1000px); height: min(80vh, 1000px); object-fit: contain; filter: drop-shadow(0 20px 50px rgba(0,0,0,.75)); cursor: default; animation: zoomImg .22s ease-out; }
+@keyframes zoomImg { from { transform: scale(.92); } }
+.zoom-img figcaption { display: grid; gap: 2px; text-align: center; } .zoom-img figcaption b { font: 400 26px var(--f-disp); color: var(--lua); } .zoom-img figcaption span { font-size: 13px; color: var(--lua-dim); }
+.zoom-x { position: fixed; top: 14px; right: 14px; width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--linha-2); background: var(--painel-2); color: var(--lua); font-size: 18px; cursor: pointer; }
 .sessao-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .ms-b { background: var(--tabua); border: 2px solid #000; padding: 6px 10px; border-radius: 2px 10px 10px 10px; max-width: 100%; min-width: 0; position: relative; }
 .ms-msg.meu .ms-b { background: color-mix(in srgb, var(--ambar) 26%, var(--tabua)); border-radius: 10px 2px 10px 10px; }
