@@ -63,7 +63,10 @@ window.mapaExtra = (camp, getQ, refazer) => {
 function verImagem(url, titulo = '', sub = '') {
   if (!url) return; document.querySelector('.zoom-img')?.remove();
   const el = document.createElement('div'); el.className = 'zoom-img'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', titulo || 'Imagem');
-  el.innerHTML = `<figure><img src="${esc(url)}" alt="${esc(titulo)}">${titulo || sub ? `<figcaption><b>${esc(titulo)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</figcaption>` : ''}</figure><button type="button" class="zoom-x" aria-label="Fechar">✕</button>`;
+  el.innerHTML = `<figure class="moldura"><div class="mold-quadro"><i class="mc a"></i><i class="mc b"></i><i class="mc c"></i><i class="mc d"></i><img src="${esc(url)}" alt="${esc(titulo)}"></div>${titulo || sub ? `<figcaption class="placa">${titulo ? `<b>${esc(titulo)}</b>` : ''}${sub ? `<span>${esc(sub)}</span>` : ''}</figcaption>` : ''}</figure><button type="button" class="zoom-x" aria-label="Fechar">✕</button>`;
+  // a moldura abraça a imagem: calcula o tamanho mantendo a proporção (aumenta retrato pequeno também)
+  const img = el.querySelector('img'), caber = () => { const nw = img.naturalWidth || 1, nh = img.naturalHeight || 1, k = Math.min(innerWidth * 0.86 / nw, (innerHeight - (titulo || sub ? 190 : 110)) / nh, 4); img.style.width = Math.round(nw * k) + 'px'; img.style.height = Math.round(nh * k) + 'px'; };
+  if (img.complete) caber(); else img.onload = caber; addEventListener('resize', caber); const tirar = el.remove.bind(el); el.remove = () => { removeEventListener('resize', caber); tirar(); };
   const fechar = () => { el.remove(); document.removeEventListener('keydown', tecla, true); };
   const tecla = e => { if (e.key === 'Escape') { e.stopPropagation(); fechar(); } };
   el.addEventListener('click', e => { if (!e.target.closest('img')) fechar(); });
@@ -585,10 +588,24 @@ const RPX = (() => {
 [data-zoom-img] { cursor: zoom-in; }
 .zoom-img { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 24px; background: rgba(5,6,10,.9); backdrop-filter: blur(4px); animation: zoomEntra .18s ease-out; cursor: zoom-out; }
 @keyframes zoomEntra { from { opacity: 0; } }
-.zoom-img figure { margin: 0; display: grid; gap: 10px; justify-items: center; max-width: min(92vw, 1100px); }
-.zoom-img img { width: min(92vw, 1000px); height: min(80vh, 1000px); object-fit: contain; filter: drop-shadow(0 20px 50px rgba(0,0,0,.75)); cursor: default; animation: zoomImg .22s ease-out; }
-@keyframes zoomImg { from { transform: scale(.92); } }
-.zoom-img figcaption { display: grid; gap: 2px; text-align: center; } .zoom-img figcaption b { font: 400 26px var(--f-disp); color: var(--lua); } .zoom-img figcaption span { font-size: 13px; color: var(--lua-dim); }
+.zoom-img figure { margin: 0; display: grid; justify-items: center; animation: zoomImg .25s ease-out; cursor: default; }
+@keyframes zoomImg { from { transform: scale(.94); opacity: 0; } }
+.mold-quadro { position: relative; padding: 14px; background: linear-gradient(145deg, #3a2c17, #15100a 45%, #2b2012); border: 2px solid #c8a35a;
+  box-shadow: 0 0 0 3px #0b0d14, 0 0 0 5px #7d6230, 0 0 0 6px #0b0d14, inset 0 0 0 1px rgba(255,226,160,.35), inset 0 0 18px rgba(0,0,0,.8), 0 30px 80px rgba(0,0,0,.85), 0 0 60px rgba(200,163,90,.12); }
+.mold-quadro img { display: block; max-width: 86vw; max-height: 76vh; border: 1px solid rgba(232,200,130,.55); box-shadow: 0 0 0 3px #0b0d14, inset 0 0 30px rgba(0,0,0,.5); }
+.mc { position: absolute; width: 22px; height: 22px; border: 2px solid #e3c47f; pointer-events: none; }
+.mc::after { content: ''; position: absolute; width: 7px; height: 7px; background: #e3c47f; transform: rotate(45deg); box-shadow: 0 0 6px rgba(227,196,127,.8); }
+.mc.a { top: -7px; left: -7px; border-right: 0; border-bottom: 0; } .mc.a::after { top: -5px; left: -5px; }
+.mc.b { top: -7px; right: -7px; border-left: 0; border-bottom: 0; } .mc.b::after { top: -5px; right: -5px; }
+.mc.c { bottom: -7px; left: -7px; border-right: 0; border-top: 0; } .mc.c::after { bottom: -5px; left: -5px; }
+.mc.d { bottom: -7px; right: -7px; border-left: 0; border-top: 0; } .mc.d::after { bottom: -5px; right: -5px; }
+.placa { position: relative; z-index: 2; margin-top: -20px; display: grid; justify-items: center; gap: 2px; min-width: 240px; max-width: 86vw; padding: 9px 46px 10px; text-align: center;
+  background: linear-gradient(180deg, #f1dba0, #c9a24f 48%, #8f6c2b); color: #1c1307; border: 1px solid #fff0c4;
+  clip-path: polygon(16px 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 16px 100%, 0 50%);
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,.7)); }
+.placa::before { content: ''; position: absolute; inset: 4px 12px; border-top: 1px solid rgba(60,38,10,.45); border-bottom: 1px solid rgba(60,38,10,.45); pointer-events: none; }
+.placa b { font: 400 clamp(24px, 3.2vw, 34px)/1.05 var(--f-disp); letter-spacing: .04em; text-shadow: 0 1px 0 rgba(255,245,210,.7); overflow-wrap: anywhere; }
+.placa span { font: 700 11.5px/1.2 var(--f-body); letter-spacing: .2em; text-transform: uppercase; color: #3d2a0e; }
 .zoom-x { position: fixed; top: 14px; right: 14px; width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--linha-2); background: var(--painel-2); color: var(--lua); font-size: 18px; cursor: pointer; }
 .sessao-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .ms-b { background: var(--tabua); border: 2px solid #000; padding: 6px 10px; border-radius: 2px 10px 10px 10px; max-width: 100%; min-width: 0; position: relative; }
