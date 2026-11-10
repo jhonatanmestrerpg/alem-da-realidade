@@ -116,7 +116,7 @@
           <span class="seg"><button type="button" data-modo="mover" class="${ui.modo === 'mover' ? 'aqui' : ''}">✋ Pinos</button><button type="button" data-modo="revelar" class="${ui.modo === 'revelar' ? 'aqui' : ''}">🔦 Revelar</button><button type="button" data-modo="cobrir" class="${ui.modo === 'cobrir' ? 'aqui' : ''}">🌫 Cobrir</button></span>
           <label class="pincel" ${ui.modo === 'mover' ? 'hidden' : ''}>Pincel <input type="range" min="0" max="5" step="1" value="${ui.pincel}" data-pincel></label>
           <span class="btns">${cena.nevoa?.on ? '<button class="btn mini sec" data-m="tudo1">Revelar tudo</button><button class="btn mini sec" data-m="tudo0">Cobrir tudo</button><button class="btn mini sec" data-m="semnevoa">Tirar névoa</button>' : '<button class="btn mini" data-m="comnevoa">🌫 Ligar névoa</button>'}
-          <button class="btn mini sec" data-m="sobs">+ ${T.quem}</button><button class="btn mini sec" data-m="npc">+ NPC</button><button class="btn mini sec" data-m="ass">+ ${T.ass}</button><button class="btn mini sec" data-m="novo">+ Pino</button></span></div>` : ''}
+          <button class="btn mini sec" data-m="sobs">+ ${T.quem}</button><button class="btn mini sec" data-m="npc">+ NPC</button><button class="btn mini sec" data-m="ass" title="Coloca no mapa as ameaças que estão no combate">+ ${T.ass}</button><button class="btn mini sec" data-m="novo">+ Pino</button></span></div>` : ''}
       ${cena?.img ? `<div class="mapa-vista"><div class="mapa-palco ${mestre ? 'modo-' + ui.modo : ''}" data-cena="${esc(cena.id)}" data-img="${esc(cena.img)}"><img src="${esc(cena.img)}" alt="${esc(cena.nome)}" draggable="false"><canvas class="nevoa ${mestre ? '' : 'jog'}"></canvas><div class="pinos">${pinosVisiveis(cena, mestre)}</div></div>
         <div class="mapa-zoom" role="toolbar" aria-label="Zoom do mapa"><button type="button" data-z="mais" title="Aproximar" aria-label="Aproximar">＋</button><span data-z-n>1×</span><button type="button" data-z="menos" title="Afastar" aria-label="Afastar">－</button><button type="button" data-z="foco" title="Foco: toque num ponto do mapa para aproximar ali" aria-label="Foco">🎯</button><button type="button" data-z="pinos" title="Focar num pino" aria-label="Focar num pino">📍</button><button type="button" data-z="reset" title="Ver o mapa inteiro" aria-label="Ver o mapa inteiro">⤢</button></div>
         <div class="mapa-zoom-lista" hidden></div></div>
@@ -188,10 +188,18 @@
       });
     });
     A.querySelector('[data-m="ass"]')?.addEventListener('click', async () => {
-      const l = pinosAt(); if (l.some(p => p.assassino)) return toast('A Ameaça já tem pino nesta cena.');
+      // pega na hora as ameaças que estão no combate (com foto e nome) e põe no mapa as que ainda não têm pino
+      const noCombate = (typeof opts.combate === 'function' ? opts.combate() : []).filter(x => x && x.tipo !== 'agente' && x.nome);
+      if (noCombate.length) {
+        const l = pinosAt(), ja = new Set(l.filter(p => p.combate).map(p => p.combate)), novas = noCombate.filter(x => !ja.has(x.nome));
+        if (!novas.length) return toast('Todas as ameaças do combate já estão nesta cena.');
+        novas.forEach((x, i) => l.push({ id: novoId('p'), combate: x.nome, nome: x.nome, ic: x.tipo === 'npc' ? '🎭' : '🔪', cor: x.tipo === 'npc' ? '#9a86f0' : '#c4000d', foto: x.imagem || '', x: Math.min(90, 30 + (i % 6) * 8), y: 20 + Math.floor(i / 6) * 10 }));
+        await salvarPinos(l); refazer(); toast(novas.length > 1 ? `${novas.length} ameaças do combate no mapa. Arraste para o lugar.` : `${novas[0].nome} no mapa. Arraste para o lugar.`); return;
+      }
+      const l = pinosAt(); if (l.some(p => p.assassino)) return toast('Nenhuma ameaça no combate, e o pino genérico de Ameaça já está nesta cena.');
       const nome = E?.nome || T.ass;
       l.push({ id: novoId('p'), assassino: true, nome, ic: '🔪', cor: '#8e0010', foto: E?.foto || '', oculto: true, x: 50, y: 12 });
-      await salvarPinos(l); refazer(); toast('Pino criado escondido. Clique nele para mostrar à mesa.'); });
+      await salvarPinos(l); refazer(); toast('Nenhuma ameaça no combate: criei um pino genérico escondido. Clique nele para mostrar à mesa.'); });
     const editar = (pino, novo) => abrirModal(novo ? 'Novo pino' : 'Editar pino', `<div class="campo"><label class="rotulo" for="pn-n">Nome</label><input type="text" id="pn-n" maxlength="40" value="${esc(pino.nome || '')}"></div>
         <div class="campo"><span class="rotulo">Ícone</span><div class="pino-ics">${ICONES.map(ic => `<button type="button" class="${ic === (pino.ic || '📍') ? 'aqui' : ''}" data-ic="${ic}">${ic}</button>`).join('')}</div></div>
         <div class="duas"><div class="campo"><label class="rotulo" for="pn-c">Cor</label><input type="color" id="pn-c" value="${esc(pino.cor || '#c4000d')}" style="height:40px;padding:2px"></div>
