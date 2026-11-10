@@ -888,7 +888,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261110003234';
+const BUILD = '20261110021221';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1152,6 +1152,9 @@ const sabeFeitico = f => ehBruxa(f) || (f?.passivas || []).some(p => p.nome === 
 const vetorLiberado = f => !!(f?.vetor?.liberado);
 const vetorAtivo = f => vetorLiberado(f) && !!f.vetorVestido;
 const fotoEf = f => (vetorAtivo(f) && f.vetor.foto) || f?.foto || '';
+const nomeEf = f => (vetorAtivo(f) && f.vetor.nome) || f?.nome || '';
+// o mapa lê o agente ao vivo: com o vetor vestido, o token troca nome, foto e cor
+const vivoMapa = fichas => p => { const f = p.ficha && fichas[p.ficha]; return f ? { nome: nomeEf(f), foto: fotoEf(f), cor: vetorAtivo(f) && f.vetor?.cor ? f.vetor.cor : '' } : null; };
 const normBusca = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 function calc(f) {
   const C = classe(f.classe) || { pv: 0, ps: 0, pst: 0 };
@@ -1516,7 +1519,7 @@ async function publicarRolagem(f, rotulo, r) {
   guardarLocal(f, rotulo, r);
   if (!db || !f?.campanhas?.length) return;
   for (const c of f.campanhas) {
-    try { await db.collection(`campanhas/${c}/rolagens`).add({ uid: ME, autor: f.nome || 'Agente', foto: (typeof fotoEf === 'function' ? fotoEf(f) : f.foto) || '', cor: (vetorAtivo(f) && f.vetor?.cor) || '', ficha: f.id || '', estilo: f.estiloRolagem || null, rotulo, detalhe: r.detalhe, total: r.total ?? '', tipo: r.tipo || '', titulo: r.titulo || '', ataque: r.ataque ?? '', dano: r.dano ?? '', critico: !!r.critico, t: Date.now() }); } catch (e) {}
+    try { await db.collection(`campanhas/${c}/rolagens`).add({ uid: ME, autor: nomeEf(f) || 'Agente', foto: (typeof fotoEf === 'function' ? fotoEf(f) : f.foto) || '', cor: (vetorAtivo(f) && f.vetor?.cor) || '', ficha: f.id || '', estilo: f.estiloRolagem || null, rotulo, detalhe: r.detalhe, total: r.total ?? '', tipo: r.tipo || '', titulo: r.titulo || '', ataque: r.ataque ?? '', dano: r.dano ?? '', critico: !!r.critico, t: Date.now() }); } catch (e) {}
   }
 }
 
@@ -1760,7 +1763,7 @@ function telaMorto(f, { ehMestre, aoVer, aoReviver }) {
 function cardAgente(f, extra = '', dono = '') {
   return `<article class="card-ag ${f.morto ? 'morto' : ''}">${f.morto ? '<span class="carimbo">Morto</span>' : ''}
     <div class="foto" style="${fotoEf(f) ? `background-image:url('${esc(fotoEf(f))}')` : ''}">${fotoEf(f) ? '' : esc(iniciais(f.nome))}</div>
-    <div class="corpo"><div class="nm">${esc(f.nome || 'Sem nome')}</div>
+    <div class="corpo"><div class="nm">${esc(nomeEf(f) || 'Sem nome')}</div>${vetorAtivo(f) ? `<div class="faint" style="font-size:12.5px; margin-top:-2px">${esc(f.nome)}, vestindo o vetor</div>` : ''}
       <div class="dim" style="font-weight:600">${nivelDe(f) === 0 ? 'Mundano' : `${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''}`} · Nv ${nivelDe(f)}</div>
       ${dono ? `<div class="dono">Jogador: <b>${esc(dono)}</b></div>` : ''}<div class="faint" style="font-size:12px">Registrado em ${dataBR(f.criado)}</div>
       <div class="acoes">${extra}<a class="btn mini" href="#agente-${esc(f.id)}" style="text-decoration:none">Acessar ficha</a></div></div>
@@ -4161,7 +4164,7 @@ ROTAS.campanha = async id => {
   const salvarMesaC = async p => { st.mesa = { ...(st.mesa || {}), ...p }; try { await salvarMesa(id, p); } catch (e) { toast('Não salvou: ' + (e.message || e.code)); } };
   const desenharAbaViva = () => { const A = ABA_EL; if (!A?.isConnected || !st.camp) return false; const mestre = st.camp.mestre === ME;
     if (aba === 'mapa') { const fs = Object.values(st.fichas).filter(Boolean), meu = fs.find(f => f.dono === ME && f.id === MEU_PRINCIPAL) || fs.find(f => f.dono === ME);
-      desenharMapa(A, getMesa, { mestre, salvarC: salvarMesaC, combate: () => (st.combate?.ordem || []).map(o => ({ nome: o.nome, tipo: o.tipo, imagem: o.img || '' })), DETS: fs.map(f => ({ id: f.id, nome: f.nome, foto: fotoEf(f), oculto: ocultosDe(st).has(f.dono) })), ...opcoesMapa(id, getQd, fs.filter(f => f.dono === ME).map(f => f.id), mestre, mestre ? 'Mestre' : meu?.nome) }); return true; }
+      desenharMapa(A, getMesa, { mestre, salvarC: salvarMesaC, vivo: vivoMapa(st.fichas), combate: () => (st.combate?.ordem || []).map(o => ({ nome: o.nome, tipo: o.tipo, imagem: o.img || '' })), DETS: fs.map(f => ({ id: f.id, nome: f.nome, foto: fotoEf(f), oculto: ocultosDe(st).has(f.dono) })), ...opcoesMapa(id, getQd, fs.filter(f => f.dono === ME).map(f => f.id), mestre, mestre ? 'Mestre' : meu?.nome) }); return true; }
     if (aba === 'npcs') { desenharNpcs(A, getMesa, { mestre, salvarC: salvarMesaC }); return true; }
     if (aba === 'suspeitos') { desenharSuspeitos(A, getMesa, getQd, id); return true; }
     if (aba === 'quadro') { if (!QUADRO || !A.querySelector('#q-quadro')) QUADRO = abrirAbaQuadro(A, id, getMesa, getQd, pistasQuadro); else QUADRO.desenhar(); return true; }
@@ -4169,7 +4172,7 @@ ROTAS.campanha = async id => {
   const st = ouvirCampanha(id, (s, tipo) => { if ((tipo === 'rolagens' || tipo === 'chat' || tipo === 'mesa') && $('#feed-j')) { atualizarFeed($('#feed-j'), cfgFeed, tipo); if (tipo !== 'mesa') return; }
     if ((tipo === 'mesa' || tipo === 'quadro') && ['mapa', 'npcs', 'suspeitos', 'quadro'].includes(aba)) { if (desenharAbaViva()) return; }
     if (tipo === 'quadro') return;
-    if (['mapa', 'quadro'].includes(aba) && ABA_EL?.isConnected && tipo !== 'mesa') return;
+    if (['mapa', 'quadro'].includes(aba) && ABA_EL?.isConnected && tipo !== 'mesa') { if (aba === 'mapa' && !tipo) desenharAbaViva(); return; }
     if (!document.activeElement?.matches?.('#dados-expr, .chat-txt, .ms-rp-form textarea, .ms-rp-quem, #corpo-c input, #corpo-c textarea')) render(); });
   async function render() {
     segurarAltura();
@@ -4185,7 +4188,7 @@ ROTAS.campanha = async id => {
     if (aba === 'jogadores') corpo = `<div class="lista">${[...new Set([C.mestre, ...st.membros.map(m => m.uid)])].map(u => `<div class="item"><div class="cab"><span style="display:flex; gap:10px; align-items:center"><span class="ava" style="background:${corDe(u)}">${esc(iniciais(nomes[u]))}</span><b>${esc(nomes[u])}${u === ME ? ' (você)' : ''}</b></span><span style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">${OC.has(u) && (mestre || u === ME) ? `<span class="tag tag-oculta">🕶 Ficha oculta</span>` : ''}${mestre && u !== C.mestre ? `<button class="btn mini ${OC.has(u) ? '' : 'sec'}" data-ocultar="${esc(u)}" title="${OC.has(u) ? 'Mostrar os agentes desta pessoa para a mesa' : 'Esconder os agentes desta pessoa dos outros jogadores'}">${OC.has(u) ? 'Mostrar ficha' : '🕶 Ocultar ficha'}</button>` : ''}<span class="tag ${u === C.mestre ? 'crit' : ''}">${u === C.mestre ? 'Mestre' : 'Jogador'}</span></span></div>${OC.has(u) && u === ME && !mestre ? '<p class="faint" style="margin:6px 0 0; font-size:13px">O mestre deixou sua ficha oculta: só você e ele veem seus agentes e suas rolagens nesta campanha.</p>' : ''}</div>`).join('')}</div>`;
     if (aba === 'combate') corpo = st.combate?.ativo ? `<div class="cb-topo"><h2>Rodada ${st.combate.rodada || 1}</h2><span class="dim">Ordem de iniciativa</span></div>
       <section class="ini-lista" style="max-width:560px">${(st.combate.ordem || []).map((o, i) => { const f = o.tipo === 'agente' ? st.fichas[o.ref] : null; if (f && !vePessoa(st, f.dono, mestre)) return ''; const K = f ? calc(f) : null; const a = f ? { ...K.max, ...(f.atual || {}) } : null;
-        return cardIni({ i, nome: o.nome, foto: f ? fotoEf(f) : (o.img || ''), ameaca: o.tipo !== 'agente', pv: a?.pv, pvM: K?.max.pv, ps: a?.ps, psM: K?.max.ps, conds: o.cond || [], ini: o.ini, vez: i === st.combate.turno, meu: f?.dono === ME, morto: !!f?.morto, mostrarPV: !!f, rotTipo: o.tipo === 'ameaca' ? 'Ameaça' : o.tipo === 'npc' ? 'NPC' : '' }); }).join('')}</section>`
+        return cardIni({ i, nome: f ? nomeEf(f) : o.nome, foto: f ? fotoEf(f) : (o.img || ''), ameaca: o.tipo !== 'agente', pv: a?.pv, pvM: K?.max.pv, ps: a?.ps, psM: K?.max.ps, conds: o.cond || [], ini: o.ini, vez: i === st.combate.turno, meu: f?.dono === ME, morto: !!f?.morto, mostrarPV: !!f, rotTipo: o.tipo === 'ameaca' ? 'Ameaça' : o.tipo === 'npc' ? 'NPC' : '' }); }).join('')}</section>`
       : '<div class="vazio">Nenhum combate em andamento.</div>';
     const nSus = suspeitosDe(st.mesa).filter(x => !inocentado(x, st.quadro)).length;
     if (ABAS_INV.includes(aba)) abaInv = aba;
@@ -4333,7 +4336,7 @@ ROTAS.escudo = async id => {
     rodapeRol: `<div class="btns feed-rodape"><a class="btn mini sec" href="#historico-${esc(id)}" style="text-decoration:none">Histórico completo</a><button class="btn mini sec" data-limpar-hist>🗑 Limpar</button></div>` };
   const salvarMesaE = async p => { st.mesa = { ...(st.mesa || {}), ...p }; try { await salvarMesa(id, p); } catch (e) { toast('Não salvou: ' + (e.message || e.code)); } };
   const desenharVivaE = () => { const A = $('#aba-viva-e'); if (!A) return false; const DETS = Object.values(st.fichas).filter(Boolean).map(f => ({ id: f.id, nome: f.nome, foto: fotoEf(f), oculto: ocultosDe(st).has(f.dono) }));
-    if (aba === 'mapa') { desenharMapa(A, () => st.mesa || {}, { mestre: true, salvarC: salvarMesaE, DETS, combate: () => (E.combate?.lista || []).map(x => ({ nome: x.nome, tipo: x.tipo, imagem: x.tipo === 'ameaca' ? (x.imagem || CRI.find(k => String(k.id) === String(x.ref))?.imagem || '') : (x.imagem || '') })), ...opcoesMapa(id, () => st.quadro || {}, [], true, 'Mestre') }); return true; }
+    if (aba === 'mapa') { desenharMapa(A, () => st.mesa || {}, { mestre: true, salvarC: salvarMesaE, DETS, vivo: vivoMapa(st.fichas), combate: () => (E.combate?.lista || []).map(x => ({ nome: x.nome, tipo: x.tipo, imagem: x.tipo === 'ameaca' ? (x.imagem || CRI.find(k => String(k.id) === String(x.ref))?.imagem || '') : (x.imagem || '') })), ...opcoesMapa(id, () => st.quadro || {}, [], true, 'Mestre') }); return true; }
     if (aba === 'npcs') { desenharNpcs(A, () => st.mesa || {}, { mestre: true, salvarC: salvarMesaE }); return true; }
     return false; };
   function desenharFeed(tipo) { if (!st) return; atualizarFeed($('#feed'), cfgFeedE, tipo); $('#feed')?.classList.add('sou-mestre'); if (tipo === 'rolagens' || !tipo) avisarInvocacoes(); }
@@ -4359,7 +4362,7 @@ ROTAS.escudo = async id => {
   }
   $('#feed').addEventListener('click', e => { const ok = e.target.closest('[data-inv-ok]'), nao = e.target.closest('[data-inv-nao]'); if (ok) decidirInvocacao(ok.dataset.invOk, true); if (nao) decidirInvocacao(nao.dataset.invNao, false); });
   st = ouvirCampanha(id, (s, tipo) => { desenharFeed(tipo); if (tipo === 'quadro' && aba === 'mapa') { desenharVivaE(); return; } if (tipo === 'chat' || tipo === 'rolagens' || tipo === 'quadro') return;
-    if (aba === 'mapa' || aba === 'npcs') { if (tipo === 'mesa') desenharVivaE(); return; }
+    if (aba === 'mapa' || aba === 'npcs') { if (tipo === 'mesa' || (aba === 'mapa' && tipo !== 'chat' && tipo !== 'rolagens')) desenharVivaE(); return; }
     if (tipo === 'mesa' && aba !== 'investigacao') return;
     if (!document.activeElement?.closest?.('#corpo-e input, #corpo-e textarea, #corpo-e select')) render(); });
   desenharFeed();
@@ -4374,7 +4377,7 @@ ROTAS.escudo = async id => {
     if (aba === 'mapa' || aba === 'npcs') { corpo.innerHTML = '<div id="aba-viva-e"></div>'; desenharVivaE(); return; }
     if (aba === 'agentes') {
       corpo.innerHTML = `<div class="grade-cards">${fichas.map(f => { const K = calc(f), a = f.atual || K.max;
-        return `<div class="ag-escudo"><div class="cab"><div class="mini-f" style="${fotoEf(f) ? `background-image:url('${esc(fotoEf(f))}')` : ''}">${fotoEf(f) ? '' : esc(iniciais(f.nome))}</div><div style="min-width:0"><b style="font: 400 19px var(--f-disp)">${esc(f.nome)}</b><div class="dim" style="font-size:12.5px">${esc(f.classe)} · ${esc(f.subclasse)} · Nv ${f.nivel}</div></div></div>
+        return `<div class="ag-escudo"><div class="cab"><div class="mini-f" style="${fotoEf(f) ? `background-image:url('${esc(fotoEf(f))}')` : ''}">${fotoEf(f) ? '' : esc(iniciais(f.nome))}</div><div style="min-width:0"><b style="font: 400 19px var(--f-disp)">${esc(nomeEf(f))}</b>${vetorAtivo(f) ? `<span class="tag tag-vetor" style="--cv:${esc(f.vetor.cor || '#b4333b')}; margin-left:6px">Vetor</span>` : ''}<div class="dim" style="font-size:12.5px">${esc(f.classe)} · ${esc(f.subclasse)} · Nv ${f.nivel}</div></div></div>
           <div class="attr-linha">${ATR.map(([k, , s]) => `<span><b>${f.atributos?.[k] ?? 0}</b>${s}</span>`).join('')}</div>
           ${['pv', 'ps', 'pst'].map(k => `<div class="vital ${k}"><div class="ctrl"><button class="vbtn" data-fv="${esc(f.id)}" data-k="${k}" data-d="-5">−5</button><button class="vbtn" data-fv="${esc(f.id)}" data-k="${k}" data-d="-1">−1</button>
             <div class="trilho fino" style="height:22px"><div class="cheio" style="width:${Math.min(100, (a[k] / (K.max[k] || 1)) * 100)}%"></div><div class="txt" style="line-height:20px">${k.toUpperCase()} ${a[k]}/${K.max[k]}</div></div>
@@ -4410,7 +4413,7 @@ ROTAS.escudo = async id => {
         if (ab === 'combate') cx = `<div class="per-l">${armas.map((it, k) => { const E2 = armaEfF(f, it); return `<div style="grid-template-columns:1fr auto auto"><span><b>${ehFavorita(f, it) ? '★ ' : ''}${esc(it.nome)}</b><br><span class="mono faint" style="font-size:12px">Dano ${esc(fmtDano(danoComFav(E2)))} · Crítico ${E2.margem}/×${E2.mult}</span></span><button class="btn mini sec" data-cbatq="${k}">Acerto</button><button class="btn mini ouro" data-cbdano="${k}">Dano</button></div>`; }).join('') || '<p class="faint">Nenhuma arma no inventário.</p>'}</div>`;
         if (ab === 'condicoes') cx = blocoCond;
         det = `<div class="am-banner" style="--bc:${f.alinhamento ? corEl(elDe(f.alinhamento.nome)) : 'var(--violeta)'}">${I0.foto ? `<div class="am-bgw"><div class="am-bg" style="background-image:url('${esc(I0.foto)}')"></div></div>` : ''}<div class="am-ft ag" style="${I0.foto ? `background-image:url('${esc(I0.foto)}')` : ''}">${I0.foto ? '' : esc(iniciais(f.nome))}</div>
-            <div class="am-tx"><b>${esc(f.nome)}</b><span>${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''}</span><span class="am-el">Nv ${nivelDe(f)} · ${esc(patente(nivelDe(f)).nome || '')}</span></div><a class="btn mini sec am-acao" href="#agente-${esc(f.id)}" style="text-decoration:none">Ficha</a></div>
+            <div class="am-tx"><b>${esc(nomeEf(f))}</b>${vetorAtivo(f) ? `<span class="tag tag-vetor" style="--cv:${esc(f.vetor.cor || '#b4333b')}">Vetor · ${esc(f.nome)}</span>` : ''}<span>${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''}</span><span class="am-el">Nv ${nivelDe(f)} · ${esc(patente(nivelDe(f)).nome || '')}</span></div><a class="btn mini sec am-acao" href="#agente-${esc(f.id)}" style="text-decoration:none">Ficha</a></div>
           ${['pv', 'ps', 'pst'].map(k => barraCris(k, a[k], K.max[k], 'data-cbv-' + k, [5, 1]).replace('<span class="v">', `<span class="v clicavel" data-cbaj="${k}" role="button" tabindex="0" title="Digitar valor ou mudar o máximo">`)).join('')}
           <div class="abas abas-mini">${[['atributos', 'Atributos'], ['combate', 'Combate'], ['condicoes', `Condições${I0.conds.length ? ' ' + I0.conds.length : ''}`]].map(([k, l]) => `<button class="${ab === k ? 'aqui' : ''}" data-dab="${k}">${l}</button>`).join('')}</div>
           ${caixaDano(rdTxtX(x0), window._dnRes?.k === chave0 ? window._dnRes.txt : '')}<div style="display:grid; gap:10px">${cx}</div><div class="res" id="cb-res"></div>
@@ -4425,7 +4428,7 @@ ROTAS.escudo = async id => {
             <div class="menu-pop"><button class="btn mini" data-menu>Adicionar</button><div hidden><button id="cb-ag">Agentes da campanha</button><button id="cb-am">Ameaça</button><button id="cb-npc">NPC</button></div></div></div></div>
         <div class="cb-wrap"><section class="ini-lista">
           <div class="ini-cab"><div><b>Iniciativa</b><div class="sub">Rodada atual: ${c.ativo ? c.rodada : 0}</div></div><div style="display:flex; gap:6px"><button class="btn sec mini" id="cb-voltar">Voltar turno</button><button class="btn mini" id="cb-prox">Próximo turno</button></div></div>
-          ${c.lista.map((x, i) => { const I = infoX(x); return cardIni({ i, nome: x.nome, foto: I.foto, ameaca: x.tipo === 'ameaca', pv: I.pv, pvM: I.pvM, ps: I.f ? I.a.ps : null, psM: I.f ? I.K.max.ps : null, conds: I.conds.map(cd => cd.nome), ini: x.ini, vez: c.ativo && i === c.turno, sel: i === sel, editavel: true, morto: !!I.f?.morto, rotTipo: x.tipo === 'npc' ? 'NPC' : '' }); }).join('') || '<div class="vazio" style="font-size:15px">Use Adicionar para montar a iniciativa.</div>'}
+          ${c.lista.map((x, i) => { const I = infoX(x); return cardIni({ i, nome: I.f ? nomeEf(I.f) : x.nome, foto: I.foto, ameaca: x.tipo === 'ameaca', pv: I.pv, pvM: I.pvM, ps: I.f ? I.a.ps : null, psM: I.f ? I.K.max.ps : null, conds: I.conds.map(cd => cd.nome), ini: x.ini, vez: c.ativo && i === c.turno, sel: i === sel, editavel: true, morto: !!I.f?.morto, rotTipo: x.tipo === 'npc' ? 'NPC' : '' }); }).join('') || '<div class="vazio" style="font-size:15px">Use Adicionar para montar a iniciativa.</div>'}
           <p class="faint" style="font-size:12px; margin:4px 2px 0">Os jogadores veem a ordem e as condições, nunca os PV das ameaças.</p></section>
         <aside class="cb-det" id="cb-det">${det}</aside></div></div>`;
       if (x0 && (x0.tipo === 'ameaca' || x0.ficha)) { const base = x0.tipo === 'ameaca' ? CRI.find(k => String(k.id) === String(x0.ref)) || {} : {};

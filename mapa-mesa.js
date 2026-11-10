@@ -39,7 +39,7 @@
   }
 
   /* ---------- posições: quem move (mestre ou jogador) grava em quadro/estado.pinos[cena][pino]; a luz de quem está arrastando vai por broadcast ---------- */
-  const OPT = { getPos: () => ({}), podeMover: () => false, salvarPos: null, eu: null, sala: '' };
+  const OPT = { getPos: () => ({}), podeMover: () => false, salvarPos: null, eu: null, sala: '', vivo: null };
   const REMOTO = {}; // pino -> { x, y, nome, cor, t }
   const posDe = (cena, p) => { const o = OPT.getPos()?.[cena?.id]?.[p.id], r = REMOTO[p.id]; if (r && Date.now() - r.t < 4000) return { x: r.x, y: r.y }; return o && (o.t || 0) >= (p.t || 0) ? o : p; };
   const CANAIS = {};
@@ -68,7 +68,7 @@
   const SEL = { id: null }; // token selecionado (alças de tamanho e giro, barra do mestre)
   const rotDe = (cena, p) => { const o = OPT.getPos()?.[cena?.id]?.[p.id]; return o && o.rot != null ? +o.rot : +p.rot || 0; };
   const BARRA = [['vis', '👁', 'Mostrar ou esconder da mesa'], ['trava', '🔒', 'Travar ou destravar'], ['frente', '⬆', 'Trazer para a frente'], ['tras', '⬇', 'Mandar para trás'], ['dup', '⧉', 'Duplicar'], ['nome', 'Aa', 'Mostrar ou esconder o nome'], ['del', '🗑', 'Apagar'], ['mais', '⋯', 'Editar tudo']];
-  const pinoHTML = (p, mestre, escondido, cena, movel) => { const q = posDe(cena, p), r = REMOTO[p.id] && Date.now() - REMOTO[p.id].t < 4000 ? REMOTO[p.id] : null, sel = SEL.id === p.id && (mestre || movel);
+  const pinoHTML = (p0, mestre, escondido, cena, movel) => { const v = p0.ficha && OPT.vivo ? OPT.vivo(p0) : null, p = v ? { ...p0, nome: v.nome || p0.nome, foto: v.foto || p0.foto, cor: v.cor || p0.cor } : p0; const q = posDe(cena, p), r = REMOTO[p.id] && Date.now() - REMOTO[p.id].t < 4000 ? REMOTO[p.id] : null, sel = SEL.id === p.id && (mestre || movel);
     return `<div class="pino ${p.oculto ? 'oculto' : ''} ${escondido ? 'na-nevoa' : ''} ${(mestre || movel) && !(p.travado && !mestre) ? 'mov' : ''} ${p.travado ? 'travado' : ''} ${r ? 'movendo' : ''} ${sel ? 'sel' : ''} ${p.semNome ? 'sem-nome' : ''}" data-pino="${esc(p.id)}" style="left:${+q.x || 50}%;top:${+q.y || 50}%;--pc:${esc(p.cor || '#c4000d')};--tam:${+p.tam || 1};--rot:${rotDe(cena, p)}deg${r ? `;--mv:${esc(r.cor)}` : ''}" title="${esc(p.nome)}">${r ? `<span class="pino-quem">✋ ${esc(r.nome)}</span>` : ''}
     <span class="pino-nome">${esc(p.nome)}${p.oculto ? ' 🙈' : ''}${p.travado ? ' 🔒' : ''}${escondido ? ' 🌫' : ''}</span><span class="pino-alvo"><span class="pino-cab" style="${p.foto ? `background-image:url('${esc(p.foto)}')` : ''}">${p.foto ? '' : esc(p.ic || '📍')}</span>${sel ? `<span class="pino-h girar" data-h="girar" title="Girar (Shift: de 15 em 15°)"></span>${mestre ? ['nw', 'ne', 'sw', 'se'].map(c => `<span class="pino-h canto ${c}" data-h="tam" title="Arraste para aumentar ou diminuir"></span>`).join('') : ''}` : ''}</span>
     ${sel && mestre ? `<div class="pino-barra">${BARRA.map(([k, ic, t]) => `<button type="button" data-pb="${k}" title="${t}" aria-label="${t}" class="${(k === 'vis' && p.oculto) || (k === 'trava' && p.travado) || (k === 'nome' && p.semNome) ? 'on' : ''}">${ic}</button>`).join('')}</div>` : ''}</div>`; };
@@ -92,7 +92,7 @@
 
   function desenharMapa(A, getC, opts) {
     const { mestre, salvarC, DETS = [], E = null, getPos, podeMover, salvarPos, eu, sala } = opts;
-    rotulos(); Object.assign(OPT, { getPos: getPos || (() => ({})), podeMover: podeMover || (() => false), salvarPos: salvarPos || null, eu: eu || null, sala: sala || '' }); canal(OPT.sala);
+    rotulos(); Object.assign(OPT, { getPos: getPos || (() => ({})), podeMover: podeMover || (() => false), salvarPos: salvarPos || null, eu: eu || null, sala: sala || '', vivo: opts.vivo || OPT.vivo || null }); canal(OPT.sala);
     const C = getC(), cenas = cenasDe(C), ativo = ativoDe(C), mesaId = C.id || C.nome || 'm';
     const ui = UI[mesaId] = UI[mesaId] || { ver: null, modo: 'mover', pincel: 2 };
     if (!mestre) ui.ver = null;
