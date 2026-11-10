@@ -12918,5 +12918,135 @@
     }
    ]
   }
+ },
+ {
+  "id": 143,
+  "nome": "A Viúva de Veludo",
+  "nivel": 5,
+  "elemento": "Peste",
+  "origem": "Cena gótica do centro de São Paulo, clubes subterrâneos da Rua Augusta, começo dos anos 2000",
+  "descricao": "A Viúva de Veludo já foi Mirela Saint-Clair, a rainha das noites góticas: veludo preto, renda, batom vinho e uma obsessão por tudo que apodrece bonito. Num ritual feito de brincadeira num porão de clube, ela pediu para nunca deixar de ser bela enquanto o mundo morre. A Peste respondeu ao pé da letra.\nO corpo dela virou carvão úmido, os braços se dividiram em quatro e as pernas dobraram para trás como as de uma aranha. O cabelo continuou longo, preto com mechas magenta, mas os fios brancos não são cabelo: são micélio vivo, que cresce e solta esporos. O sorriso rasgou até as orelhas e nunca mais fechou.\nPor onde ela passa, o veludo apodrece, as paredes mofam e quem respira o ar perto dela começa a tossir flores de fungo.",
+  "encontro": "Um clube na Augusta fechou depois que doze frequentadores foram internados com uma infecção fúngica que nenhum laboratório identificou. A equipe desceu ao porão às três da manhã. As paredes estavam cobertas de mofo em forma de renda. Ela estava no teto, de cabeça para baixo, sorrindo.",
+  "habitos": "Volta sempre aos lugares onde a cena gótica se reúne: clubes, cemitérios e festas de porão. Escolhe quem estiver mais bem vestido.",
+  "anotacoes": "Não elogie a roupa dela. Sério. O último que elogiou virou cogumelo.",
+  "ponto_forte": "Quatro braços, velocidade de aranha, contágio em área e corpo intangível dentro do mofo.",
+  "ponto_fraco": "O micélio do cabelo queima fácil. Sem o mofo por perto, o corpo dela fica sólido e lento.",
+  "forma_de_abate": "Queime o mofo das paredes antes de entrar e mire o cabelo com fogo. Lute em lugar aberto e seco, longe de porões e de umidade.",
+  "comportamento": "Vaidosa e brincalhona. Brinca com a presa antes de abraçar.",
+  "modus": "Contamina o ambiente com mofo, espera os alvos adoecerem e ataca do teto.",
+  "uv": "Ela ainda usa a gargantilha de veludo do ritual. Quem arrancar a gargantilha (Atletismo DT 22 enquanto ela agarra alguém) faz o micélio secar até o fim da rodada.",
+  "imagem": "img/criaturas/143.webp",
+  "ficha": {
+   "pv": 1250,
+   "defesa": 28,
+   "rd": 15,
+   "movimento": 12,
+   "atributos": {
+    "forca": 4,
+    "destreza": 6,
+    "constituicao": 5,
+    "inteligencia": 3,
+    "presenca": 6
+   },
+   "testes": "6d20",
+   "dt": 22,
+   "presenca": {
+    "nome": "Sorriso Rasgado",
+    "texto": "Ao vê-la pela primeira vez, teste de Vontade DT 22. Se falhar, sofre 5d6 de dano mental (PS) e fica Amedrontado por 1 rodada; se passar, metade."
+   },
+   "poderes": [
+    {
+     "acao": "PADRÃO",
+     "nome": "Mechas de Micélio",
+     "texto": "O cabelo se estende até 12m e chicoteia até 3 alvos. Cada um faz Esquiva DT 22 ou fica Imobilizado e sofre 4d12+18 de dano químico."
+    },
+    {
+     "acao": "REAÇÃO",
+     "nome": "Esporos de Luto",
+     "texto": "Quando sofre dano corpo a corpo, explode esporos num raio de 3m. Quem estiver dentro faz Resiliência DT 22 ou fica Envenenado."
+    },
+    {
+     "acao": "MOVIMENTO",
+     "nome": "Mofo de Renda",
+     "texto": "Cobre uma área de 10m de mofo em forma de renda. Quem entrar ou começar o turno ali faz Resiliência DT 22 ou fica Doente. Dentro do mofo, ela conta como Intangível."
+    },
+    {
+     "acao": "COMPLETA",
+     "nome": "Último Baile",
+     "texto": "Todos os Doentes ou Envenenados num raio de 30m fazem Resiliência DT 22. Se falharem, sofrem 7d12+24 de dano químico, 2d10 de dano mental (PS) e ficam Exaustos; se passarem, metade."
+    }
+   ],
+   "acoes": [
+    {
+     "acao": "PADRÃO",
+     "nome": "Quatro Garras",
+     "texto": "Quatro ataques corpo a corpo. Se 2 ou mais acertarem o mesmo alvo, ele faz Resiliência DT 22 ou fica Doente.",
+     "ataques": [
+      {
+       "nome": "Garra",
+       "alcance": "3m",
+       "vezes": 4,
+       "dados": 6,
+       "bonus": 14,
+       "margem": 19,
+       "mult": 2,
+       "dano": "3d12+16",
+       "tipo": "Corte",
+       "extras": []
+      }
+     ]
+    },
+    {
+     "acao": "REAÇÃO",
+     "nome": "Contorção",
+     "texto": "Ao ser atacada, faz Esquiva DT 22. Se passar, o ataque erra e ela se reposiciona 3m. Se o atacante estava colado nela, ele faz Esquiva DT 22 ou sofre 2d12+10 de corte.",
+     "ataques": []
+    },
+    {
+     "acao": "MOVIMENTO",
+     "nome": "Rastejo de Aranha",
+     "texto": "Move o dobro do deslocamento por paredes e teto sem provocar reação. Se terminar acima de um alvo, o próximo ataque dela ganha +1d.",
+     "ataques": []
+    },
+    {
+     "acao": "COMPLETA",
+     "nome": "Abraço da Viúva",
+     "texto": "Agarra um alvo a 3m, que faz Esquiva DT 22. Se falhar, fica Agarrado, sofre o dano do beijo pestilento e faz Resiliência DT 22 ou fica Doente. Enquanto estiver Agarrado, testa Atletismo DT 22 no início do turno: se falhar, sofre 4d12+18 de dano químico.",
+     "ataques": [
+      {
+       "nome": "Beijo Pestilento",
+       "alcance": "3m",
+       "vezes": 1,
+       "dados": 6,
+       "bonus": 14,
+       "margem": 20,
+       "mult": 2,
+       "dano": "7d12+24",
+       "tipo": "Químico",
+       "extras": []
+      }
+     ]
+    }
+   ],
+   "intangivel": {
+    "defesa": 34,
+    "defesaContornada": 26,
+    "contorno": "Queimar o mofo da área com fogo ou luz forte deixa o corpo dela sólido até o fim da rodada."
+   },
+   "pericias": {
+    "Esquiva": {
+     "dados": 7,
+     "bonus": 19
+    },
+    "Furtividade": {
+     "dados": 6,
+     "bonus": 16
+    },
+    "Atletismo": {
+     "dados": 6,
+     "bonus": 14
+    }
+   }
+  }
  }
 ]
