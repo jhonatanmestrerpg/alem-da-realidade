@@ -888,7 +888,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261110001919';
+const BUILD = '20261110002703';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1597,7 +1597,11 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-ler]
   const c = alvo.cloneNode(true); c.querySelectorAll('[data-ler], button, select, input, .nao-ler').forEach(x => x.remove());
   lerTexto(c.innerText || c.textContent, b); });
 addEventListener('pagehide', () => temVoz() && speechSynthesis.cancel());
+// redesenhar a tela inteira não pode jogar a rolagem para o topo: segura a altura até as imagens carregarem
+let _altT = null;
+function segurarAltura(el = app) { if (!el) return; const h = el.offsetHeight, y = scrollY; if (h) el.style.minHeight = h + 'px'; clearTimeout(_altT); _altT = setTimeout(() => { el.style.minHeight = ''; }, 1500); requestAnimationFrame(() => { if (Math.abs(scrollY - y) > 2 && y <= document.documentElement.scrollHeight - innerHeight + 2) scrollTo(0, y); }); }
 async function rotear() {
+  clearTimeout(_altT); app.style.minHeight = '';
   pararLeitura();
   limparSubs(); $('#camada').innerHTML = '';
   if (typeof fecharSala === 'function' && !CH.dentro) { fecharSala(); CH.ctxLig = null; }
@@ -2006,6 +2010,7 @@ ROTAS.agente = async id => {
   }, e => { app.innerHTML = `<div class="vazio">Não deu para abrir a ficha (${esc(e.code)}).</div>`; }));
 
   function render() {
+    segurarAltura();
     if (F.morto && !VER_MORTO[F.id]) return telaMorto(F, { ehMestre, aoVer: () => { VER_MORTO[F.id] = true; render(); }, aoReviver: () => reviver() });
     const K = calc(F); const A = F.atributos || {};
     F.atual = F.atual || { ...K.max };
@@ -4167,6 +4172,7 @@ ROTAS.campanha = async id => {
     if (['mapa', 'quadro'].includes(aba) && ABA_EL?.isConnected && tipo !== 'mesa') return;
     if (!document.activeElement?.matches?.('#dados-expr, .chat-txt, .ms-rp-form textarea, .ms-rp-quem, #corpo-c input, #corpo-c textarea')) render(); });
   async function render() {
+    segurarAltura();
     if (st.camp === null) { app.innerHTML = '<div class="vazio">Abrindo a campanha…</div>'; return; }
     if (st.camp === false) { app.innerHTML = '<div class="vazio">Campanha não encontrada.</div>'; return; }
     const C = st.camp, mestre = C.mestre === ME, membro = st.membros.some(m => m.uid === ME) || mestre;
@@ -4358,7 +4364,7 @@ ROTAS.escudo = async id => {
     if (!document.activeElement?.closest?.('#corpo-e input, #corpo-e textarea, #corpo-e select')) render(); });
   desenharFeed();
 
-  function render() { renderE(); if (!$('#escudo')) return; laterais({ esq: $('#feed'), dir: aba === 'combate' ? $('#cb-det') : null, rot: { esq: 'Mesa', dir: 'Ficha' } }); marcarPuxador(st, id); }
+  function render() { segurarAltura(); renderE(); if (!$('#escudo')) return; laterais({ esq: $('#feed'), dir: aba === 'combate' ? $('#cb-det') : null, rot: { esq: 'Mesa', dir: 'Ficha' } }); marcarPuxador(st, id); }
   function renderE() {
     const ABAS = [['agentes', 'Agentes'], ['combate', 'Combate'], ['npcs', 'NPCs'], ['mapa', 'Mapa'], ['investigacao', 'Investigação'], ['relatorios', 'Relatórios'], ['dados', 'Dados'], ['vetores', 'Vetores'], ['anotacoes', 'Anotações'], ['ligacao', 'Ligação']];
     $('#abas-e').innerHTML = ABAS.map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('');

@@ -101,11 +101,13 @@
     const palco0 = A.querySelector('.mapa-palco');
     if (palco0?.dataset.ocupado === '1') return; // pintando ou arrastando: não redesenha por cima
     // atualização leve: mesma cena e mesma imagem, só pinos e névoa
-    if (palco0 && palco0.dataset.cena === (cena?.id || '') && palco0.dataset.img === (cena?.img || '') && A.querySelector('.mapa-cenas')?.dataset.n === String(cenas.length) && A.querySelector('[data-ativo]')?.dataset.ativo === (ativo?.id || '')) {
+    // jogador não tem a fileira de cenas: para ele basta ser a mesma cena e a mesma imagem
+    if (palco0 && palco0.dataset.cena === (cena?.id || '') && palco0.dataset.img === (cena?.img || '') && (!mestre || (A.querySelector('.mapa-cenas')?.dataset.n === String(cenas.length) && A.querySelector('[data-ativo]')?.dataset.ativo === (ativo?.id || '')))) {
       palco0._cena = cena; palco0.querySelector('.pinos').innerHTML = pinosVisiveis(cena, mestre);
       pintarNevoa(palco0.querySelector('.nevoa'), cena.nevoa, mestre); return;
     }
     const ehAtivo = cena && ativo && cena.id === ativo.id;
+    if (A.offsetHeight) { const h0 = A.offsetHeight; A.style.minHeight = h0 + 'px'; setTimeout(() => { A.style.minHeight = ''; }, 1500); }
     A.innerHTML = `<div class="caixa bloco mapa-caixa">
       ${mestre ? `<div class="mapa-cenas" data-n="${cenas.length}"><span data-ativo="${esc(ativo?.id || '')}" hidden></span>${cenas.map(c => `<button type="button" class="cena-tab ${c.id === cena?.id ? 'aqui' : ''} ${c.id === ativo?.id ? 'ativa' : ''}" data-cena="${esc(c.id)}" style="${c.img ? `--ci:url('${esc(c.img)}')` : ''}" title="${c.id === ativo?.id ? 'A mesa está vendo esta' : 'Só você está vendo'}"><b>${esc(c.nome)}</b>${c.id === ativo?.id ? '<small>👁 a mesa vê</small>' : ''}</button>`).join('')}<button type="button" class="cena-tab nova" data-m="nova" title="Nova cena">＋ Cena</button></div>` : ''}
       <div class="btns" style="justify-content:space-between;align-items:center"><h3>🗺 ${cena ? esc(cena.nome) : 'Mapa'}${mestre && cena && !ehAtivo ? ' <span class="tag">só você vê</span>' : ''}</h3>
