@@ -23,6 +23,7 @@
 <script src="banco.js"></script>
 <script src="mapa-mesa.js"></script>
 <script src="mesa-extra.js"></script>
+<script src="estetica.js"></script>
 <style>
 /* Layout: barra fixa no topo com a "linha do destino" (ouro > sangue > violeta), páginas em coluna
    central larga. Escudo do mestre: feed de rolagens à esquerda, abas à direita. Visual escuro único. */
@@ -831,6 +832,7 @@ button, a, input, select, textarea { touch-action: manipulation; }
 @media (hover: none) { .card-am:hover, .atalho:hover { border-color: var(--linha); background: var(--painel); } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
+<link rel="stylesheet" href="estetica.css">
 </head>
 <body>
 
@@ -888,7 +890,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261111024519';
+const BUILD = '20261111025447';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -2080,7 +2082,10 @@ ROTAS.agente = async id => {
       </div>
     </section>
 
-    <div class="abas" role="tablist">${[['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ...(sabeFeitico(F) ? [['feiticos', 'Feitiços']] : []), ...(ehBruxa(F) ? [['maldicoes', 'Maldições']] : []), ...(F.subclasse === 'Manipuladora' ? [['arsenal', 'Arsenal']] : []), ...(mecsFicha().length ? [['campanha', 'Campanha']] : []), ...(vampDe(F) ? [['vampiro', 'Vampiro']] : []), ['inventario', 'Inventário'], ['descricao', 'Descrição']].map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
+    ${(() => { const T = [['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ...(sabeFeitico(F) ? [['feiticos', 'Feitiços']] : []), ...(ehBruxa(F) ? [['maldicoes', 'Maldições']] : []), ...(F.subclasse === 'Manipuladora' ? [['arsenal', 'Arsenal']] : []), ...(mecsFicha().length ? [['campanha', 'Campanha']] : []), ...(vampDe(F) ? [['vampiro', 'Vampiro']] : []), ['inventario', 'Inventário'], ['descricao', 'Descrição']], tem = new Map(T);
+      const G = [['Ficha', ['pericias', 'habilidades', 'alinhamento']], ['Combate', ['combate', 'arsenal', 'vampiro']], ['Oculto', ['rituais', 'feiticos', 'maldicoes']], ['Inventário', ['inventario']], ['Registro', ['descricao', 'campanha']]].map(([n, ks]) => [n, ks.filter(k => tem.has(k))]).filter(([, ks]) => ks.length);
+      const gAt = G.find(([, ks]) => ks.includes(aba)) || G[0]; window.ABA_GRUPO ||= {}; window.ABA_GRUPO[gAt[0]] = aba;
+      return `<nav class="abas abas-grupo" role="tablist" aria-label="Seções da ficha">${G.map(([n, ks]) => { const alvo = ks.includes(window.ABA_GRUPO[n]) ? window.ABA_GRUPO[n] : ks[0]; return `<button role="tab" aria-selected="${gAt[0] === n}" class="${gAt[0] === n ? 'aqui' : ''}" data-aba="${alvo}">${n}${ks.length > 1 ? `<small>${ks.length}</small>` : ''}</button>`; }).join('')}</nav>${gAt[1].length > 1 ? `<div class="abas abas-sub" role="tablist" aria-label="${esc(gAt[0])}">${gAt[1].map(k => `<button role="tab" aria-selected="${aba === k}" class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${tem.get(k)}</button>`).join('')}</div>` : ''}`; })()}
     <section id="sec">${secao(K, C, S)}</section>
     </div>`;
     ligarFicha(K);
@@ -4207,10 +4212,9 @@ ROTAS.campanha = async id => {
         ${RG.classes.length ? `<h2 style="margin:0">Classes da campanha</h2><div class="grade-cards">${RG.classes.map(c => `<div class="caixa"><h3 style="margin:0">${esc(c.nome)}</h3><p class="dim">${esc(c.descricao || '')}</p><div class="base-cls"><span>PV ${c.pv}</span><span>PST ${c.pst}</span><span>PS ${c.ps}</span><span>Perícias ${c.pericias}</span></div>${(c.subclasses || []).map(sc => `<p style="margin:6px 0 0"><b>${esc(sc.nome)}</b> <span class="dim">${esc(sc.descricao || '')}</span></p>`).join('')}</div>`).join('')}</div>` : ''}
         ${RG.subExtras.length ? `<h2 style="margin:0">Subclasses novas</h2><div class="grade-cards">${RG.subExtras.map(sc => `<div class="caixa"><span class="rotulo">${esc(sc.classe)}</span><h3 style="margin:0">${esc(sc.nome)}</h3><p class="dim">${esc(sc.descricao || '')}</p>${(sc.habilidades || []).filter(h => h.nome).map(h => `<div><span class="tag">Nv ${h.nivel}</span> <b>${esc(h.nome)}</b> <span class="dim">${esc(h.texto)}</span></div>`).join('')}</div>`).join('')}</div>` : ''}</div>`; }
     if (aba === 'ligacao') corpo = membro ? '<div id="ligacao"></div>' : '<div class="vazio">Entre na campanha para usar a ligação.</div>';
-    app.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
-        ${mestre ? `<button class="btn sec" id="editar-c">Editar campanha</button><a class="btn sec" href="#regras-${esc(id)}" style="text-decoration:none">Homebrew da campanha</a><a class="btn ouro" href="#escudo-${esc(id)}" style="text-decoration:none">Escudo do mestre</a><button class="btn sec" id="x-camp" title="Apagar campanha">🗑 Apagar</button>` : ''}
-        ${membro ? `<button class="btn sec" data-abrir-mapa="campanhas/${esc(id)}/publico|mesa">🗺 Mapa</button><a class="btn" href="#novo-${esc(id)}" style="text-decoration:none">Criar agente da campanha</a>` : ''}${membro ? '<button class="btn sec" id="add-ag">Adicionar agente</button><button class="btn sec" id="convidar">Convidar jogadores</button>' : '<button class="btn" id="entrar-c">Entrar nesta campanha</button>'}
-        ${membro && !mestre ? '<button class="btn sec" id="sair">Sair da campanha</button>' : ''}</div>
+    app.innerHTML = `<div class="barra-acoes">
+        <div class="grupo-acoes" role="group" aria-label="Mesa"><span class="rotulo">Mesa</span>${membro ? `<button class="btn sec" data-abrir-mapa="campanhas/${esc(id)}/publico|mesa">🗺 Mapa</button><a class="btn" href="#novo-${esc(id)}" style="text-decoration:none">Criar agente da campanha</a><button class="btn sec" id="add-ag">Adicionar agente</button><button class="btn sec" id="convidar">Convidar jogadores</button>` : '<button class="btn" id="entrar-c">Entrar nesta campanha</button>'}${membro && !mestre ? '<button class="btn sec" id="sair">Sair da campanha</button>' : ''}</div>
+        ${mestre ? `<div class="grupo-acoes" role="group" aria-label="Mestre"><span class="rotulo">Mestre</span><a class="btn ouro" href="#escudo-${esc(id)}" style="text-decoration:none">Escudo do mestre</a><button class="btn sec" id="editar-c">Editar campanha</button><a class="btn sec" href="#regras-${esc(id)}" style="text-decoration:none">Homebrew da campanha</a><button class="btn sec perigo" id="x-camp" title="Apagar campanha">🗑 Apagar</button></div>` : ''}</div>
       <section class="camp-topo ${C.capa ? 'com-capa' : ''}">
         ${C.capa ? `<img src="${esc(C.capa)}" alt="" style="border:1px solid var(--linha-2); width:100%">` : ''}
         <div style="display:grid; gap:10px"><span class="rotulo">Mestre: ${esc(nomes[C.mestre])}</span><h1>${esc(C.nome)}</h1>${C.descricao ? `<p class="dim" style="font-size:17px; max-width:60ch">${nl(C.descricao)}</p>` : ''}</div>
