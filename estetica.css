@@ -58,7 +58,7 @@
   display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; margin: 0; border: 1px solid transparent; border-radius: var(--raio);
   font-size: 16px; color: var(--lua-dim); transition: color .2s, background .25s, box-shadow .25s, transform .2s;
 }
-.abas:not(.abas-sub):not(.abas-inv):not(.abas-mini):not(.it-abas) button:hover { color: var(--lua); background: rgba(255,255,255,.04); }
+@media (hover: hover) { .abas:not(.abas-sub):not(.abas-inv):not(.abas-mini):not(.it-abas) button:not(.aqui):hover { color: var(--lua); background: rgba(255,255,255,.04); } }
 .abas:not(.abas-sub):not(.abas-inv):not(.abas-mini):not(.it-abas) button.aqui {
   color: #fff; border-color: color-mix(in srgb, var(--sangue-hi) 45%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--sangue) 70%, #2a0d10), color-mix(in srgb, var(--sangue) 35%, #120608));
@@ -70,17 +70,17 @@
 /* sub-abas: linha fina embaixo do trilho */
 .abas-sub { display: flex; gap: 2px 18px; flex-wrap: wrap; border-bottom: 1px solid var(--linha); margin-top: -6px; padding: 0 6px; }
 .abas-sub button { background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 10px 2px; color: var(--lua-dim); font: 400 15.5px/1 var(--f-disp); white-space: nowrap; transition: color .2s, border-color .2s; }
-.abas-sub button:hover { color: var(--lua); }
+@media (hover: hover) { .abas-sub button:hover { color: var(--lua); } }
 .abas-sub button.aqui { color: var(--lua); border-bottom-color: var(--ouro); }
 .abas-inv button.aqui, .abas-mini button.aqui { border-bottom-color: var(--ouro); }
 
 /* ---------- controles ---------- */
 .btn { border-radius: var(--raio-p); transition: transform .15s, box-shadow .2s, background .2s, border-color .2s, color .2s; }
 .btn:not(.sec):not(.ouro):not(.perigo):not(:disabled) { background-image: linear-gradient(180deg, rgba(255,255,255,.12), rgba(0,0,0,.08)); box-shadow: 0 4px 12px -6px rgba(180,51,59,.8); }
-.btn:hover:not(:disabled) { transform: translateY(-1px); }
+@media (hover: hover) { .btn:hover:not(:disabled) { transform: translateY(-1px); } }
 .btn:active:not(:disabled) { transform: translateY(0) scale(.98); }
 .chip { transition: background .2s, color .2s, border-color .2s; }
-.chip:hover { border-color: var(--linha-2); color: var(--lua); }
+@media (hover: hover) { .chip:hover { border-color: var(--linha-2); color: var(--lua); } }
 .tag { border-radius: 4px; }
 input[type=text], input[type=number], input[type=search], input[type=email], input[type=password], select, textarea { border-radius: var(--raio-p); transition: border-color .2s, box-shadow .2s; }
 input:focus, select:focus, textarea:focus { border-color: var(--ouro) !important; box-shadow: 0 0 0 3px rgba(200,163,90,.18); outline: none; }
@@ -88,14 +88,14 @@ input:focus, select:focus, textarea:focus { border-color: var(--ouro) !important
 .trilho { border-radius: 999px; overflow: hidden; }
 
 /* ---------- topo ---------- */
-.topo { background: rgba(9,11,17,.86); -webkit-backdrop-filter: blur(10px) saturate(1.2); backdrop-filter: blur(10px) saturate(1.2); }
+.topo { background: #090b11; box-shadow: 0 8px 20px -14px rgba(0,0,0,.9); }
 .nav a { position: relative; transition: color .2s; }
 .nav a::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px; transform: scaleX(0); transform-origin: left; transition: transform .3s; background: linear-gradient(90deg, var(--ouro), var(--sangue)); }
-.nav a:hover::after { transform: scaleX(.5); }
+@media (hover: hover) { .nav a:hover::after { transform: scaleX(.5); } }
 .nav a.aqui { border-bottom-color: transparent; } .nav a.aqui::after { transform: scaleX(1); }
 
 /* barras de ferramentas (botões soltos em fila): quebram bem em qualquer largura */
-.cab-pagina > div:last-child:not(:first-child), .acoes-topo { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.acoes-topo { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
 /* ---------- acessibilidade ---------- */
 :focus-visible { outline: none; box-shadow: var(--anel) !important; }
@@ -132,8 +132,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--ouro) !important
   .abas-grupo button { flex: 1 0 auto !important; justify-content: center; }
   .abas-sub { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 2px 16px; }
   .abas-sub::-webkit-scrollbar { display: none; }
-  .cab-pagina > div:last-child:not(:first-child) > .btn, .acoes-topo > .btn { flex: 1 1 auto; justify-content: center; text-align: center; }
-  .caixa, .item, .hab { padding-inline: 14px; }
+  .acoes-topo > .btn { flex: 1 1 0; min-width: max-content; justify-content: center; text-align: center; }
+  .caixa, .item:not(.inv-item), .hab { padding-inline: 14px; }
 }
 @media (min-width: 1400px) { .pagina { max-width: 1320px; } }
 
@@ -153,3 +153,30 @@ input:focus, select:focus, textarea:focus { border-color: var(--ouro) !important
   .abas.abas-grupo button { padding: 9px 4px !important; font-size: 14px !important; gap: 4px; overflow: hidden; text-overflow: ellipsis; }
   .abas.abas-grupo button small { display: none; }
 }
+
+/* ---------- correções do celular ---------- */
+.abas button, .abas-sub button, .nav a { overflow: visible; text-overflow: clip; }
+@media (max-width: 760px) {
+  /* topo numa linha só (marca, campanha, mapa, conta) e o menu embaixo: ocupa menos tela */
+  .topo-in { gap: 6px 10px; min-height: 0; padding-block: 8px 0; }
+  .topo-in > .marca { order: 0; } .topo-in > .marca b { font-size: 20px; }
+  .topo-in > .volta-camp:not(.mapa-camp) { order: 1; flex: 1 1 0; min-width: 0; max-width: none; }
+  .topo-in > .mapa-camp { order: 2; flex: none; }
+  .topo-in > .quem { order: 3; margin-left: auto; flex: none; }
+  .topo-in > .nav { order: 4; flex: 1 1 100%; }
+  .quem .ava { width: 32px; height: 32px; }
+  /* abas de grupo: letra menor para nenhuma palavra ser cortada */
+  .abas.abas-grupo button { font-size: 13px !important; letter-spacing: 0; padding: 9px 2px !important; }
+  /* inventário: miniatura, nome e controles compactos, sem buraco vazio */
+  .inv-sum { grid-template-columns: 44px auto minmax(0, 1fr) !important; gap: 6px 10px !important; padding: 10px 12px !important; }
+  .inv-sum .moldura-it { display: grid !important; grid-row: span 2; width: 44px; border: 1px solid var(--linha); border-radius: var(--raio-p); }
+  .inv-sum .moldura-it::after { inset: 3px; }
+  .inv-sum .inv-seta { grid-row: span 2; }
+  .inv-ctrl { grid-column: 3 !important; justify-content: flex-start !important; gap: 4px !important; }
+  .inv-ctrl .vbtn { width: 32px; height: 32px; }
+  .inv-corpo { margin: 0 12px !important; }
+}
+@media (max-width: 380px) { .abas.abas-grupo button { font-size: 12px !important; } }
+.inv-item { overflow: hidden; padding: 0 !important; gap: 0 !important; }
+.inv-sum:hover .inv-nome > b { color: #fff; }
+.inv-resumo { gap: 4px 12px; }

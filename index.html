@@ -890,7 +890,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261111025447';
+const BUILD = '20261111030143';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -2083,7 +2083,7 @@ ROTAS.agente = async id => {
     </section>
 
     ${(() => { const T = [['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ...(sabeFeitico(F) ? [['feiticos', 'Feitiços']] : []), ...(ehBruxa(F) ? [['maldicoes', 'Maldições']] : []), ...(F.subclasse === 'Manipuladora' ? [['arsenal', 'Arsenal']] : []), ...(mecsFicha().length ? [['campanha', 'Campanha']] : []), ...(vampDe(F) ? [['vampiro', 'Vampiro']] : []), ['inventario', 'Inventário'], ['descricao', 'Descrição']], tem = new Map(T);
-      const G = [['Ficha', ['pericias', 'habilidades', 'alinhamento']], ['Combate', ['combate', 'arsenal', 'vampiro']], ['Oculto', ['rituais', 'feiticos', 'maldicoes']], ['Inventário', ['inventario']], ['Registro', ['descricao', 'campanha']]].map(([n, ks]) => [n, ks.filter(k => tem.has(k))]).filter(([, ks]) => ks.length);
+      const G = [['Ficha', ['pericias', 'habilidades', 'alinhamento']], ['Combate', ['combate', 'arsenal', 'vampiro']], ['Oculto', ['rituais', 'feiticos', 'maldicoes']], ['Itens', ['inventario']], ['Registro', ['descricao', 'campanha']]].map(([n, ks]) => [n, ks.filter(k => tem.has(k))]).filter(([, ks]) => ks.length);
       const gAt = G.find(([, ks]) => ks.includes(aba)) || G[0]; window.ABA_GRUPO ||= {}; window.ABA_GRUPO[gAt[0]] = aba;
       return `<nav class="abas abas-grupo" role="tablist" aria-label="Seções da ficha">${G.map(([n, ks]) => { const alvo = ks.includes(window.ABA_GRUPO[n]) ? window.ABA_GRUPO[n] : ks[0]; return `<button role="tab" aria-selected="${gAt[0] === n}" class="${gAt[0] === n ? 'aqui' : ''}" data-aba="${alvo}">${n}${ks.length > 1 ? `<small>${ks.length}</small>` : ''}</button>`; }).join('')}</nav>${gAt[1].length > 1 ? `<div class="abas abas-sub" role="tablist" aria-label="${esc(gAt[0])}">${gAt[1].map(k => `<button role="tab" aria-selected="${aba === k}" class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${tem.get(k)}</button>`).join('')}</div>` : ''}`; })()}
     <section id="sec">${secao(K, C, S)}</section>
@@ -2194,7 +2194,7 @@ ROTAS.agente = async id => {
       return `<div style="display:grid; gap:12px">
         <div class="caixa" style="display:grid; gap:6px"><div class="cab-pagina"><span><b class="mono">${fmtKg(K.carga)}</b> de ${fmtKg(K.cc)} <span class="faint">· CC = (For + Con) × 2</span></span><span class="el" style="color:${pct <= 100 ? 'var(--fole)' : pct <= 150 ? 'var(--ouro)' : 'var(--sangue-hi)'}">${pct > 200 ? 'Acima do limite' : esc(est.nome)}</span></div>
           <div class="trilho fino"><div class="cheio" style="width:${Math.min(100, pct / 2)}%; background:var(--lua-dim)"></div></div><span class="dim" style="font-size:13px">${esc(est.texto)}</span></div>
-        ${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn mini" id="add-item">Adicionar do livro</button><button class="btn sec mini" id="add-item-hb">Adicionar do homebrew</button><button class="btn sec mini" id="novo-item">Novo item</button></div>' : ''}
+        ${podeEditar ? '<div class="acoes-topo"><button class="btn mini" id="add-item">Adicionar do livro</button><button class="btn sec mini" id="add-item-hb">Adicionar do homebrew</button><button class="btn sec mini" id="novo-item">Novo item</button></div>' : ''}
         <div class="lista">${(F.equipamentos || []).map((it, i) => { if (it.ataque) return ''; const ab = INV_ABERTO.has(id + '|' + i);
           const det = [['Categoria', it.categoria], ['Alcance', it.alcance], ['Tipo', it.tipoDano], ['Teste', it.dano ? it.pericia || 'Armas Brancas' : ''], ['Peso', it.peso ? fmtKg(it.peso) + (it.qtd > 1 ? ` cada (${fmtKg(it.peso * it.qtd)})` : '') : ''], ['RD', it.rd || ''], ['Alivia', it.alivio ? fmtKg(it.alivio) : ''], ['Dano extra', it.extra]].filter(x => x[1]);
           return `<details class="item inv-item" data-inv="${i}" ${ab ? 'open' : ''}><summary class="inv-sum">${molduraItem(it, 'moldura-it mini-it')}<span class="inv-seta" aria-hidden="true">›</span><span class="inv-nome"><b>${esc(it.nome)}${it.qtd > 1 ? ` <span class="faint">×${it.qtd}</span>` : ''}</b>
