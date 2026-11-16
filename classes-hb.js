@@ -16,11 +16,14 @@ function iniciarClassesHb() {
     s.docs.forEach(d => { const x = d.data(); if (x.tipo === 'classe') HB_CLS[x.nome] = { ...x, hbId: d.id, __via: chave }; }); };
   try { db.collection('homebrew').where('autor', '==', ME).onSnapshot(s => pegar(s, 'meu')); } catch (e) {}
   try { db.collection('homebrew').where('ver_' + ME, '==', true).onSnapshot(s => pegar(s, 'visto')); } catch (e) {}
+  // revelada a todos pelo autor: qualquer um pode usar
+  try { db.collection('homebrew').where('compartilhado', '==', true).onSnapshot(s => { for (const k in HB_CLS) if (HB_CLS[k].__via === 'todos') delete HB_CLS[k];
+    s.docs.forEach(d => { const x = d.data(); if (x.tipo === 'classe' && !HB_CLS[x.nome]) HB_CLS[x.nome] = { ...x, hbId: d.id, __via: 'todos' }; }); }); } catch (e) {}
 }
-const limparClasse = c => { if (!c) return null; const { __via, autor, compartilhado, criado, tipo, ...r } = c; return JSON.parse(JSON.stringify(r)); };
+const limparClasse = c => { if (!c) return null; const { __via, autor, compartilhado, criado, tipo, ...r } = c; return JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(r).filter(([k]) => !k.startsWith('ver_'))))); };
 const snapshotHb = nome => HB_CLS[nome] ? limparClasse(HB_CLS[nome]) : null;
 const classeHbDe = n => HB_CLS[n] || HB_SNAP[n] || null;
-const minhasClassesHb = () => Object.values(HB_CLS).filter(c => c.__via === 'meu');
+const minhasClassesHb = () => Object.values(HB_CLS);
 function registrarClasseFicha(f) { if (f?.classeHb?.nome) HB_SNAP[f.classeHb.nome] = f.classeHb; }
 
 /* ---------- Marcas na ficha ---------- */
@@ -128,12 +131,37 @@ function ligarMarcas(F, { salvar, render }) {
 
 /* ---------- Homebrew: classe ---------- */
 function cardClasseHb(x) {
-  const meu = x.autor === ME, vistos = Object.keys(x).filter(k => k.startsWith('ver_') && x[k]).length;
-  return `<div class="item hb-classe"><div class="cab"><span class="nm">${esc(x.nome)}</span><span class="btns">${meu ? (vistos ? `<span class="tag">Mostrada a ${vistos} mestre${vistos > 1 ? 's' : ''}</span>` : '<span class="tag">Só você</span>') : '<span class="tag crit">Mostrada a você</span>'}
-      ${meu ? `<button class="btn mini ouro" data-cls-mestre="${esc(x.id)}">${IC('ver')} Mostrar ao mestre</button><button class="btn mini sec" data-cls-ed="${esc(x.id)}">${IC('editar')} Editar</button><button class="btn-x" data-del="${esc(x.id)}" aria-label="Apagar">×</button>` : ''}</span></div>
+  const meu = x.autor === ME, vistos = Object.keys(x).filter(k => k.startsWith('ver_') && x[k]).length, recebida = !meu && x['ver_' + ME];
+  const status = x.compartilhado ? '<span class="tag crit">Revelada a todos</span>' : meu ? (vistos ? `<span class="tag">Mostrada a ${vistos} mestre${vistos > 1 ? 's' : ''}</span>` : '<span class="tag">Só você</span>') : recebida ? '<span class="tag tag-oculta">Mostrada só a você</span>' : '';
+  return `<div class="item hb-classe"><div class="cab"><span class="nm">${esc(x.nome)}</span><span class="btns">${status}
+      ${meu ? `<button class="btn mini ouro" data-cls-mestre="${esc(x.id)}">${IC('ver')} Mostrar ao mestre</button><button class="btn mini ${x.compartilhado ? 'sec' : ''}" data-cls-todos="${esc(x.id)}">${x.compartilhado ? `${IC('esconder')} Esconder de novo` : `${IC('ver')} Revelar a todos`}</button><button class="btn mini sec" data-cls-ed="${esc(x.id)}">${IC('editar')} Editar</button><button class="btn-x" data-del="${esc(x.id)}" aria-label="Apagar">×</button>` : ''}
+      ${recebida && !x.compartilhado ? `<button class="btn mini ouro" data-cls-mesa="${esc(x.id)}">${IC('ver')} Revelar à mesa</button>` : ''}</span></div>
+    ${recebida && !x.compartilhado ? '<p class="faint" style="font-size:13px; margin:4px 0">Só você e o jogador veem e usam esta classe. Os outros jogadores só passam a ver se ela for revelada.</p>' : ''}
     <div class="mk-tags"><span class="tag">PV ${esc(x.pv)} · PST ${esc(x.pst)} · PS ${esc(x.ps)}</span><span class="tag">${esc(x.pericias)} perícias</span>${x.bruxaria ? '<span class="tag">Feitiços e maldições</span>' : ''}${x.chakras ? `<span class="tag">${(x.chakras || []).length} Marcas</span>` : ''}</div>
     ${x.descricao ? `<p class="dim" style="font-size:13.5px">${nl(x.descricao)}</p>` : ''}
     ${(x.subclasses || []).map(s => `<details class="hb-sub"><summary><b>${esc(s.nome)}</b>${s.descricao ? ` <span class="faint">${esc(s.descricao.slice(0, 90))}${s.descricao.length > 90 ? '…' : ''}</span>` : ''}</summary>${(s.habilidades || []).map(h => `<div class="hb-hab"><span class="tag">Nv ${esc(h.nivel)}</span> <b>${esc(h.nome)}</b><p>${nl(h.texto)}</p></div>`).join('')}</details>`).join('')}</div>`;
+}
+/* o autor revela a classe para todo mundo (ou esconde de novo) */
+async function revelarClasseTodos(x) {
+  const v = !x.compartilhado;
+  if (v && !await confirmar(`Revelar <b>${esc(x.nome)}</b> a todos? Qualquer jogador vai poder ver e usar a classe.`, { titulo: 'Revelar a todos', ok: 'Revelar' })) return;
+  try { await db.doc('homebrew/' + x.id).update({ compartilhado: v }); x.compartilhado = v; toast(v ? 'Classe revelada a todos.' : 'Classe escondida de novo: só você e os mestres que você escolheu.'); } catch (e) { toast('Não deu: ' + (e.message || e.code)); }
+}
+/* o mestre que recebeu a classe revela para os jogadores das campanhas dele (entra no homebrew da campanha) */
+async function revelarClasseMesa(x) {
+  let camps = []; try { camps = (await db.collection('campanhas').where('mestre', '==', ME).get()).docs.map(d => ({ id: d.id, ...d.data() })); } catch (e) {}
+  if (!camps.length) return toast('Você não mestra nenhuma campanha.');
+  const regras = {}; for (const c of camps) { try { const s = await db.doc(`campanhas/${c.id}/publico/regras`).get(); regras[c.id] = s.exists ? s.data() : {}; } catch (e) { regras[c.id] = {}; } }
+  const tem = c => (regras[c]?.ativo?.classes || []).some(k => k.hbId === x.id || k.nome === x.nome);
+  abrirModal('Revelar à mesa', `<p class="dim" style="margin:0">Os jogadores das campanhas marcadas passam a ver e usar <b>${esc(x.nome)}</b>. Desmarcar esconde de novo.</p>
+    <div class="lista">${camps.map(c => `<label class="chk"><input type="checkbox" data-rm-c="${esc(c.id)}" ${tem(c.id) ? 'checked' : ''}> ${esc(c.nome)}</label>`).join('')}</div><button class="btn" id="rm-ok">Salvar</button>`, (m, fechar) => {
+    m.querySelector('#rm-ok').onclick = async () => { const copia = { ...limparClasse(x), hbId: x.id };
+      for (const i of m.querySelectorAll('[data-rm-c]')) { const c = i.dataset.rmC, d = regras[c] || {}, quer = i.checked; if (quer === tem(c)) continue;
+        const mexer = R => { const L = (R?.classes || []).filter(k => k.hbId !== x.id && k.nome !== x.nome); return { ...(R || {}), classes: quer ? [...L, copia] : L }; };
+        const novo = { ...d, ativo: mexer(d.ativo || { classes: [], subExtras: [], mecanicas: [] }) }; if (d.rascunho) novo.rascunho = mexer(d.rascunho);
+        try { await db.doc(`campanhas/${c}/publico/regras`).set(novo); } catch (e) { return toast('Não salvou: ' + (e.message || e.code)); } }
+      fechar(); toast('Pronto.'); };
+  });
 }
 function editarClasseHb(x, gravar) {
   const base = x.id ? x : { tipo: 'classe', nome: '', descricao: '', pv: 12, pst: 9, ps: 9, pericias: 3, bruxaria: false, chakras: null, subclasses: [{ nome: 'Primeira subclasse', descricao: '', habilidades: [1, 3, 5, 7, 10].map(n => ({ nivel: n, nome: '', texto: '' })) }] };

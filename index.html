@@ -896,7 +896,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261116212625';
+const BUILD = '20261116213739';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -2893,6 +2893,8 @@ ROTAS.homebrew = async () => {
     $$('[data-ed]').forEach(b => b.onclick = () => editarHB(docs.find(d => d.id === b.dataset.ed)));
     $$('[data-cls-ed]').forEach(b => b.onclick = () => editarHB(docs.find(d => d.id === b.dataset.clsEd)));
     $$('[data-cls-mestre]').forEach(b => b.onclick = () => mostrarAoMestre(docs.find(d => d.id === b.dataset.clsMestre)));
+    $$('[data-cls-todos]').forEach(b => b.onclick = async () => { await revelarClasseTodos(docs.find(d => d.id === b.dataset.clsTodos)); render(); });
+    $$('[data-cls-mesa]').forEach(b => b.onclick = () => revelarClasseMesa(docs.find(d => d.id === b.dataset.clsMesa)));
     $$('[data-canon]').forEach(b => b.onclick = () => { const x = docs.find(d => d.id === b.dataset.canon); if (!x) return;
       if (x.canonico) return canonizar(x, false).then(render);
       abrirModal('Canonizar', `<p><b>${esc(x.nome)}</b> deixa de ser homebrew e entra no conteúdo original do sistema, para todo mundo: ${x.tipo === 'ameaca' || x.tipo === 'npc' ? 'no bestiário' : x.tipo === 'ritual' ? 'na lista de rituais' : x.tipo === 'feitico' ? 'na lista de feitiços' : x.tipo === 'item' ? 'nos itens do livro' : 'nas habilidades passivas'}, sem a etiqueta de homebrew.</p><p class="faint">Dá para desfazer depois.</p><div style="display:flex; gap:8px"><button class="btn" id="cn-ok">Canonizar</button><button class="btn sec" data-c>Cancelar</button></div>`, (m, fechar) => {
@@ -2905,7 +2907,7 @@ ROTAS.homebrew = async () => {
         m.querySelector('[data-fechar]:not(.btn-x)').onclick = fechar; }); });
   }
   async function gravar(base, dados) {
-    const vis = Object.fromEntries(Object.entries(base).filter(([k]) => k.startsWith('ver_'))), obj = { ...dados, ...vis, tipo: base.tipo, autor: base.autor || ME, compartilhado: base.tipo === 'classe' ? false : !!base.compartilhado, criado: base.criado || Date.now() };
+    const vis = Object.fromEntries(Object.entries(base).filter(([k]) => k.startsWith('ver_'))), obj = { ...dados, ...vis, tipo: base.tipo, autor: base.autor || ME, compartilhado: !!base.compartilhado, criado: base.criado || Date.now() };
     try { if (base.id) await db.doc('homebrew/' + base.id).set(obj); else await db.collection('homebrew').add(obj); toast('Salvo no homebrew.'); }
     catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); }
   }
