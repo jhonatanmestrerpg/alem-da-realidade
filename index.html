@@ -27,6 +27,7 @@
 <script src="mesa-extra.js"></script>
 <script src="aparicao.js"></script>
 <script src="base-sistema.js?v=20261116171603"></script>
+<script src="classes-hb.js"></script>
 <script src="estetica.js"></script>
 <style>
 /* Layout: barra fixa no topo com a "linha do destino" (ouro > sangue > violeta), páginas em coluna
@@ -141,7 +142,7 @@ img { max-width: 100%; }
 .linha-destino { height: 2px; background: linear-gradient(90deg, transparent, var(--ouro) 18%, var(--sangue) 55%, var(--violeta) 85%, transparent); }
 
 main { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 80px; }
-.pagina { max-width: 1240px; margin: 0 auto; display: grid; gap: 20px; }
+.pagina { max-width: 1240px; margin: 0 auto; display: grid; gap: 20px; align-content: start; }
 .estreita { max-width: 900px; }
 h1, h2, h3 { font-weight: 400; margin: 0; text-wrap: balance; }
 h1 { font: 400 clamp(30px, 5vw, 48px)/1.05 var(--f-disp); }
@@ -895,7 +896,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261116171603';
+const BUILD = '20261116212625';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -963,7 +964,7 @@ async function carregarBase() {
 // classes do livro + classes e subclasses criadas no homebrew das campanhas carregadas
 // nível 0 = mundano: sem classe, só perícias e uma passiva
 const nivelDe = x => x?.nivel === 0 || x?.nivel === '0' ? 0 : (+x?.nivel || 1);
-const classe = n => { const b = SIS.classes.find(c => c.nome === n) || (typeof todasClassesCamp === 'function' ? todasClassesCamp().find(c => c.nome === n) : null); if (!b) return undefined;
+const classe = n => { const b = SIS.classes.find(c => c.nome === n) || (typeof todasClassesCamp === 'function' ? todasClassesCamp().find(c => c.nome === n) : null) || (typeof classeHbDe === 'function' ? classeHbDe(n) : null); if (!b) return undefined;
   const ex = typeof todasSubExtras === 'function' ? todasSubExtras().filter(x => x.classe === n) : []; return ex.length ? { ...b, subclasses: [...(b.subclasses || []), ...ex.filter(x => !(b.subclasses || []).some(y => y.nome === x.nome))] } : b; };
 const subclasse = (c, s) => classe(c)?.subclasses?.find(x => x.nome === s);
 const patente = n => SIS.patentes.find(p => n >= p.de && n <= p.ate) || SIS.patentes[0];
@@ -1141,7 +1142,7 @@ const bolinhas = n => `<span class="bolinhas" aria-label="${n} de 3 bolinhas de 
 function qtdPassivas(nivel) { return [2, 6, 9, 11].filter(x => nivel >= x).length; }
 
 /* ---------- regras de cálculo ---------- */
-const ehBruxa = f => f?.classe === 'Bruxa';
+const ehBruxa = f => f?.classe === 'Bruxa' || !!(f?.classe && classe(f.classe)?.bruxaria);
 // feitiço: Bruxa conjura com Bruxaria, Ocultista com Ocultismo, outros com a melhor das duas
 const periciaConj = f => f?.classe === 'Bruxa' ? 'Bruxaria' : f?.classe === 'Ocultista' ? 'Ocultismo' : (() => { const a = dadosPericia(f, 'Bruxaria'), b = dadosPericia(f, 'Ocultismo'); return (b.dados * 10 + b.mod) > (a.dados * 10 + a.mod) ? 'Ocultismo' : 'Bruxaria'; })();
 // feitiço com resistência do alvo: não existe DT fixa, a DT é o teste de quem conjura contra o teste do alvo
@@ -1156,17 +1157,20 @@ const tagUsos = it => ehSaco(it) ? `<span class="tag">${usosSaco(it)}/${USOS_SAC
 const htmlReq = r => (r.ingrediente || r.item || r.sacrificio) ? `<p class="preparo"><b>Requer.</b> ${[r.ingrediente ? r.ingrediente + ' (1 uso)' : '', r.item ? r.item + ' (consumido)' : ''].filter(Boolean).map(esc).join(' + ')}${r.sacrificio ? `<br><b>Sacrifício.</b> ${esc(r.sacrificio)}` : ''}</p>` : '';
 const tagNivelF = r => r.nivel ? `<span class="tag">Nível ${esc(r.nivel)}</span>` : '';
 const sabeFeitico = f => ehBruxa(f) || (f?.passivas || []).some(p => p.nome === 'Aprender Feitiço') || (f?.habilidades || []).some(p => p.nome === 'Aprender Feitiço');
-const vetorLiberado = f => !!(f?.vetor?.liberado);
-const vetorAtivo = f => vetorLiberado(f) && !!f.vetorVestido;
-const fotoEf = f => (vetorAtivo(f) && f.vetor.foto) || f?.foto || '';
-const nomeEf = f => (vetorAtivo(f) && f.vetor.nome) || f?.nome || '';
+const chakraVest = f => (f?.chakraVestido && (f.chakras || []).find(c => c.id === f.chakraVestido)) || null;
+const vetorEf = f => chakraVest(f) ? { ...chakraVest(f), liberado: true } : f?.vetor;
+const vetorLiberado = f => !!(f?.vetor?.liberado) || !!chakraVest(f);
+const vetorAtivo = f => !!chakraVest(f) || (!!f?.vetor?.liberado && !!f.vetorVestido);
+const fotoEf = f => (vetorAtivo(f) && vetorEf(f)?.foto) || f?.foto || '';
+const nomeEf = f => (vetorAtivo(f) && vetorEf(f)?.nome) || f?.nome || '';
 // o mapa lê o agente ao vivo: com o vetor vestido, o token troca nome, foto e cor
-const vivoMapa = fichas => p => { const f = p.ficha && fichas[p.ficha]; return f ? { nome: nomeEf(f), foto: fotoEf(f), cor: vetorAtivo(f) && f.vetor?.cor ? f.vetor.cor : '' } : null; };
+const vivoMapa = fichas => p => { const f = p.ficha && fichas[p.ficha]; return f ? { nome: nomeEf(f), foto: fotoEf(f), cor: vetorAtivo(f) && vetorEf(f)?.cor ? vetorEf(f).cor : '' } : null; };
 const normBusca = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 function calc(f) {
   const C = classe(f.classe) || { pv: 0, ps: 0, pst: 0 };
   const A = atrEf(f), N = nivelDe(f);
-  const VB = vetorAtivo(f) ? 5 * N : 0;
+  const CK = chakraVest(f), SB = (C.subclasses || []).find(x => x.nome === f.subclasse) || {};
+  const VB = vetorAtivo(f) ? (CK && SB.bonusVestir != null ? +SB.bonusVestir : 5) * N : 0;
   const pt = n => (f.pericias || []).find(p => p.nome === n)?.pontos || 0;
   const vig = pt('Vigor'), vtd = pt('Vontade');
   const max = N === 0 ? { pv: 8 + (A.constituicao || 0) + vig * 5, ps: 5 + (A.inteligencia || 0) + vtd * 5, pst: 5 + (A.constituicao || 0) + vig * 2 } : {
@@ -1180,7 +1184,9 @@ function calc(f) {
     ps: `5 + (${C.ps} + ${A.inteligencia || 0}) × ${N}${vtd ? ` + ${vtd * 5} Vontade` : ''}`,
     pst: `5 + (${C.pst} + ${A.constituicao || 0}) × ${N}${vig ? ` + ${vig * 2} Vigor` : ''}`,
   };
-  if (VB) for (const k in form) form[k] += ` + ${VB} Vetor`;
+  if (VB) for (const k in form) form[k] += ` + ${VB} ${CK ? 'Marca' : 'Vetor'}`;
+  // subclasse homebrew com bônus por nível e Marca vestida com bônus próprio
+  for (const k of ['pv', 'ps', 'pst']) { const x = (+SB.bonusNivel?.[k] || 0) * N; if (x && N) { max[k] += x; form[k] += ` + ${x} ${SB.nome}`; } const y = +CK?.[k] || 0; if (y) { max[k] += y; form[k] += ` + ${y} ${CK.nome}`; } }
   // complemento de vampiro: bônus do tipo e da forma de morcego (Carniçal)
   const VP = vampDe(f), VF = vampForma(f) ? VAMP_TIPOS.carnical.forma : null;
   if (VP) for (const k of ['pv', 'ps', 'pst']) { const x = (+VP[k] || 0) + (VF ? +VF[k] || 0 : 0); if (x) { max[k] = Math.max(1, max[k] + x); form[k] += ` ${x > 0 ? '+' : '−'} ${Math.abs(x)} ${VF && VF[k] ? 'Morcego' : 'Vampiro'}`; } }
@@ -1196,7 +1202,7 @@ function calc(f) {
   const cc = ((A.forca || 0) + (A.constituicao || 0)) * 2;
   const rdItens = eq.reduce((s, i) => s + (+i.rd || 0) * 1, 0);
   const temPas = n => (f.passivas || []).some(p => p.nome === n);
-  const rd = Math.max(0, rdItens + (+f.rdExtra || 0) + (BM?.rd || 0) + (VF ? VF.rd : 0));
+  const rd = Math.max(0, rdItens + (+f.rdExtra || 0) + (BM?.rd || 0) + (VF ? VF.rd : 0) + (+CK?.rd || 0));
   const rdPar = Math.max(0, (temPas('Resistência Arcana') ? 15 : 0) + (+f.rdParExtra || 0));
   const rdForm = [rdItens ? `${rdItens} itens` : '', +f.rdExtra ? `${+f.rdExtra > 0 ? '+' : ''}${+f.rdExtra} ajuste` : ''].filter(Boolean).join(' ') || '0';
   const rdParForm = [temPas('Resistência Arcana') ? '15 Resistência Arcana' : '', +f.rdParExtra ? `${+f.rdParExtra > 0 ? '+' : ''}${+f.rdParExtra} ajuste` : ''].filter(Boolean).join(' ') || '0';
@@ -1231,8 +1237,8 @@ function dadosPericia(f, nome) {
   const vb = vetorAtivo(f) ? 1 : 0;
   const alem = vb && pontos + 1 > patente(nivelDe(f)).limite ? 1 : 0;
   const bm = typeof bonusMec === 'function' ? bonusMec(f).pericias : 0;
-  const vd = vampDados(f, nome), vtx = vampTeste(f, nome);
-  return { pontos, vt, vb, alem, atr, vd, dados: Math.max(1, pontos + vt + vb + alem + bm + vd), mod: (atrEf(f)[atr] || 0) + vtx, extraVamp: vtx };
+  const vd = vampDados(f, nome), vtx = vampTeste(f, nome), mk = +chakraVest(f)?.pericias?.[nome] || 0;
+  return { pontos, vt, vb, alem, atr, vd, mk, dados: Math.max(1, pontos + vt + vb + alem + bm + vd + mk), mod: (atrEf(f)[atr] || 0) + vtx, extraVamp: vtx };
 }
 
 /* =================================================================
@@ -1276,7 +1282,7 @@ const vampDe = f => VAMP_TIPOS[f?.vampiro?.tipo] || null;
 // os bônus do Carniçal (asas, garras, mordida, RD e Resiliência) valem sempre; virar morcego é a cena
 const vampForma = f => f?.vampiro?.tipo === 'carnical';
 // atributos com o bônus do tipo de vampiro (Centenário, Aristocrata)
-const atrEf = f => { const A = { ...(f?.atributos || {}) }, V = vampDe(f); if (V?.atr) for (const k in V.atr) A[k] = (A[k] || 0) + V.atr[k]; return A; };
+const atrEf = f => { const A = { ...(f?.atributos || {}) }, V = vampDe(f); if (V?.atr) for (const k in V.atr) A[k] = (A[k] || 0) + V.atr[k]; const CK = chakraVest(f); if (CK?.atributos) for (const k in CK.atributos) A[k] = (A[k] || 0) + (+CK.atributos[k] || 0); return A; };
 // dados extras e bônus fixos de teste vindos do vampiro
 const vampDados = (f, nome) => vampDe(f)?.dados?.[nome] || 0;
 // perícias que o tipo de vampiro mexe (aparecem na lista mesmo sem treino)
@@ -1288,6 +1294,7 @@ function armasVamp(f) {
   const For = atrEf(f).forca || 0, out = [];
   if (vampForma(f)) out.push({ nome: 'Garras', dano: `1d12+${For}`, mult: 3, pericia: 'Lutar', tipoDano: 'Corte', alcance: 'Corpo a corpo', natural: true, obs: 'Vampiro Carniçal.' },
     { nome: 'Mordida', dano: `2d8+${For}`, mult: 2, pericia: 'Lutar', tipoDano: 'Perfuração', alcance: 'Corpo a corpo', natural: true, obs: 'Vampiro Carniçal.' });
+  const CK = chakraVest(f); for (const a of CK?.ataques || []) out.push({ alcance: 'Corpo a corpo', ...a, natural: true, origemNat: CK.nome });
   return out;
 }
 function htmlVampiro(F, podeEditar) {
@@ -1527,7 +1534,7 @@ async function publicarRolagem(f, rotulo, r) {
   guardarLocal(f, rotulo, r);
   if (!db || !f?.campanhas?.length) return;
   for (const c of f.campanhas) {
-    try { await db.collection(`campanhas/${c}/rolagens`).add({ uid: ME, autor: nomeEf(f) || 'Agente', foto: (typeof fotoEf === 'function' ? fotoEf(f) : f.foto) || '', cor: (vetorAtivo(f) && f.vetor?.cor) || '', ficha: f.id || '', estilo: f.estiloRolagem || null, rotulo, detalhe: r.detalhe, total: r.total ?? '', tipo: r.tipo || '', titulo: r.titulo || '', ataque: r.ataque ?? '', dano: r.dano ?? '', critico: !!r.critico, t: Date.now() }); } catch (e) {}
+    try { await db.collection(`campanhas/${c}/rolagens`).add({ uid: ME, autor: nomeEf(f) || 'Agente', foto: (typeof fotoEf === 'function' ? fotoEf(f) : f.foto) || '', cor: (vetorAtivo(f) && vetorEf(f)?.cor) || '', ficha: f.id || '', estilo: f.estiloRolagem || null, rotulo, detalhe: r.detalhe, total: r.total ?? '', tipo: r.tipo || '', titulo: r.titulo || '', ataque: r.ataque ?? '', dano: r.dano ?? '', critico: !!r.critico, t: Date.now() }); } catch (e) {}
   }
 }
 
@@ -1784,7 +1791,7 @@ function cardAgente(f, extra = '', dono = '') {
 ROTAS.novo = async (campId = '') => {
   if (!db) { app.innerHTML = semBanco(); return; }
   let campNome = ''; if (campId) { try { const s = await db.doc('campanhas/' + campId).get(); campNome = s.exists ? s.data().nome : ''; } catch (e) {} if (!campNome) campId = ''; else await carregarRegras([campId]); }
-  const CLASSES = campId ? classesPara({ campanhas: [campId] }) : SIS.classes;
+  const CLASSES = classesPara(campId ? { campanhas: [campId] } : {});
   const CH = `adr-rascunho-${ME}${campId ? '-' + campId : ''}`;
   let R; try { R = JSON.parse(localStorage.getItem(CH) || 'null'); } catch (e) {}
   R = R || { passo: 0, nivel: 1, atributos: { forca: 0, destreza: 0, constituicao: 0, inteligencia: 0, presenca: 0 }, vontade: '', classe: '', subclasse: '', passivas: [], pericias: {}, nome: '', jogador: '', idade: '', vetor: '', aparencia: '', personalidade: '', historico: '', objetivo: '', foto: '' };
@@ -1876,7 +1883,7 @@ ROTAS.novo = async (campId = '') => {
       if (R.nivel === 0) { R.vontade = ''; R.vontadeEscolha = {}; R.classe = ''; R.subclasse = ''; }
       const vt = periciasVontade(R.vontade, R.vontadeEscolha);
       const nomes = new Set([...Object.keys(R.pericias), ...vt]);
-      const ficha = { dono: ME, criado: Date.now(), nome: R.nome.trim(), jogador: R.jogador, idade: R.idade, vontade: R.vontade, vontadeEscolha: R.vontadeEscolha || {}, vetor: R.vetor, classe: R.classe, subclasse: R.subclasse, nivel: R.nivel,
+      const ficha = { dono: ME, criado: Date.now(), nome: R.nome.trim(), jogador: R.jogador, idade: R.idade, vontade: R.vontade, vontadeEscolha: R.vontadeEscolha || {}, vetor: R.vetor, classe: R.classe, classeHb: snapshotHb(R.classe), subclasse: R.subclasse, nivel: R.nivel,
         atributos: R.atributos, pericias: [...nomes].map(n => ({ nome: n, pontos: R.pericias[n] || 0, atributo: SIS.pericias.find(p => p.nome === n)?.atributo || 'inteligencia' })),
         equipamentos: [], passivas: R.passivas, habilidades: [], rituais: [], aparencia: R.aparencia, personalidade: R.personalidade, historico: R.historico, objetivo: R.objetivo, foto: R.foto, campanhas: [], anotacoes: '' };
       const m = calc(ficha).max; ficha.atual = { ...m };
@@ -2015,6 +2022,7 @@ ROTAS.agente = async id => {
     const novo = { id: s.id, ...s.data() };
     if (pendente && F) novo.atual = F.atual;
     const primeira = !F; F = vincularItens(novo);
+    if (F.dono === ME && F.classeHb) { const sn = snapshotHb(F.classe); if (sn && JSON.stringify(sn) !== JSON.stringify(F.classeHb)) { F.classeHb = sn; registrarClasseFicha(F); ref.update({ classeHb: sn }).catch(() => {}); } }
     if (primeira) { await checarPermissao(); await carregarRegras(F.campanhas, () => { if (F) render(); }); }
     else carregarRegras(F.campanhas, () => { if (F) render(); });
     if (!document.activeElement?.closest?.('#ficha [data-texto]')) render();
@@ -2023,22 +2031,22 @@ ROTAS.agente = async id => {
   function render() {
     segurarAltura();
     if (F.morto && !VER_MORTO[F.id]) return telaMorto(F, { ehMestre, aoVer: () => { VER_MORTO[F.id] = true; render(); }, aoReviver: () => reviver() });
-    const K = calc(F); const A = F.atributos || {};
+    const K = calc(F); const A = editando ? (F.atributos || {}) : atrEf(F);
     F.atual = F.atual || { ...K.max };
     if (!pendente && ajustarQueda(F) && (F.dono === ME || ehMestre)) salvar({ queda: F.queda });
     const C = classe(F.classe), S = subclasse(F.classe, F.subclasse);
-    const VA = vetorAtivo(F), VL = vetorLiberado(F), cv = F.vetor?.cor || '#b4333b';
+    const VA = vetorAtivo(F), CKV = chakraVest(F), VL = !!F.vetor?.liberado, VGM = VL && !!F.vetorVestido && !CKV, cv = vetorEf(F)?.cor || '#b4333b';
     app.innerHTML = `${true ? `<button class="btn-hist" id="abrir-hist" aria-label="Histórico de rolagens" title="Histórico de rolagens"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></button>` : ''}<div id="ficha" class="${editando ? 'editando' : ''} ${VA ? 'vestido' : ''}" style="display:grid; gap:22px; --cv:${esc(cv)}">
     <div class="ficha-topo">
-      <div class="retrato ${VA ? 'vetor' : ''}" style="${fotoEf(F) ? `background-image:url('${esc(fotoEf(F))}')` : ''}">${fotoEf(F) ? '' : esc(iniciais(F.nome))}</div>
+      <div class="retrato-w ${F.ashura ? 'ashura' : ''}">${rodaMarcas(F)}<div class="retrato ${VA ? 'vetor' : ''}" style="${fotoEf(F) ? `background-image:url('${esc(fotoEf(F))}')` : ''}">${fotoEf(F) ? '' : esc(iniciais(F.nome))}</div></div>
       <div style="display:grid; gap:8px; min-width:0">
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center"><span class="el" style="color:var(--sangue-hi)">Dossiê de agente</span><span class="el" style="color:var(--ouro)">${esc(K.pat.nome)}</span>${F.vetor ? `<span class="el el-x">Vetor: ${esc(F.vetor)}</span>` : ''}</div>
-        ${VA ? `<h1 class="nome-vetor">${esc(F.vetor.nome || 'Vetor')}</h1><div class="dim" style="margin-top:-4px">${esc(F.nome)}, vestindo o vetor</div>` : `<h1>${esc(F.nome)}</h1>`}
+        ${VA ? `<h1 class="nome-vetor">${esc(nomeEf(F) || 'Vetor')}</h1><div class="dim" style="margin-top:-4px">${esc(F.nome)}, ${CKV ? `vestindo a intenção${CKV.titulo ? ' · ' + esc(CKV.titulo) : ''}` : 'vestindo o vetor'}</div>` : `<h1>${esc(F.nome)}</h1>`}
         <div class="dim">${nivelDe(F) === 0 ? 'Mundano' : `${esc(F.classe)} · ${esc(F.subclasse)}`} · Nível ${nivelDe(F)}${F.vontade ? ` · Vontade de ${esc(F.vontade)}` : ''}</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px">
           ${ehMestre ? (F.morto ? '<button class="btn ouro" id="reviver">Reviver</button>' : '<button class="btn sec" id="matar" title="Só o mestre declara a morte">Declarar morte</button>') : ''}${podeEditar ? `<button class="btn ${editando ? '' : 'sec'}" id="editar">${editando ? 'Concluir edição' : 'Editar ficha'}</button>${editando ? '<button class="btn sec" id="corrigir" title="Ajusta atributos, perícias, passivas e vitais às regras do nível e da patente">Corrigir ficha</button>' : ''}${F.dono === ME || DONO ? '<button class="btn sec" id="entregar-ag" title="Passar esta ficha para outro jogador"><i data-ic="entregar"></i> Entregar</button>' : ''}${editando && (F.dono === ME || DONO) ? '<button class="btn sec perigo" id="apagar-ag">Apagar agente</button>' : ''}` : ''}
-          ${VL ? (podeEditar ? `<button class="btn btn-vetor ${VA ? 'ativo' : ''}" id="vestir">${VA ? 'Tirar o vetor' : 'Vestir vetor'}</button>` : '')
-            : `<button class="btn btn-vetor" disabled title="Só o mestre libera">${CADEADO} Vestir vetor</button>`}
+          ${CKV ? (podeEditar ? `<button class="btn btn-vetor ativo" id="tirar-marca">Tirar ${esc(CKV.nome)}</button>` : '') : VL ? (podeEditar ? `<button class="btn btn-vetor ${VGM ? 'ativo' : ''}" id="vestir">${VGM ? 'Tirar o vetor' : 'Vestir vetor'}</button>` : '')
+            : temMarcas(F) ? '' : `<button class="btn btn-vetor" disabled title="Só o mestre libera">${CADEADO} Vestir vetor</button>`}
           ${F.dono === ME ? (MEU_PRINCIPAL === id ? `<a class="btn sec principal-on" href="#dossie-${esc(ME)}" title="Abrir seu dossiê de caçador">★ Personagem principal · caçador</a>` : `<button class="btn sec" id="tornar-principal" title="Vira seu caçador no Bestiário, com dossiê e registro de abates">☆ Tornar personagem principal</button>`) : ''}
           ${F.campanhas?.length ? `<span class="faint" style="align-self:center; font-size:13px">Rolagens vão para ${F.campanhas.length} campanha(s)</span>` : ''}
         </div>
@@ -2088,8 +2096,8 @@ ROTAS.agente = async id => {
       </div>
     </section>
 
-    ${(() => { const T = [['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ...(sabeFeitico(F) ? [['feiticos', 'Feitiços']] : []), ...(ehBruxa(F) ? [['maldicoes', 'Maldições']] : []), ...(F.subclasse === 'Manipuladora' ? [['arsenal', 'Arsenal']] : []), ...(mecsFicha().length ? [['campanha', 'Campanha']] : []), ...(vampDe(F) ? [['vampiro', 'Vampiro']] : []), ['inventario', 'Inventário'], ['descricao', 'Descrição']], tem = new Map(T);
-      const G = [['Ficha', ['pericias', 'habilidades', 'alinhamento']], ['Combate', ['combate', 'arsenal', 'vampiro']], ['Oculto', ['rituais', 'feiticos', 'maldicoes']], ['Itens', ['inventario']], ['Registro', ['descricao', 'campanha']]].map(([n, ks]) => [n, ks.filter(k => tem.has(k))]).filter(([, ks]) => ks.length);
+    ${(() => { const T = [['pericias', 'Perícias'], ['combate', 'Combate'], ['habilidades', 'Habilidades'], ['alinhamento', 'Alinhamento'], ['rituais', 'Rituais'], ...(sabeFeitico(F) ? [['feiticos', 'Feitiços']] : []), ...(ehBruxa(F) ? [['maldicoes', 'Maldições']] : []), ...(F.subclasse === 'Manipuladora' ? [['arsenal', 'Arsenal']] : []), ...(temMarcas(F) ? [['marcas', 'Marcas']] : []), ...(mecsFicha().length ? [['campanha', 'Campanha']] : []), ...(vampDe(F) ? [['vampiro', 'Vampiro']] : []), ['inventario', 'Inventário'], ['descricao', 'Descrição']], tem = new Map(T);
+      const G = [['Ficha', ['pericias', 'habilidades', 'alinhamento']], ['Combate', ['combate', 'marcas', 'arsenal', 'vampiro']], ['Oculto', ['rituais', 'feiticos', 'maldicoes']], ['Itens', ['inventario']], ['Registro', ['descricao', 'campanha']]].map(([n, ks]) => [n, ks.filter(k => tem.has(k))]).filter(([, ks]) => ks.length);
       const gAt = G.find(([, ks]) => ks.includes(aba)) || G[0]; window.ABA_GRUPO ||= {}; window.ABA_GRUPO[gAt[0]] = aba;
       return `<nav class="abas abas-grupo" role="tablist" aria-label="Seções da ficha">${G.map(([n, ks]) => { const alvo = ks.includes(window.ABA_GRUPO[n]) ? window.ABA_GRUPO[n] : ks[0]; return `<button role="tab" aria-selected="${gAt[0] === n}" class="${gAt[0] === n ? 'aqui' : ''}" data-aba="${alvo}">${n}${ks.length > 1 ? `<small>${ks.length}</small>` : ''}</button>`; }).join('')}</nav>${gAt[1].length > 1 ? `<div class="abas abas-sub" role="tablist" aria-label="${esc(gAt[0])}">${gAt[1].map(k => `<button role="tab" aria-selected="${aba === k}" class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${tem.get(k)}</button>`).join('')}</div>` : ''}`; })()}
     <section id="sec">${secao(K, C, S)}</section>
@@ -2133,7 +2141,7 @@ ROTAS.agente = async id => {
         ${ehInventor(F) && nomeFav(F) && (F.bonusAtaque || []).some(b => FAV_AUTO.includes(b.nome)) ? `<p class="faint" style="font-size:12px; margin:0">${FAV_AUTO.join(', ')} já entram sozinhos pela Arma Favorita: os chips com esses nomes ficam de fora para não somar duas vezes.</p>` : ''}
         ${BA.nomes.length ? `<p class="mono" style="font-size:12px; color:var(--fole); margin:0">Ligado: ${esc(resumoBonus({ acerto: BA.acerto, margem: BA.margem, dano: BA.dano.join(' + '), mult: BA.mult, multTotal: BA.multTotal, custo: BA.custo, custoPs: BA.custoPs }))}</p>` : ''}</div>`;
       return `<div style="display:grid; gap:12px">${barra}${painelBonus}${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center"><button class="btn mini" id="novo-ataque">Criar ataque</button><span class="faint" style="font-size:13px">Soco, garra, mordida, chute: ataques que não são itens do inventário.</span></div>' : ''}${armas.length ? `<div class="lista">${armas.map(([it, i]) => { const P = dadosPericia(F, it.pericia || 'Armas Brancas'), E = armaEfF(F, it), nv = +F.nivel || 1;
-        return `<div class="item ${it.natural ? 'arma-natural' : ''} ${E.fav ? 'arma-fav' : ''}"><div class="cab"><span class="nm">${E.fav ? '<span class="fav-estrela" title="Arma Favorita">★</span> ' : ''}${esc(it.nome)} <span class="mono dim" style="font-weight:400; font-size:13px">${esc(E.mx !== 1 || E.danoFav ? fmtDano(danoComFav(E)) : it.dano)}</span>${it.danificada ? ' <span class="tag tag-dano">Danificada</span>' : ''}${it.natural ? ' <span class="tag crit">Vampiro</span>' : ''}${it.ataque ? ' <span class="tag">Ataque</span>' : ''}</span><span style="display:flex; gap:6px; flex-wrap:wrap">${it.tipoDano ? `<span class="tag">${esc(it.tipoDano)}</span>` : ''}${it.alcance ? `<span class="tag">${esc(it.alcance)}</span>` : ''}<span class="tag crit">${E.margem < 20 ? `${E.margem}/` : ''}×${E.mult}</span><span class="tag" data-pline="${esc(id + '|a|' + i)}">${(G => `${esc(it.pericia || 'Armas Brancas')} ${G.dados}d20+${G.mod + E.acerto} (${SIGLA[G.atr]})`)(comAtributo(F, P, UI_ARMA['giro|' + id + '|a|' + i]))}</span></span></div>
+        return `<div class="item ${it.natural ? 'arma-natural' : ''} ${E.fav ? 'arma-fav' : ''}"><div class="cab"><span class="nm">${E.fav ? '<span class="fav-estrela" title="Arma Favorita">★</span> ' : ''}${esc(it.nome)} <span class="mono dim" style="font-weight:400; font-size:13px">${esc(E.mx !== 1 || E.danoFav ? fmtDano(danoComFav(E)) : it.dano)}</span>${it.danificada ? ' <span class="tag tag-dano">Danificada</span>' : ''}${it.natural ? ` <span class="tag crit">${esc(it.origemNat || 'Vampiro')}</span>` : ''}${it.ataque ? ' <span class="tag">Ataque</span>' : ''}</span><span style="display:flex; gap:6px; flex-wrap:wrap">${it.tipoDano ? `<span class="tag">${esc(it.tipoDano)}</span>` : ''}${it.alcance ? `<span class="tag">${esc(it.alcance)}</span>` : ''}<span class="tag crit">${E.margem < 20 ? `${E.margem}/` : ''}×${E.mult}</span><span class="tag" data-pline="${esc(id + '|a|' + i)}">${(G => `${esc(it.pericia || 'Armas Brancas')} ${G.dados}d20+${G.mod + E.acerto} (${SIGLA[G.atr]})`)(comAtributo(F, P, UI_ARMA['giro|' + id + '|a|' + i]))}</span></span></div>
         ${tagsMods(it) ? `<div style="display:flex; gap:6px; flex-wrap:wrap">${tagsMods(it)}</div>` : ''}${E.notas.length + E.notasFav.length ? `<p class="mono faint" style="font-size:12px">Aplicado: ${esc([...E.notas, ...E.notasFav].join(' · '))}</p>` : ''}
         ${E.fav && ehInventor(F) && (nv >= 3 || nv >= 7 || nv >= 5 || it.danificada) ? `<div class="fav-painel">${nv >= 3 ? `<label class="chk">Modificação Avançada ${podeEditar ? `<select data-fav-mod style="width:auto; padding:3px 6px"><option value="">Escolher</option>${(SIS.melhorias || []).filter(m => modCabe(it, m)).map(m => `<option ${m.nome === F.favMod ? 'selected' : ''}>${esc(m.nome)}</option>`).join('')}</select>` : `<b>${esc(F.favMod || 'nenhuma')}</b>`}</label>` : ''}${nv >= 5 ? `<button class="btn mini" data-fav-extra="${i}" title="Uma vez por rodada: ataque adicional com a Arma Favorita">Ataque adicional · 10 PST</button>` : ''}${nv >= 7 ? `<label class="chk" title="Uma vez por combate, 5 turnos: margem +2, +2d10, +5 nos testes. Ao desligar, a arma fica Danificada."><input type="checkbox" data-fav-exp ${F.favExp ? 'checked' : ''} ${podeEditar ? '' : 'disabled'}> Modo Experimental</label>` : ''}${it.danificada && podeEditar ? `<button class="btn sec mini" data-fav-conserta="${i}">Consertar</button>` : ''}</div>` : ''}
         ${it.obs ? `<p class="dim" style="font-size:13.5px">${esc(it.obs)}</p>` : ''}
@@ -2141,6 +2149,7 @@ ROTAS.agente = async id => {
         <div class="res" id="res-${i}">${UI_ARMA[id + '|r|' + i] || ''}</div></div>`; }).join('')}</div>` : '<div class="vazio">Nenhuma arma ou ataque. Pegue uma arma no inventário ou crie um ataque.</div>'}
         <div class="caixa" style="display:grid; gap:8px"><span class="rotulo">Rolagem livre</span><div style="display:flex; gap:8px"><input type="text" id="livre" placeholder="2d6+3, 3d20m+4 (m = fica o maior) ou 3#2d10+6 (# = rola 3 vezes e soma)"><button class="btn" id="rolar-livre">Rolar</button></div><div class="res" id="res-livre"></div></div></div>`;
     }
+    if (aba === 'marcas') return marcasHTML(F, podeEditar);
     if (aba === 'arsenal') {
       const L = F.arsenal || [], cap = Math.max(0, atrEf(F).inteligencia || 0), nv = +F.nivel || 1, lim = nv >= 7 ? 2 : 1, ativos = L.filter(x => x.invocada).length;
       return `<div style="display:grid; gap:14px"><div class="cab-pagina"><div><h2 style="margin:0">Arsenal</h2><p class="dim" style="margin:4px 0 0; max-width:70ch">Criaturas absorvidas com Absorção de Maldição. Cabem ${cap} (seu Intelecto). Usar manda o pedido ao mestre; se ele aceitar, a criatura entra no combate e você paga 5 PS. ${nv >= 7 ? 'Até 2 em combate ao mesmo tempo (Enxame de Maldições).' : 'Uma em combate por vez.'}</p></div>${podeEditar ? `<button class="btn" id="ars-add" ${L.length >= cap ? 'disabled title="Arsenal cheio"' : ''}>Absorver criatura</button>` : ''}</div>
@@ -2216,11 +2225,11 @@ ROTAS.agente = async id => {
       ${podeEditar ? `<textarea id="d-${k}" data-texto="${k}">${esc(F[k])}</textarea>` : `<p class="dim">${nl(F[k]) || '—'}</p>`}</div>`).join('')}</div>`;
   }
   const VL_HAB = () => {
-    if (!vetorLiberado(F)) return '';
+    if (!F.vetor?.liberado) return '';
     const hs = F.vetor.habilidades || [];
-    return `<div class="cab-pagina"><h2 class="titulo-vetor">Vetor · ${esc(F.vetor.nome || '')}</h2>${vetorAtivo(F) ? '<span class="tag tag-vetor">Vestido</span>' : '<span class="faint" style="font-size:13px">Vista o vetor para usar</span>'}</div>
+    return `<div class="cab-pagina"><h2 class="titulo-vetor">Vetor · ${esc(F.vetor.nome || '')}</h2>${F.vetorVestido && !chakraVest(F) ? '<span class="tag tag-vetor">Vestido</span>' : '<span class="faint" style="font-size:13px">Vista o vetor para usar</span>'}</div>
       ${F.vetor.descricao ? `<p class="dim" style="max-width:70ch; font-style:italic">${nl(F.vetor.descricao)}</p>` : ''}
-      <div class="grade-hab">${hs.map(h => `<article class="hab hab-vetor ${vetorAtivo(F) ? '' : 'bloq'}"><span class="nm">${esc(h.nome)}</span><p>${nl(h.texto)}</p></article>`).join('') || '<div class="vazio">O mestre ainda não escreveu habilidades para este vetor.</div>'}</div>`;
+      <div class="grade-hab">${hs.map(h => `<article class="hab hab-vetor ${F.vetorVestido && !chakraVest(F) ? '' : 'bloq'}"><span class="nm">${esc(h.nome)}</span><p>${nl(h.texto)}</p></article>`).join('') || '<div class="vazio">O mestre ainda não escreveu habilidades para este vetor.</div>'}</div>`;
   };
   const RES_HAB = window._resHab = window._resHab || {};
   const autoDe = nome => (F.autos || {})[nome];
@@ -2259,14 +2268,14 @@ ROTAS.agente = async id => {
     $('#matar')?.addEventListener('click', () => declararMorte(F, async morto => { VER_MORTO[F.id] = false; F.morto = morto; render(); try { await ref.update({ morto }); } catch (e) { toast('Não deu para salvar.'); } }));
     $('#reviver')?.addEventListener('click', () => reviver());
     $('#vestir')?.addEventListener('click', async () => {
-      if (!vetorLiberado(F)) return;
+      if (!F.vetor?.liberado) return;
       const vestir = !F.vetorVestido, b = 5 * (nivelDe(F));
       const a = { ...(F.atual || calc(F).max) };
       F.vetorVestido = vestir;
       const M = calc(F).max;
       for (const k of ['pv', 'ps', 'pst']) a[k] = vestir ? Math.min(M[k], (a[k] ?? 0) + b) : Math.max(1, Math.min(M[k], (a[k] ?? 0) - b));
       F.atual = a; pendente = true;
-      const fx = document.createElement('div'); fx.className = 'fx-vetor' + (vestir ? '' : ' sair'); fx.style.setProperty('--cv', F.vetor.cor || '#b4333b'); document.body.appendChild(fx); setTimeout(() => fx.remove(), 1100);
+      const fx = document.createElement('div'); fx.className = 'fx-vetor' + (vestir ? '' : ' sair'); fx.style.setProperty('--cv', F.vetor?.cor || '#b4333b'); document.body.appendChild(fx); setTimeout(() => fx.remove(), 1100);
       setTimeout(render, 380);
       try { await ref.update({ vetorVestido: vestir, atual: a }); } catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); }
       pendente = false;
@@ -2302,7 +2311,7 @@ ROTAS.agente = async id => {
         m.querySelector('#sn-c').onchange = sc; sc();
         m.querySelector('#sn-ok').onclick = () => { aplicarMudanca({ nivel: n, classe: m.querySelector('#sn-c').value, subclasse: m.querySelector('#sn-s').value }, `Nível ${n}: agora ${m.querySelector('#sn-c').value}`); fechar(); }; });
       e.target.value = 0; });
-    $('#e-classe')?.addEventListener('change', e => { const C = classe(e.target.value); aplicarMudanca({ classe: C.nome, subclasse: C.subclasses[0]?.nome || '' }, `Agora ${C.nome}`); });
+    $('#e-classe')?.addEventListener('change', e => { const C = classe(e.target.value); aplicarMudanca({ classe: C.nome, classeHb: snapshotHb(C.nome), subclasse: C.subclasses[0]?.nome || '' }, `Agora ${C.nome}`); });
     $('#e-sub')?.addEventListener('change', e => aplicarMudanca({ subclasse: e.target.value }, `Subclasse ${e.target.value}`));
     $('#e-pat')?.addEventListener('change', e => { const p = SIS.patentes.find(x => x.de === +e.target.value), n = nivelDe(F); aplicarMudanca({ nivel: n >= p.de && n <= p.ate ? n : p.de }, p.nome); });
     const pularPatente = d => { const i = SIS.patentes.findIndex(p => p.nome === patente(nivelDe(F)).nome) + d; const p = SIS.patentes[i]; if (!p) return toast(d > 0 ? 'Já está na patente mais alta.' : 'Já está na primeira patente.'); aplicarMudanca({ nivel: p.de }, `${d > 0 ? 'Subiu' : 'Desceu'} para ${p.nome}`); };
@@ -2515,6 +2524,8 @@ ROTAS.agente = async id => {
     $$('[data-auto-hab]').forEach(b => b.onclick = () => formAuto(b.dataset.autoHab));
     $$('[data-usar-hab]').forEach(b => b.onclick = () => usarHab(b.dataset.usarHab));
     // Arsenal da Manipuladora: absorver, soltar, pedir para invocar (o mestre aceita ou nega)
+    if (aba === 'marcas') ligarMarcas(F, { salvar, render });
+    $('#tirar-marca')?.addEventListener('click', () => vestirMarca(F, '', { salvar, render }));
     $('#ars-add')?.addEventListener('click', async () => { const hb = (await homebrewVisivel('ameaca')).map(x => ({ ...x, id: 'hb' + x.id }));
       seletor('Absorver criatura', [...CRI.filter(a => !a.npc), ...hb], a => `<b>${esc(a.nome)}</b> ${elTag(a.elemento)} <span class="tag">Nv ${esc(a.nivel)}</span> <span class="tag">PV ${esc(a.ficha?.pv)}</span>`, a => {
         const L = [...(F.arsenal || [])], cap = Math.max(0, atrEf(F).inteligencia || 0); if (L.length >= cap) return toast(`Arsenal cheio: cabem ${cap} (Intelecto).`);
@@ -2828,7 +2839,7 @@ async function carregarCanon() {
   FEIT = [...B.F, ...de('feitico').map(x => ({ ...limpo(x), canon: true }))];
   SIS.passivas = [...SIS.passivas, ...de('habilidade').map(x => ({ nome: x.nome, texto: x.texto || '', canon: true }))];
   SIS.itens = [...SIS.itens, ...de('item').map(x => ({ ...limpo(x), categoria: x.categoria || 'Gerais', canon: true }))];
-  vigiarPedidos();
+  vigiarPedidos(); iniciarClassesHb();
 }
 async function canonizar(x, sim) {
   try { await db.doc('homebrew/' + x.id).update({ canonico: !!sim, canonizadoEm: sim ? Date.now() : null, canonizadoPor: sim ? ME : null }); x.canonico = !!sim; await carregarCanon();
@@ -2842,7 +2853,7 @@ async function homebrewVisivel(tipo, comCanon = false) {
     return [...m.values()].filter(x => (!tipo || x.tipo === tipo) && (comCanon || !x.canonico));
   } catch (e) { return []; }
 }
-const TIPOS_HB = [['ameaca', 'Ameaças'], ['npc', 'NPCs'], ['habilidade', 'Habilidades'], ['ritual', 'Rituais'], ['feitico', 'Feitiços'], ['item', 'Itens']];
+const TIPOS_HB = [['ameaca', 'Ameaças'], ['npc', 'NPCs'], ['classe', 'Classes'], ['habilidade', 'Habilidades'], ['ritual', 'Rituais'], ['feitico', 'Feitiços'], ['item', 'Itens']];
 ROTAS.homebrew = async () => {
   let aba = abaSalva('ameaca'), docs = [];
   app.className = 'pagina estreita';
@@ -2851,15 +2862,17 @@ ROTAS.homebrew = async () => {
     const meus = docs.filter(x => x.autor === ME).length;
     app.innerHTML = `<div><span class="rotulo">Criações da mesa</span><h1>Homebrew</h1></div>${db ? '' : semBanco()}
       <div class="abas">${TIPOS_HB.map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
-      <div class="cab-pagina"><span class="dim">Você criou <b class="mono">${meus}</b>. Compartilhados aparecem para toda a mesa.</span>${db ? `<button class="btn" id="novo">Adicionar</button>` : ''}</div>
+      <div class="cab-pagina"><span class="dim">${aba === 'classe' ? 'Classes são só suas. Use "Mostrar ao mestre" para o mestre da campanha ver; os outros jogadores nunca veem.' : `Você criou <b class="mono">${meus}</b>. Compartilhados aparecem para toda a mesa.`}</span>${db ? `<span class="btns"><button class="btn sec" id="importar-hb">Importar arquivo</button><button class="btn" id="novo">Adicionar</button></span>` : ''}</div>
       <div class="busca">${ICON_BUSCA}<input type="search" id="busca" placeholder="Buscar"></div>
       <div class="lista" id="lista-hb">${lista.length ? '' : `<div class="vazio">Ainda não há ${TIPOS_HB.find(t => t[0] === aba)[1].toLowerCase()} no homebrew.</div>`}</div>`;
     const desenhar = () => { const q = $('#busca').value.toLowerCase(); $('#lista-hb').innerHTML = lista.filter(x => !q || JSON.stringify(x).toLowerCase().includes(q)).map(cardHB).join('') || (lista.length ? '<div class="vazio">Nada encontrado.</div>' : $('#lista-hb').innerHTML); ligarLista(); };
     $('#busca').oninput = desenhar; desenhar();
     $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; lembrarAba(aba); render(); });
     $('#novo')?.addEventListener('click', () => editarHB({ tipo: aba }));
+    $('#importar-hb')?.addEventListener('click', importarHomebrew);
   }
   const cardHB = x => {
+    if (x.tipo === 'classe') return cardClasseHb(x);
     if (x.tipo === 'ameaca' || x.tipo === 'npc') { const meu = x.autor === ME || DONO;
       return `<div class="hb-am">${bannerAmeaca({ ...x, npc: x.tipo === 'npc' }, `<div class="hb-acoes">${meu ? `<div class="menu-pop"><button class="btn-x engr" data-menu aria-label="Opções de ${esc(x.nome)}"><i data-ic="engrenagem"></i></button><div hidden>${DONO ? `<button data-canon="${esc(x.id)}">${x.canonico ? 'Voltar a ser homebrew' : 'Canonizar (vira original)'}</button>` : ''}<button data-comp="${esc(x.id)}">${x.compartilhado ? 'Parar de compartilhar' : 'Compartilhar com a mesa'}</button><button data-ed="${esc(x.id)}">Editar</button><button class="del" data-del="${esc(x.id)}">Apagar</button></div></div>` : '<span></span>'}
         <span style="display:flex; gap:6px; align-items:center">${x.canonico ? '<span class="tag canon">Original</span>' : x.compartilhado ? '<span class="tag crit">Compartilhado</span>' : ''}<button class="btn mini" data-ver-am="${esc(x.id)}">Ficha</button></span></div>`)}</div>`; }
@@ -2878,6 +2891,8 @@ ROTAS.homebrew = async () => {
   function ligarLista() {
     $$('[data-comp]').forEach(b => b.onclick = async () => { const x = docs.find(d => d.id === b.dataset.comp); try { await db.doc('homebrew/' + x.id).update({ compartilhado: !x.compartilhado }); } catch (e) { toast('Não deu para alterar.'); } });
     $$('[data-ed]').forEach(b => b.onclick = () => editarHB(docs.find(d => d.id === b.dataset.ed)));
+    $$('[data-cls-ed]').forEach(b => b.onclick = () => editarHB(docs.find(d => d.id === b.dataset.clsEd)));
+    $$('[data-cls-mestre]').forEach(b => b.onclick = () => mostrarAoMestre(docs.find(d => d.id === b.dataset.clsMestre)));
     $$('[data-canon]').forEach(b => b.onclick = () => { const x = docs.find(d => d.id === b.dataset.canon); if (!x) return;
       if (x.canonico) return canonizar(x, false).then(render);
       abrirModal('Canonizar', `<p><b>${esc(x.nome)}</b> deixa de ser homebrew e entra no conteúdo original do sistema, para todo mundo: ${x.tipo === 'ameaca' || x.tipo === 'npc' ? 'no bestiário' : x.tipo === 'ritual' ? 'na lista de rituais' : x.tipo === 'feitico' ? 'na lista de feitiços' : x.tipo === 'item' ? 'nos itens do livro' : 'nas habilidades passivas'}, sem a etiqueta de homebrew.</p><p class="faint">Dá para desfazer depois.</p><div style="display:flex; gap:8px"><button class="btn" id="cn-ok">Canonizar</button><button class="btn sec" data-c>Cancelar</button></div>`, (m, fechar) => {
@@ -2890,11 +2905,12 @@ ROTAS.homebrew = async () => {
         m.querySelector('[data-fechar]:not(.btn-x)').onclick = fechar; }); });
   }
   async function gravar(base, dados) {
-    const obj = { ...dados, tipo: base.tipo, autor: base.autor || ME, compartilhado: !!base.compartilhado, criado: base.criado || Date.now() };
+    const vis = Object.fromEntries(Object.entries(base).filter(([k]) => k.startsWith('ver_'))), obj = { ...dados, ...vis, tipo: base.tipo, autor: base.autor || ME, compartilhado: base.tipo === 'classe' ? false : !!base.compartilhado, criado: base.criado || Date.now() };
     try { if (base.id) await db.doc('homebrew/' + base.id).set(obj); else await db.collection('homebrew').add(obj); toast('Salvo no homebrew.'); }
     catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); }
   }
   function editarHB(x) {
+    if (x.tipo === 'classe') return editarClasseHb(x, gravar);
     if (x.tipo === 'habilidade') return formHabilidade(h => gravar(x, h), x);
     if (x.tipo === 'ritual') return formRitual(r => gravar(x, r), x);
     if (x.tipo === 'feitico') return formFeitico(r => gravar(x, r), x);
@@ -2902,7 +2918,8 @@ ROTAS.homebrew = async () => {
     formAmeaca(x, a => gravar(x, a));
   }
   if (db) assinar(db.collection('homebrew').where('autor', '==', ME).onSnapshot(s => { const outros = docs.filter(d => d.autor !== ME); docs = [...outros, ...s.docs.map(d => ({ id: d.id, ...d.data() }))]; render(); }));
-  if (db) assinar(db.collection('homebrew').where('compartilhado', '==', true).onSnapshot(s => { const meus = docs.filter(d => d.autor === ME); const m = new Map(meus.map(d => [d.id, d])); s.docs.forEach(d => { if (!m.has(d.id)) m.set(d.id, { id: d.id, ...d.data() }); }); docs = [...m.values()]; render(); }));
+  if (db) assinar(db.collection('homebrew').where('ver_' + ME, '==', true).onSnapshot(s => { const m = new Map(docs.map(d => [d.id, d])); s.docs.forEach(d => m.set(d.id, { id: d.id, ...d.data() })); docs = [...m.values()]; render(); }));
+  if (db) assinar(db.collection('homebrew').where('compartilhado', '==', true).onSnapshot(s => { const meus = docs.filter(d => d.autor === ME || d['ver_' + ME]); const m = new Map(meus.map(d => [d.id, d])); s.docs.forEach(d => { if (!m.has(d.id)) m.set(d.id, { id: d.id, ...d.data() }); }); docs = [...m.values()]; render(); }));
   render();
 };
 /* ---------- ficha de ameaça / NPC: tipos, formulário completo, ações e poderes ---------- */
@@ -3692,6 +3709,11 @@ function ouvirCampanha(id, aoMudar) {
 /* ---------- fichas ocultas: o mestre marca um jogador e os agentes dele somem para os outros jogadores ---------- */
 const ocultosDe = st => new Set((st?.membros || []).filter(m => m.oculto).map(m => m.uid));
 const vePessoa = (st, uid, mestre) => mestre || !uid || uid === ME || !ocultosDe(st).has(uid);
+// por ficha: o mestre escolhe quais agentes do jogador ficam ocultos (um jogador pode ter um visível e outro oculto)
+const fichasOcultasDe = st => new Set((st?.membros || []).flatMap(m => m.ocultas || []));
+const fichaOculta = (st, f) => !!f && (ocultosDe(st).has(f.dono) || fichasOcultasDe(st).has(f.id));
+const veFicha = (st, f, mestre) => mestre || !f || f.dono === ME || !fichaOculta(st, f);
+const veRol = (st, r, mestre) => mestre || !r || r.uid === ME || (vePessoa(st, r.uid, false) && !(r.ficha ? fichasOcultasDe(st).has(r.ficha) : (st?.membros || []).some(m => m.uid === r.uid && (m.ocultas || []).length)));
 /* ---------- painel lateral: rolagens e chat da sessão ---------- */
 const FEED_ABA = {};
 const vistoChat = id => { try { return +(localStorage.getItem('chatVisto|' + id) || 0); } catch (e) { return 0; } };
@@ -3776,7 +3798,9 @@ function abrirHistorico(camps0, fid) {
   const desenhar = rols => { g.querySelector('.hist-lista').innerHTML = rols.map(rolHtml).join('') || '<div class="vazio">Nenhuma rolagem ainda.</div>'; };
   const ouvir = () => { un?.(); g.querySelector('.hist-lista').innerHTML = '<div class="vazio">Carregando…</div>';
     if (atual === '__ficha') { const ver = () => desenhar(histLocal(fid)); ver(); const f2 = e => { if (e.detail === fid) ver(); }; addEventListener('hist-local', f2); un = () => removeEventListener('hist-local', f2); return; }
-    un = db.collection(`campanhas/${atual}/rolagens`).orderBy('t', 'desc').limit(40).onSnapshot(sn => desenhar(sn.docs.map(x => x.data()).filter(r => !r.oculta)), () => { g.querySelector('.hist-lista').innerHTML = '<div class="vazio">Não deu para ler as rolagens.</div>'; }); };
+    const cA = atual, stH = { membros: [] }; let ehM = false, parado = false; un = () => { parado = true; };
+    Promise.all([db.doc(`campanhas/${cA}`).get().then(d => { ehM = d.data()?.mestre === ME; }).catch(() => {}), db.collection(`campanhas/${cA}/membros`).get().then(q => { stH.membros = q.docs.map(d => d.data()); }).catch(() => {})]).then(() => { if (parado) return;
+    un = db.collection(`campanhas/${atual}/rolagens`).orderBy('t', 'desc').limit(40).onSnapshot(sn => desenhar(sn.docs.map(x => x.data()).filter(r => !r.oculta && veRol(stH, r, ehM))), () => { g.querySelector('.hist-lista').innerHTML = '<div class="vazio">Não deu para ler as rolagens.</div>'; }); }); };
   const cabeca = () => `<div class="hist-cab"><b>Rolagens</b><button class="btn-x" data-fechar aria-label="Fechar">×</button></div>${camps.length > 1 ? `<div class="filtros hist-camps">${camps.map(c => `<button class="chip ${c === atual ? 'aqui' : ''}" data-hc="${esc(c)}">${esc(c === '__ficha' ? 'Esta ficha' : nomes[c] || 'Campanha')}</button>`).join('')}</div>` : ''}`;
   g.innerHTML = `<div class="hist-topo">${cabeca()}</div><div class="hist-lista"></div>`;
   const ligar = () => { g.querySelector('[data-fechar]').onclick = sair; g.querySelectorAll('[data-hc]').forEach(b => b.onclick = () => { atual = b.dataset.hc; g.querySelector('.hist-topo').innerHTML = cabeca(); ligar(); ouvir(); }); };
@@ -3844,7 +3868,7 @@ async function carregarRegras(ids, aoMudar) {
 const regrasDe = f => { const out = regrasVazias(); for (const c of f?.campanhas || []) { const r = REGRAS[c]; if (!r) continue; out.classes.push(...(r.classes || []).map(x => ({ ...x, campanha: c }))); out.subExtras.push(...(r.subExtras || [])); out.mecanicas.push(...(r.mecanicas || []).map(m => ({ ...m, campanha: c }))); } return out; };
 const todasClassesCamp = () => Object.values(REGRAS).flatMap(r => r.classes || []);
 const todasSubExtras = () => Object.values(REGRAS).flatMap(r => r.subExtras || []);
-const classesPara = f => { const nomes = new Set(SIS.classes.map(c => c.nome)); return [...SIS.classes.map(c => classe(c.nome)), ...regrasDe(f).classes.filter(c => !nomes.has(c.nome))]; };
+const classesPara = f => { const nomes = new Set(SIS.classes.map(c => c.nome)), out = [...SIS.classes.map(c => classe(c.nome)), ...regrasDe(f).classes.filter(c => !nomes.has(c.nome))]; const tem = new Set(out.map(c => c.nome)); for (const c of [...(typeof minhasClassesHb === 'function' ? minhasClassesHb() : []), ...(f?.classeHb ? [f.classeHb] : [])]) if (!tem.has(c.nome)) { tem.add(c.nome); out.push(classe(c.nome) || c); } return out; };
 // a mecânica vale para este agente?
 const mecVale = (m, f) => { const q = m.quem || { modo: 'todos' }; if (q.modo === 'classes') return (q.classes || []).includes(f.classe); if (q.modo === 'nivel') return (+f.nivel || 0) >= (+q.nivel || 1); if (q.modo === 'liberado') return !!f.mec?.[m.id]?.lib; return true; };
 const mecsDe = f => regrasDe(f).mecanicas.filter(m => mecVale(m, f));
@@ -4172,7 +4196,7 @@ ROTAS.campanha = async id => {
   await carregarPart();
   let aba = ABA_INICIAL || abaSalva('agentes'); ABA_INICIAL = null; if (aba === 'rolagens') aba = 'agentes'; LADO = null;
   await carregarRegras([id], () => render());
-  const rolVis = () => st.rolagens.filter(r => vePessoa(st, r.uid, st.camp?.mestre === ME));
+  const rolVis = () => st.rolagens.filter(r => veRol(st, r, st.camp?.mestre === ME));
   const listaRol = () => rolVis().map(rolHtml).join('') || '<div class="vazio" style="font-size:15px">Nenhuma rolagem ainda.</div>';
   let cfgFeed = null;
   // mapa, quadro, NPCs e suspeitos se redesenham sozinhos (sem refazer a página inteira e perder zoom ou arrasto)
@@ -4182,7 +4206,7 @@ ROTAS.campanha = async id => {
   const salvarMesaC = async p => { st.mesa = { ...(st.mesa || {}), ...p }; try { await salvarMesa(id, p); } catch (e) { toast('Não salvou: ' + (e.message || e.code)); } };
   const desenharAbaViva = () => { const A = ABA_EL; if (!A?.isConnected || !st.camp) return false; const mestre = st.camp.mestre === ME;
     if (aba === 'mapa') { const fs = Object.values(st.fichas).filter(Boolean), meu = fs.find(f => f.dono === ME && f.id === MEU_PRINCIPAL) || fs.find(f => f.dono === ME);
-      desenharMapa(A, getMesa, { mestre, salvarC: salvarMesaC, vivo: vivoMapa(st.fichas), combate: () => (st.combate?.ordem || []).map(o => ({ nome: o.nome, tipo: o.tipo, imagem: o.img || '' })), DETS: fs.map(f => ({ id: f.id, nome: f.nome, foto: fotoEf(f), oculto: ocultosDe(st).has(f.dono) })), ...opcoesMapa(id, getQd, fs.filter(f => f.dono === ME).map(f => f.id), mestre, mestre ? 'Mestre' : meu?.nome) }); return true; }
+      desenharMapa(A, getMesa, { mestre, salvarC: salvarMesaC, vivo: vivoMapa(st.fichas), combate: () => (st.combate?.ordem || []).map(o => ({ nome: o.nome, tipo: o.tipo, imagem: o.img || '' })), DETS: fs.map(f => ({ id: f.id, nome: f.nome, foto: fotoEf(f), oculto: fichaOculta(st, f) })), ...opcoesMapa(id, getQd, fs.filter(f => f.dono === ME).map(f => f.id), mestre, mestre ? 'Mestre' : meu?.nome) }); return true; }
     if (aba === 'npcs') { desenharNpcs(A, getMesa, { mestre, salvarC: salvarMesaC, campId: id }); return true; }
     if (aba === 'suspeitos') { desenharSuspeitos(A, getMesa, getQd, id); return true; }
     if (aba === 'quadro') { if (!QUADRO || !A.querySelector('#q-quadro')) QUADRO = abrirAbaQuadro(A, id, getMesa, getQd, pistasQuadro); else QUADRO.desenhar(); return true; }
@@ -4198,14 +4222,15 @@ ROTAS.campanha = async id => {
     if (st.camp === false) { app.innerHTML = '<div class="vazio">Campanha não encontrada.</div>'; return; }
     const C = st.camp, mestre = C.mestre === ME, membro = st.membros.some(m => m.uid === ME) || mestre;
     if (membro) guardarUltima(id, C.nome, false);
-    const OC = ocultosDe(st), fichas = Object.values(st.fichas).filter(Boolean).filter(f => vePessoa(st, f.dono, mestre));
+    const OC = ocultosDe(st), fichas = Object.values(st.fichas).filter(Boolean).filter(f => veFicha(st, f, mestre));
     const nomes = await nomeDe([...new Set([C.mestre, ...st.membros.map(m => m.uid), ...fichas.map(f => f.dono).filter(Boolean)])]);
     let corpo = '';
     if (aba === 'agentes') corpo = `<div class="grade-cards">${fichas.map(f => { const K = calc(f); const a = { ...K.max, ...(f.atual || {}) };
-      return cardAgente(f, `${OC.has(f.dono) ? `<span class="tag tag-oculta" title="Só o mestre e o dono veem este agente"><i data-ic="esconder"></i> Oculta</span>` : ''}<div class="vit">${vitalMini('pv', a.pv, K.max.pv)}${vitalMini('ps', a.ps, K.max.ps)}${vitalMini('pst', a.pst, K.max.pst)}</div>${f.dono === ME || mestre || DONO ? `<button class="btn mini sec" data-rm-ag="${esc(f.id)}" title="Tirar da campanha">Remover</button>` : ''}`, nomes[f.dono] || f.jogador || ''); }).join('') || '<div class="vazio">Nenhum agente nesta campanha ainda.</div>'}</div>`;
-    if (aba === 'jogadores') corpo = `<div class="lista">${[...new Set([C.mestre, ...st.membros.map(m => m.uid)])].map(u => `<div class="item"><div class="cab"><span style="display:flex; gap:10px; align-items:center"><span class="ava" style="background:${corDe(u)}">${esc(iniciais(nomes[u]))}</span><b>${esc(nomes[u])}${u === ME ? ' (você)' : ''}</b></span><span style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">${OC.has(u) && (mestre || u === ME) ? `<span class="tag tag-oculta"><i data-ic="esconder"></i> Ficha oculta</span>` : ''}${mestre && u !== C.mestre ? `<button class="btn mini ${OC.has(u) ? '' : 'sec'}" data-ocultar="${esc(u)}" title="${OC.has(u) ? 'Mostrar os agentes desta pessoa para a mesa' : 'Esconder os agentes desta pessoa dos outros jogadores'}">${OC.has(u) ? 'Mostrar ficha' : '<i data-ic="esconder"></i> Ocultar ficha'}</button>` : ''}<span class="tag ${u === C.mestre ? 'crit' : ''}">${u === C.mestre ? 'Mestre' : 'Jogador'}</span></span></div>${OC.has(u) && u === ME && !mestre ? '<p class="faint" style="margin:6px 0 0; font-size:13px">O mestre deixou sua ficha oculta: só você e ele veem seus agentes e suas rolagens nesta campanha.</p>' : ''}</div>`).join('')}</div>`;
+      return cardAgente(f, `${fichaOculta(st, f) ? `<span class="tag tag-oculta" title="Só o mestre e o dono veem este agente"><i data-ic="esconder"></i> Oculta</span>` : ''}<div class="vit">${vitalMini('pv', a.pv, K.max.pv)}${vitalMini('ps', a.ps, K.max.ps)}${vitalMini('pst', a.pst, K.max.pst)}</div>${f.dono === ME || mestre || DONO ? `<button class="btn mini sec" data-rm-ag="${esc(f.id)}" title="Tirar da campanha">Remover</button>` : ''}`, nomes[f.dono] || f.jogador || ''); }).join('') || '<div class="vazio">Nenhum agente nesta campanha ainda.</div>'}</div>`;
+    if (aba === 'jogadores') corpo = `<div class="lista">${[...new Set([C.mestre, ...st.membros.map(m => m.uid)])].map(u => `<div class="item"><div class="cab"><span style="display:flex; gap:10px; align-items:center"><span class="ava" style="background:${corDe(u)}">${esc(iniciais(nomes[u]))}</span><b>${esc(nomes[u])}${u === ME ? ' (você)' : ''}</b></span><span style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">${(() => { const fs = Object.values(st.fichas).filter(f => f && f.dono === u), oc = fs.filter(f => fichaOculta(st, f)), tudo = OC.has(u), alguma = tudo || oc.length;
+        return `${alguma && (mestre || u === ME) ? `<span class="tag tag-oculta"><i data-ic="esconder"></i> ${tudo ? 'Fichas ocultas' : oc.length === 1 && fs.length > 1 ? esc(oc[0].nome) + ' oculta' : oc.length > 1 ? oc.length + ' fichas ocultas' : 'Ficha oculta'}</span>` : ''}${mestre && u !== C.mestre ? `<button class="btn mini ${alguma ? '' : 'sec'}" data-ocultar="${esc(u)}" title="Escolher quais agentes desta pessoa ficam escondidos dos outros jogadores"><i data-ic="esconder"></i> ${fs.length > 1 ? 'Ocultar fichas' : alguma ? 'Mostrar ficha' : 'Ocultar ficha'}</button>` : ''}`; })()}<span class="tag ${u === C.mestre ? 'crit' : ''}">${u === C.mestre ? 'Mestre' : 'Jogador'}</span></span></div>${u === ME && !mestre && (OC.has(u) || Object.values(st.fichas).some(f => f && f.dono === u && fichaOculta(st, f))) ? `<p class="faint" style="margin:6px 0 0; font-size:13px">${OC.has(u) ? 'O mestre deixou suas fichas ocultas' : 'O mestre deixou ' + esc(Object.values(st.fichas).filter(f => f && f.dono === u && fichaOculta(st, f)).map(f => f.nome).join(', ')) + ' oculta'}: só você e ele veem esses agentes e as rolagens deles nesta campanha.</p>` : ''}</div>`).join('')}</div>`;
     if (aba === 'combate') corpo = st.combate?.ativo ? `<div class="cb-topo"><h2>Rodada ${st.combate.rodada || 1}</h2><span class="dim">Ordem de iniciativa</span></div>
-      <section class="ini-lista" style="max-width:560px">${(st.combate.ordem || []).map((o, i) => { const f = o.tipo === 'agente' ? st.fichas[o.ref] : null; if (f && !vePessoa(st, f.dono, mestre)) return ''; const K = f ? calc(f) : null; const a = f ? { ...K.max, ...(f.atual || {}) } : null;
+      <section class="ini-lista" style="max-width:560px">${(st.combate.ordem || []).map((o, i) => { const f = o.tipo === 'agente' ? st.fichas[o.ref] : null; if (f && !veFicha(st, f, mestre)) return ''; const K = f ? calc(f) : null; const a = f ? { ...K.max, ...(f.atual || {}) } : null;
         return cardIni({ i, nome: f ? nomeEf(f) : o.nome, foto: f ? fotoEf(f) : (o.img || ''), ameaca: o.tipo !== 'agente', pv: a?.pv, pvM: K?.max.pv, ps: a?.ps, psM: K?.max.ps, conds: o.cond || [], ini: o.ini, vez: i === st.combate.turno, meu: f?.dono === ME, morto: !!f?.morto, mostrarPV: !!f, rotTipo: o.tipo === 'ameaca' ? 'Ameaça' : o.tipo === 'npc' ? 'NPC' : '' }); }).join('')}</section>`
       : '<div class="vazio">Nenhum combate em andamento.</div>';
     const nSus = suspeitosDe(st.mesa).filter(x => !inocentado(x, st.quadro)).length;
@@ -4238,9 +4263,16 @@ ROTAS.campanha = async id => {
     if (aba === 'ligacao' && membro) montarLigacao(id, C, st);
     $('#entrar-c')?.addEventListener('click', () => entrarCampanha(id));
     $('#editar-c')?.addEventListener('click', () => editarCampanha(id, C));
-    $$('[data-ocultar]').forEach(b => b.onclick = async () => { const u = b.dataset.ocultar, v = !OC.has(u), m = st.membros.find(x => x.uid === u);
-      try { const r = db.doc(`campanhas/${id}/membros/${u}`); if (m) await r.update({ oculto: v }); else await r.set({ uid: u, entrou: Date.now(), papel: 'jogador', oculto: v }); if (m) m.oculto = v; toast(v ? 'Ficha oculta: os outros jogadores não veem os agentes nem as rolagens dessa pessoa.' : 'Ficha visível para a mesa de novo.'); render(); }
-      catch (e) { toast('Não deu: ' + (e.message || e.code)); } });
+    $$('[data-ocultar]').forEach(b => b.onclick = () => { const u = b.dataset.ocultar, m = st.membros.find(x => x.uid === u), fs = Object.values(st.fichas).filter(f => f && f.dono === u);
+      const gravarOc = async (dados, msg) => { try { const r = db.doc(`campanhas/${id}/membros/${u}`); if (m) await r.update(dados); else await r.set({ uid: u, entrou: Date.now(), papel: 'jogador', ...dados }); if (m) Object.assign(m, dados); else st.membros.push({ uid: u, ...dados }); toast(msg); render(); } catch (e) { toast('Não deu: ' + (e.message || e.code)); } };
+      if (fs.length <= 1) { const v = !(OC.has(u) || (fs[0] && fichaOculta(st, fs[0]))); return gravarOc({ oculto: false, ocultas: v && fs[0] ? [fs[0].id] : [], ...(v && !fs[0] ? { oculto: true } : {}) }, v ? 'Ficha oculta: os outros jogadores não veem esse agente nem as rolagens dele.' : 'Ficha visível para a mesa de novo.'); }
+      abrirModal(`Ocultar fichas de ${nomes[u] || 'jogador'}`, `<p class="dim">Marque os agentes que só você e o dono podem ver. Os desmarcados continuam visíveis para a mesa, com as rolagens deles.</p>
+        <div class="lista">${fs.map(f => `<label class="item chk" style="display:flex; gap:10px; align-items:center"><input type="checkbox" data-oc-f="${esc(f.id)}" ${fichaOculta(st, f) ? 'checked' : ''}> <b>${esc(f.nome)}</b> <span class="faint">${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''}</span></label>`).join('')}</div>
+        <label class="chk" style="margin-top:10px"><input type="checkbox" id="oc-tudo" ${OC.has(u) ? 'checked' : ''}> Ocultar tudo desta pessoa, inclusive agentes que entrarem depois</label>
+        <div class="btns" style="margin-top:12px"><button class="btn" id="oc-ok">Salvar</button></div>`, (md, fechar) => {
+        md.querySelector('#oc-ok').onclick = () => { const sel = [...md.querySelectorAll('[data-oc-f]:checked')].map(x => x.dataset.ocF), tudo = md.querySelector('#oc-tudo').checked; fechar();
+          gravarOc({ oculto: tudo, ocultas: sel }, tudo ? 'Tudo desta pessoa ficou oculto.' : sel.length ? `${sel.length} ficha${sel.length > 1 ? 's' : ''} oculta${sel.length > 1 ? 's' : ''}.` : 'Todas as fichas visíveis para a mesa.'); };
+      }); });
     $('#x-camp')?.addEventListener('click', () => pedirExcluirCampanha(id, C.nome));
     $('#convidar')?.addEventListener('click', () => abrirModal('Convidar jogadores', `<p>Mande o código abaixo para os jogadores. Eles entram no site com a conta deles e vão em Campanhas, Entrar com código.</p>
       <div style="display:flex; gap:8px"><input type="text" id="cod-c" readonly value="${esc(id)}"><button class="btn" id="copiar">Copiar</button></div>`, m => {
@@ -4278,8 +4310,8 @@ ROTAS.historico = async id => {
   const s0 = await db.doc('campanhas/' + id).get();
   if (!s0.exists) { app.innerHTML = '<div class="vazio">Campanha não encontrada.</div>'; return; }
   const C = s0.data(), mestre = C.mestre === ME;
-  let ROLS = [], fAut = 'todos', OCH = new Set();
-  if (!mestre) { try { OCH = new Set((await db.collection(`campanhas/${id}/membros`).get()).docs.map(d => d.data()).filter(m => m.oculto && m.uid !== ME).map(m => m.uid)); } catch (e) {} }
+  let ROLS = [], fAut = 'todos', OCH = new Set(), OCF = new Set();
+  if (!mestre) { try { const ms = (await db.collection(`campanhas/${id}/membros`).get()).docs.map(d => d.data()); OCH = new Set(ms.filter(m => m.oculto && m.uid !== ME).map(m => m.uid)); OCF = new Set(ms.filter(m => m.uid !== ME).flatMap(m => m.ocultas || [])); ms.filter(m => m.uid !== ME && (m.ocultas || []).length).forEach(m => OCF.add('sem|' + m.uid)); } catch (e) {} }
   app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Histórico</span><h1>${esc(C.nome)}</h1><p class="dim">Todas as rolagens da campanha, da mais nova para a mais antiga.</p></div>
     <div class="btns">${mestre ? '<button class="btn sec" id="h-limpar"><i data-ic="apagar"></i> Limpar histórico</button>' : ''}<a class="btn sec" href="#${mestre ? 'escudo' : 'campanha'}-${esc(id)}" style="text-decoration:none">Voltar para a campanha</a></div></div>
     <div class="caixa hist-filtros"><div class="campo"><label class="rotulo" for="h-aut">Quem rolou</label><select id="h-aut"></select></div><span class="faint" id="h-n"></span></div>
@@ -4298,7 +4330,7 @@ ROTAS.historico = async id => {
   $('#h-aut').onchange = e => { fAut = e.target.value; desenhar(); };
   $('#h-feed').addEventListener('click', e => { const b = e.target.closest('[data-del-rol]'); if (b && mestre) apagarRolagem(id, b.dataset.delRol); });
   $('#h-limpar')?.addEventListener('click', () => limparHistorico(id));
-  assinar(db.collection(`campanhas/${id}/rolagens`).orderBy('t', 'desc').limit(1000).onSnapshot(sn => { ROLS = sn.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !OCH.has(r.uid)); desenhar(); }));
+  assinar(db.collection(`campanhas/${id}/rolagens`).orderBy('t', 'desc').limit(1000).onSnapshot(sn => { ROLS = sn.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !OCH.has(r.uid) && !(r.ficha ? OCF.has(r.ficha) : OCF.has('sem|' + r.uid))); desenhar(); }));
 };
 
 /* =================================================================
@@ -4352,7 +4384,7 @@ ROTAS.escudo = async id => {
   const cfgFeedE = { id, get st() { return st; }, nRol: () => todasRol().length, listaRol: () => todasRol().map(r => comLixeira(rolHtml(r), r.id)).join('') || '<div class="vazio" style="font-size:15px">As rolagens dos jogadores aparecem aqui.</div>', autor: () => ({ autor: 'Mestre', foto: '' }),
     rodapeRol: `<div class="btns feed-rodape"><a class="btn mini sec" href="#historico-${esc(id)}" style="text-decoration:none">Histórico completo</a><button class="btn mini sec" data-limpar-hist><i data-ic="apagar"></i> Limpar</button></div>` };
   const salvarMesaE = async p => { st.mesa = { ...(st.mesa || {}), ...p }; try { await salvarMesa(id, p); } catch (e) { toast('Não salvou: ' + (e.message || e.code)); } };
-  const desenharVivaE = () => { const A = $('#aba-viva-e'); if (!A) return false; const DETS = Object.values(st.fichas).filter(Boolean).map(f => ({ id: f.id, nome: f.nome, foto: fotoEf(f), oculto: ocultosDe(st).has(f.dono) }));
+  const desenharVivaE = () => { const A = $('#aba-viva-e'); if (!A) return false; const DETS = Object.values(st.fichas).filter(Boolean).map(f => ({ id: f.id, nome: f.nome, foto: fotoEf(f), oculto: fichaOculta(st, f) }));
     if (aba === 'mapa') { desenharMapa(A, () => st.mesa || {}, { mestre: true, salvarC: salvarMesaE, DETS, vivo: vivoMapa(st.fichas), combate: () => (E.combate?.lista || []).map(x => ({ nome: x.nome, tipo: x.tipo, imagem: x.tipo === 'ameaca' ? (x.imagem || CRI.find(k => String(k.id) === String(x.ref))?.imagem || '') : (x.imagem || '') })), ...opcoesMapa(id, () => st.quadro || {}, [], true, 'Mestre') }); return true; }
     if (aba === 'npcs') { desenharNpcs(A, () => st.mesa || {}, { mestre: true, salvarC: salvarMesaE, campId: id }); return true; }
     return false; };
@@ -4400,7 +4432,7 @@ ROTAS.escudo = async id => {
     if (aba === 'mapa' || aba === 'npcs') { corpo.innerHTML = '<div id="aba-viva-e"></div>'; desenharVivaE(); return; }
     if (aba === 'agentes') {
       corpo.innerHTML = `<div class="grade-cards">${fichas.map(f => { const K = calc(f), a = f.atual || K.max;
-        return `<div class="ag-escudo"><div class="cab"><div class="mini-f" style="${fotoEf(f) ? `background-image:url('${esc(fotoEf(f))}')` : ''}">${fotoEf(f) ? '' : esc(iniciais(f.nome))}</div><div style="min-width:0"><b style="font: 400 19px var(--f-disp)">${esc(nomeEf(f))}</b>${vetorAtivo(f) ? `<span class="tag tag-vetor" style="--cv:${esc(f.vetor.cor || '#b4333b')}; margin-left:6px">Vetor</span>` : ''}<div class="dim" style="font-size:12.5px">${esc(f.classe)} · ${esc(f.subclasse)} · Nv ${f.nivel}</div></div></div>
+        return `<div class="ag-escudo"><div class="cab"><div class="mini-f" style="${fotoEf(f) ? `background-image:url('${esc(fotoEf(f))}')` : ''}">${fotoEf(f) ? '' : esc(iniciais(f.nome))}</div><div style="min-width:0"><b style="font: 400 19px var(--f-disp)">${esc(nomeEf(f))}</b>${vetorAtivo(f) ? `<span class="tag tag-vetor" style="--cv:${esc(vetorEf(f)?.cor || '#b4333b')}; margin-left:6px">Vetor</span>` : ''}<div class="dim" style="font-size:12.5px">${esc(f.classe)} · ${esc(f.subclasse)} · Nv ${f.nivel}</div></div></div>
           <div class="attr-linha">${ATR.map(([k, , s]) => `<span><b>${f.atributos?.[k] ?? 0}</b>${s}</span>`).join('')}</div>
           ${['pv', 'ps', 'pst'].map(k => `<div class="vital ${k}"><div class="ctrl"><button class="vbtn" data-fv="${esc(f.id)}" data-k="${k}" data-d="-5">−5</button><button class="vbtn" data-fv="${esc(f.id)}" data-k="${k}" data-d="-1">−1</button>
             <div class="trilho fino" style="height:22px"><div class="cheio" style="width:${Math.min(100, (a[k] / (K.max[k] || 1)) * 100)}%"></div><div class="txt" style="line-height:20px">${k.toUpperCase()} ${a[k]}/${K.max[k]}</div></div>
@@ -4436,7 +4468,7 @@ ROTAS.escudo = async id => {
         if (ab === 'combate') cx = `<div class="per-l">${armas.map((it, k) => { const E2 = armaEfF(f, it); return `<div style="grid-template-columns:1fr auto auto"><span><b>${ehFavorita(f, it) ? '★ ' : ''}${esc(it.nome)}</b><br><span class="mono faint" style="font-size:12px">Dano ${esc(fmtDano(danoComFav(E2)))} · Crítico ${E2.margem}/×${E2.mult}</span></span><button class="btn mini sec" data-cbatq="${k}">Acerto</button><button class="btn mini ouro" data-cbdano="${k}">Dano</button></div>`; }).join('') || '<p class="faint">Nenhuma arma no inventário.</p>'}</div>`;
         if (ab === 'condicoes') cx = blocoCond;
         det = `<div class="am-banner" style="--bc:${f.alinhamento ? corEl(elDe(f.alinhamento.nome)) : 'var(--violeta)'}">${I0.foto ? `<div class="am-bgw"><div class="am-bg" style="background-image:url('${esc(I0.foto)}')"></div></div>` : ''}<div class="am-ft ag" style="${I0.foto ? `background-image:url('${esc(I0.foto)}')` : ''}">${I0.foto ? '' : esc(iniciais(f.nome))}</div>
-            <div class="am-tx"><b>${esc(nomeEf(f))}</b>${vetorAtivo(f) ? `<span class="tag tag-vetor" style="--cv:${esc(f.vetor.cor || '#b4333b')}">Vetor · ${esc(f.nome)}</span>` : ''}<span>${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''}</span><span class="am-el">Nv ${nivelDe(f)} · ${esc(patente(nivelDe(f)).nome || '')}</span></div><a class="btn mini sec am-acao" href="#agente-${esc(f.id)}" style="text-decoration:none">Ficha</a></div>
+            <div class="am-tx"><b>${esc(nomeEf(f))}</b>${vetorAtivo(f) ? `<span class="tag tag-vetor" style="--cv:${esc(vetorEf(f)?.cor || '#b4333b')}">Vetor · ${esc(f.nome)}</span>` : ''}<span>${esc(f.classe || '')}${f.subclasse ? ' · ' + esc(f.subclasse) : ''}</span><span class="am-el">Nv ${nivelDe(f)} · ${esc(patente(nivelDe(f)).nome || '')}</span></div><a class="btn mini sec am-acao" href="#agente-${esc(f.id)}" style="text-decoration:none">Ficha</a></div>
           ${['pv', 'ps', 'pst'].map(k => barraCris(k, a[k], K.max[k], 'data-cbv-' + k, [5, 1]).replace('<span class="v">', `<span class="v clicavel" data-cbaj="${k}" role="button" tabindex="0" title="Digitar valor ou mudar o máximo">`)).join('')}
           <div class="abas abas-mini">${[['atributos', 'Atributos'], ['combate', 'Combate'], ['condicoes', `Condições${I0.conds.length ? ' ' + I0.conds.length : ''}`]].map(([k, l]) => `<button class="${ab === k ? 'aqui' : ''}" data-dab="${k}">${l}</button>`).join('')}</div>
           ${caixaDano(rdTxtX(x0), window._dnRes?.k === chave0 ? window._dnRes.txt : '')}<div style="display:grid; gap:10px">${cx}</div><div class="res" id="cb-res"></div>

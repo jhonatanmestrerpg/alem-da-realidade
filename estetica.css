@@ -376,3 +376,34 @@ h2 .ic, h3 .ic, .rotulo .ic, .hoje .ic { opacity: .85; color: var(--ouro); }
 .rol.rol-ap { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: center; border-left: 3px solid var(--apc); background: linear-gradient(90deg, color-mix(in srgb, var(--apc) 14%, transparent), transparent 70%); }
 .rol-ap-ft { width: 44px; height: 44px; border-radius: var(--raio-p); background: center/cover var(--painel-3); display: grid; place-items: center; color: var(--apc); border: 1px solid color-mix(in srgb, var(--apc) 50%, transparent); }
 .rol-ap b { display: block; font: 400 18px/1.15 var(--f-disp); } .rol-ap i { display: block; font-size: 13px; color: var(--lua-dim); }
+
+/* ---------- Marcas (classe homebrew com entidades capturadas) ---------- */
+.retrato-w { --r: 86px; position: relative; width: fit-content; max-width: 100%; isolation: isolate; }
+@media (max-width: 640px) { .retrato-w { --r: 66px; } .roda-ashura { inset: -40px; } }
+.retrato-w > .retrato { z-index: 1; }
+.retrato-w.ashura > .retrato { box-shadow: 0 0 0 2px #c8a35a55, 0 0 40px -6px #c8a35acc; }
+.roda-ashura { position: absolute; inset: -46px; z-index: 0; pointer-events: none; border-radius: 50%; animation: roda-gira 38s linear infinite; }
+.roda-ashura::before { content: ""; position: absolute; inset: 18px; border-radius: 50%; border: 3px solid rgba(0,0,0,.85); box-shadow: 0 0 0 1px #c8a35a55, inset 0 0 0 1px #c8a35a33; }
+.roda-m { --a: calc(360deg / var(--n) * var(--i)); position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px; transform: rotate(var(--a)) translateY(calc(-1 * (50% + var(--r)))) rotate(calc(-1 * var(--a))); }
+.roda-m i { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: #e8e2d0 center/cover; border: 3px solid #111; box-shadow: 0 0 0 2px var(--mc), 0 0 14px -2px var(--mc); font: 700 18px/1 var(--f-disp); color: #111; font-style: normal; animation: roda-gira 38s linear infinite reverse; }
+@keyframes roda-gira { to { transform: rotate(360deg); } }
+.retrato-w.ashura .roda-ashura { animation-duration: 38s; }
+.retrato-w.ashura { margin: 40px 40px 34px; }
+@media (prefers-reduced-motion: reduce) { .roda-ashura, .roda-m i { animation: none; } }
+@media (max-width: 640px) { .retrato-w.ashura { margin: 50px auto; } }
+
+.grade-mk { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+.mk-card { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 12px; padding: 12px; border: 1px solid var(--linha); border-left: 3px solid var(--mc); border-radius: var(--raio); background: linear-gradient(90deg, color-mix(in srgb, var(--mc) 10%, transparent), transparent 60%), var(--painel); box-shadow: var(--sombra-1); }
+.mk-card.vestida { border-color: var(--mc); box-shadow: 0 0 0 1px var(--mc), 0 10px 30px -14px var(--mc); }
+.mk-ft { width: 74px; height: 74px; border-radius: 50%; display: grid; place-items: center; background: var(--painel-3) center/cover; border: 3px solid #111; box-shadow: 0 0 0 2px var(--mc); font: 400 30px var(--f-disp); color: var(--lua-dim); flex: none; }
+.mk-ft.p { width: 34px; height: 34px; font-size: 15px; display: inline-grid; vertical-align: middle; margin-right: 6px; border-width: 2px; }
+.mk-ft.g { width: 110px; height: 110px; }
+.mk-tx { display: grid; gap: 6px; min-width: 0; } .mk-tx > b { font: 400 20px/1.1 var(--f-disp); }
+.mk-tit { font-size: 12.5px; color: var(--lua-dim); letter-spacing: .02em; }
+.mk-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.mk-ficha { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; margin-bottom: 10px; }
+.marcas { display: grid; gap: 14px; }
+.hb-classe { display: grid; gap: 8px; }
+.hb-sub { border: 1px solid var(--linha); border-radius: var(--raio-p); padding: 8px 10px; background: rgba(255,255,255,.02); }
+.hb-sub summary { cursor: pointer; } .hb-hab { padding: 8px 0 0; } .hb-hab p { margin: 4px 0 0; font-size: 13.5px; color: var(--lua-dim); white-space: pre-line; }
+@media (max-width: 560px) { .mk-ficha { grid-template-columns: 1fr; justify-items: start; } }

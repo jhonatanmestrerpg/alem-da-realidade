@@ -71,6 +71,7 @@ function aplicarBasePatch(SISorig, RITorig, FEITorig) {
 const ITEM_VELHOS = { 'Lança': [{ dano: '1d6+2', mult: 1 }], 'Lança Pesada': [{ dano: '1d8+2', mult: 2 }] };
 const CAMPOS_ITEM = it => Object.keys(it || {}).filter(k => !['nome', 'canon', 'qtd', '__novo', 'mods', 'melhorias', 'bencaos', 'fav'].includes(k));
 function vincularItens(F) {
+  if (typeof registrarClasseFicha === 'function') registrarClasseFicha(F);
   if (!F || !Array.isArray(F.equipamentos) || typeof SIS === 'undefined' || !SIS?.itens) return F;
   const orig = typeof BASE_ORIG !== 'undefined' ? BASE_ORIG?.itens || [] : [];
   F.equipamentos = F.equipamentos.map(it => {
