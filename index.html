@@ -896,7 +896,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261116220638';
+const BUILD = '20261116223028';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -3725,7 +3725,10 @@ const vePessoa = (st, uid, mestre) => mestre || !uid || uid === ME || !ocultosDe
 const fichasOcultasDe = st => new Set((st?.membros || []).flatMap(m => m.ocultas || []));
 const fichaOculta = (st, f) => !!f && (ocultosDe(st).has(f.dono) || fichasOcultasDe(st).has(f.id));
 const veFicha = (st, f, mestre) => mestre || !f || f.dono === ME || !fichaOculta(st, f);
-const veRol = (st, r, mestre) => mestre || !r || r.uid === ME || (vePessoa(st, r.uid, false) && !(r.ficha ? fichasOcultasDe(st).has(r.ficha) : (st?.membros || []).some(m => m.uid === r.uid && (m.ocultas || []).length)));
+const rolOculta = (st, r) => !!r && !!r.uid && (ocultosDe(st).has(r.uid) || (r.ficha ? fichasOcultasDe(st).has(r.ficha) : (st?.membros || []).some(m => m.uid === r.uid && (m.ocultas || []).length)));
+const veRol = (st, r, mestre) => mestre || !r || r.uid === ME || !rolOculta(st, r);
+// quem pode ver (dono e mestre) enxerga a etiqueta de que a mesa não vê
+const marcarOc = (st, r) => !r.oculta && rolOculta(st, r) ? { ...r, ocMesa: true } : r;
 /* ---------- painel lateral: rolagens e chat da sessão ---------- */
 const FEED_ABA = {};
 const vistoChat = id => { try { return +(localStorage.getItem('chatVisto|' + id) || 0); } catch (e) { return 0; } };
@@ -3794,12 +3797,12 @@ const rolHtml = r => { if (r.tipo === 'invocacao') return invHtml(r); if (r.tipo
   const corpo = aviso ? `<div class="rc-aviso">${htmlSeguro(r.detalhe)}</div>` : tipo === 'ataque'
     ? `<div class="rc-par"><div><b class="${r.critico ? 'crit' : ''}" style="--n:${tamNum(r.ataque, r.dano)}">${esc(r.ataque)}</b><span>Ataque</span></div><i aria-hidden="true"></i><div><b style="--n:${tamNum(r.ataque, r.dano)}">${esc(r.dano)}</b><span>Dano</span></div></div>`
     : `<div class="rc-par um"><div><b class="${r.critico || /crítico/i.test(r.rotulo || '') ? 'crit' : ''}" style="--n:${tamNum(r.total)}">${esc(r.total)}</b><span>${tipo === 'acerto' ? 'Ataque' : tipo === 'dano' ? 'Dano' : 'Total'}</span></div></div>`;
-  return `<div class="rol2 ${r.oculta ? 'oculta' : ''}"><div class="rc-autor">${esc(r.autor)}</div>
+  return `<div class="rol2 ${r.oculta || r.ocMesa ? 'oculta' : ''}"><div class="rc-autor">${esc(r.autor)}</div>
     <div class="rc-card ${r.critico || /crítico/i.test(r.rotulo || '') ? 'crit' : ''}" style="${(() => { const e = estiloCartao(r.estilo); return e ? `--rc:${e.borda}; background:${e.fundo}; border-image:linear-gradient(90deg, ${e.borda}, ${e.borda2}) 1` : r.cor ? `--rc:${esc(r.cor)}` : ''; })()}">
       <div class="rc-ico" style="${r.foto ? `background-image:url('${esc(r.foto)}')` : ''}">${r.foto ? '' : DADO_SVG}</div>
       <div class="rc-meio"><div class="rc-tit">${esc(tit)}</div>${corpo}</div></div>
     ${r.detalhe && !aviso ? `<details class="rc-det"><summary>dados</summary><span class="mono">${htmlSeguro(r.detalhe)}</span></details>` : ''}
-    <div class="rc-data">${horaBR(r.t)}${r.oculta ? ' · só o mestre vê' : ''}</div></div>`; };
+    <div class="rc-data">${horaBR(r.t)}${r.oculta ? ' · só o mestre vê' : r.ocMesa ? ' · ficha oculta: só você e o mestre veem' : ''}</div></div>`; };
 function abrirHistorico(camps0, fid) {
   const camps = [...(fid ? ['__ficha'] : []), ...(db ? camps0 || [] : [])]; if (!camps.length) return;
   document.querySelector('.hist-gaveta')?.remove();
@@ -3812,7 +3815,7 @@ function abrirHistorico(camps0, fid) {
     if (atual === '__ficha') { const ver = () => desenhar(histLocal(fid)); ver(); const f2 = e => { if (e.detail === fid) ver(); }; addEventListener('hist-local', f2); un = () => removeEventListener('hist-local', f2); return; }
     const cA = atual, stH = { membros: [] }; let ehM = false, parado = false; un = () => { parado = true; };
     Promise.all([db.doc(`campanhas/${cA}`).get().then(d => { ehM = d.data()?.mestre === ME; }).catch(() => {}), db.collection(`campanhas/${cA}/membros`).get().then(q => { stH.membros = q.docs.map(d => d.data()); }).catch(() => {})]).then(() => { if (parado) return;
-    un = db.collection(`campanhas/${atual}/rolagens`).orderBy('t', 'desc').limit(40).onSnapshot(sn => desenhar(sn.docs.map(x => x.data()).filter(r => !r.oculta && veRol(stH, r, ehM))), () => { g.querySelector('.hist-lista').innerHTML = '<div class="vazio">Não deu para ler as rolagens.</div>'; }); }); };
+    un = db.collection(`campanhas/${atual}/rolagens`).orderBy('t', 'desc').limit(40).onSnapshot(sn => desenhar(sn.docs.map(x => x.data()).filter(r => !r.oculta && veRol(stH, r, ehM)).map(r => marcarOc(stH, r))), () => { g.querySelector('.hist-lista').innerHTML = '<div class="vazio">Não deu para ler as rolagens.</div>'; }); }); };
   const cabeca = () => `<div class="hist-cab"><b>Rolagens</b><button class="btn-x" data-fechar aria-label="Fechar">×</button></div>${camps.length > 1 ? `<div class="filtros hist-camps">${camps.map(c => `<button class="chip ${c === atual ? 'aqui' : ''}" data-hc="${esc(c)}">${esc(c === '__ficha' ? 'Esta ficha' : nomes[c] || 'Campanha')}</button>`).join('')}</div>` : ''}`;
   g.innerHTML = `<div class="hist-topo">${cabeca()}</div><div class="hist-lista"></div>`;
   const ligar = () => { g.querySelector('[data-fechar]').onclick = sair; g.querySelectorAll('[data-hc]').forEach(b => b.onclick = () => { atual = b.dataset.hc; g.querySelector('.hist-topo').innerHTML = cabeca(); ligar(); ouvir(); }); };
@@ -4208,7 +4211,7 @@ ROTAS.campanha = async id => {
   await carregarPart();
   let aba = ABA_INICIAL || abaSalva('agentes'); ABA_INICIAL = null; if (aba === 'rolagens') aba = 'agentes'; LADO = null;
   await carregarRegras([id], () => render());
-  const rolVis = () => st.rolagens.filter(r => veRol(st, r, st.camp?.mestre === ME));
+  const rolVis = () => st.rolagens.filter(r => veRol(st, r, st.camp?.mestre === ME)).map(r => marcarOc(st, r));
   const listaRol = () => rolVis().map(rolHtml).join('') || '<div class="vazio" style="font-size:15px">Nenhuma rolagem ainda.</div>';
   let cfgFeed = null;
   // mapa, quadro, NPCs e suspeitos se redesenham sozinhos (sem refazer a página inteira e perder zoom ou arrasto)
@@ -4301,7 +4304,7 @@ ROTAS.campanha = async id => {
         try { await db.doc(`campanhas/${id}/agentes/${f.id}`).set({ ficha: f.id, por: ME, t: Date.now() }); await db.doc('fichas/' + f.id).update({ campanhas: [...new Set([...(f.campanhas || []), id])] }); } catch (e) { toast('Não deu para adicionar: ' + (e.message || e.code)); } });
     });
     const meuAg = fichas.find(f => f.dono === ME && f.id === MEU_PRINCIPAL) || fichas.find(f => f.dono === ME);
-    cfgFeed = { id, st, nRol: () => rolVis().length, listaRol: mestre ? () => st.rolagens.map(r => comLixeira(rolHtml(r), r.id)).join('') || listaRol() : listaRol,
+    cfgFeed = { id, st, nRol: () => rolVis().length, listaRol: mestre ? () => st.rolagens.map(r => comLixeira(rolHtml(marcarOc(st, r)), r.id)).join('') || listaRol() : listaRol,
       rodapeRol: `<div class="btns feed-rodape"><a class="btn mini sec" href="#historico-${esc(id)}" style="text-decoration:none">Histórico completo</a>${mestre ? '<button class="btn mini sec" data-limpar-hist><i data-ic="apagar"></i> Limpar</button>' : ''}</div>`,
       extraRol: membro ? `<div class="feed-dados"><input type="text" id="dados-expr" placeholder="Rolar na mesa: 2d6+3" style="min-width:0"><button class="btn mini" id="dados-ok">Rolar</button></div>` : '',
       autor: () => mestre ? { autor: 'Mestre', foto: '' } : meuAg ? { autor: meuAg.nome, foto: fotoEf(meuAg) } : { autor: nomes[ME] || 'Jogador', foto: '' },
