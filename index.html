@@ -896,7 +896,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261116213739';
+const BUILD = '20261116220638';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1157,7 +1157,7 @@ const tagUsos = it => ehSaco(it) ? `<span class="tag">${usosSaco(it)}/${USOS_SAC
 const htmlReq = r => (r.ingrediente || r.item || r.sacrificio) ? `<p class="preparo"><b>Requer.</b> ${[r.ingrediente ? r.ingrediente + ' (1 uso)' : '', r.item ? r.item + ' (consumido)' : ''].filter(Boolean).map(esc).join(' + ')}${r.sacrificio ? `<br><b>Sacrifício.</b> ${esc(r.sacrificio)}` : ''}</p>` : '';
 const tagNivelF = r => r.nivel ? `<span class="tag">Nível ${esc(r.nivel)}</span>` : '';
 const sabeFeitico = f => ehBruxa(f) || (f?.passivas || []).some(p => p.nome === 'Aprender Feitiço') || (f?.habilidades || []).some(p => p.nome === 'Aprender Feitiço');
-const chakraVest = f => (f?.chakraVestido && (f.chakras || []).find(c => c.id === f.chakraVestido)) || null;
+const chakraVest = f => { const c = f?.chakraVestido && (f.chakras || []).find(c => c.id === f.chakraVestido); return c ? (typeof marcaEf === 'function' ? marcaEf(f, c) : c) : null; };
 const vetorEf = f => chakraVest(f) ? { ...chakraVest(f), liberado: true } : f?.vetor;
 const vetorLiberado = f => !!(f?.vetor?.liberado) || !!chakraVest(f);
 const vetorAtivo = f => !!chakraVest(f) || (!!f?.vetor?.liberado && !!f.vetorVestido);
@@ -2088,11 +2088,11 @@ ROTAS.agente = async id => {
             <div class="rc-card cor-previa" style="${(() => { const e = estiloCartao(F.estiloRolagem); return e ? `--rc:${e.borda}; background:${e.fundo}; border-image:linear-gradient(90deg, ${e.borda}, ${e.borda2}) 1` : ''; })()}"><div class="rc-ico" style="${fotoEf(F) ? `background-image:url('${esc(fotoEf(F))}')` : ''}">${fotoEf(F) ? '' : DADO_SVG}</div><div class="rc-meio"><div class="rc-tit">Prévia</div><div class="rc-par"><div><b>20</b><span>Ataque</span></div><i></i><div><b>154</b><span>Dano</span></div></div></div></div></div>
           <div class="campo"><label class="rotulo" for="e-foto">Retrato</label><input type="file" id="e-foto" accept="image/*"></div>
         </div>
-        ${['pv', 'ps', 'pst'].map(k => `<div class="vital ${k}"><div class="cab"><span class="nome">${{ pv: 'PV · Vida', ps: 'PS · Sanidade', pst: 'PST · Stamina' }[k]}</span><span class="faint mono" style="font-size:11px">${K.form[k]} = ${K.max[k]}</span></div>
+        ${['pv', 'ps', 'pst'].map(k => `<div class="vital ${k}"><div class="cab"><span class="v-nome">${VIT_IC[k]}<span><b>${k.toUpperCase()}</b><small>${{ pv: 'Vida', ps: 'Sanidade', pst: 'Stamina' }[k]}</small></span></span><span class="v-tot"><b>${K.max[k]}</b><small>máximo</small></span></div>
           <div class="ctrl"><button class="vbtn" data-v="${k}" data-d="-5" ${podeEditar ? '' : 'disabled'}>−5</button><button class="vbtn" data-v="${k}" data-d="-1" ${podeEditar ? '' : 'disabled'}>−1</button>
           <div class="trilho ${marcas(F, k) != null ? 'caido' : ''} ${podeEditar || ehMestre ? 'clicavel' : ''}" ${podeEditar || ehMestre ? `data-vaj="${k}" role="button" tabindex="0" title="Clique para digitar um valor"` : ''}><div class="cheio" style="width:${Math.min(100, (F.atual[k] / (K.max[k] || 1)) * 100)}%"></div><div class="txt">${marcas(F, k) != null ? `${ESTADO_ZERO[k]} · ${F.atual[k]} / ${K.max[k]}` : `${F.atual[k]} / ${K.max[k]}`}</div></div>
           <button class="vbtn" data-v="${k}" data-d="1" ${podeEditar ? '' : 'disabled'}>+1</button><button class="vbtn" data-v="${k}" data-d="5" ${podeEditar ? '' : 'disabled'}>+5</button></div>
-          ${marcas(F, k) != null ? `<div class="queda"><span class="rotulo">Morte</span>${bolinhas(marcas(F, k))}<span class="faint" style="font-size:12px">3 marcadas: ${k === 'ps' ? 'loucura' : 'morte'} · zerou: volta com 1</span>${(podeEditar || ehMestre) && !F.morto ? `<button class="btn mini" data-bolinha="${k}">Teste de ${TESTE_QUEDA[k]} · DT ${QUEDA_DT}</button>${ehMestre ? `<button class="btn mini sec" data-bol-m="${k}|0" title="Marcar sem teste">+1</button><button class="btn mini sec" data-bol-m="${k}|1" title="Apagar sem teste">−1</button>` : ''}` : ''}</div>` : ''}</div>`).join('')}
+          ${marcas(F, k) != null ? `<div class="queda"><span class="rotulo">Morte</span>${bolinhas(marcas(F, k))}<span class="faint" style="font-size:12px">3 marcadas: ${k === 'ps' ? 'loucura' : 'morte'} · zerou: volta com 1</span>${(podeEditar || ehMestre) && !F.morto ? `<button class="btn mini" data-bolinha="${k}">Teste de ${TESTE_QUEDA[k]} · DT ${QUEDA_DT}</button>${ehMestre ? `<button class="btn mini sec" data-bol-m="${k}|0" title="Marcar sem teste">+1</button><button class="btn mini sec" data-bol-m="${k}|1" title="Apagar sem teste">−1</button>` : ''}` : ''}</div>` : ''}<details class="v-calc"><summary>Como chega em ${K.max[k]}</summary>${formChips(K.form[k])}</details></div>`).join('')}
       </div>
     </section>
 
@@ -2140,7 +2140,7 @@ ROTAS.agente = async id => {
         ${BA.distancia ? `<label class="dist-campo"><span>Distância do alvo (${esc(BA.distancia)})</span><input type="number" min="0" max="${K.mov * 2}" data-dist value="${esc(UI_ARMA[id + '|dist'] ?? '')}" placeholder="metros"><b class="mono">${dadosDistancia(UI_ARMA[id + '|dist'], K.mov)}d4</b><small class="faint">alcance até ${K.mov * 2} m · teto ${K.mov}d4</small></label>` : ''}
         ${ehInventor(F) && nomeFav(F) && (F.bonusAtaque || []).some(b => FAV_AUTO.includes(b.nome)) ? `<p class="faint" style="font-size:12px; margin:0">${FAV_AUTO.join(', ')} já entram sozinhos pela Arma Favorita: os chips com esses nomes ficam de fora para não somar duas vezes.</p>` : ''}
         ${BA.nomes.length ? `<p class="mono" style="font-size:12px; color:var(--fole); margin:0">Ligado: ${esc(resumoBonus({ acerto: BA.acerto, margem: BA.margem, dano: BA.dano.join(' + '), mult: BA.mult, multTotal: BA.multTotal, custo: BA.custo, custoPs: BA.custoPs }))}</p>` : ''}</div>`;
-      return `<div style="display:grid; gap:12px">${barra}${painelBonus}${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center"><button class="btn mini" id="novo-ataque">Criar ataque</button><span class="faint" style="font-size:13px">Soco, garra, mordida, chute: ataques que não são itens do inventário.</span></div>' : ''}${armas.length ? `<div class="lista">${armas.map(([it, i]) => { const P = dadosPericia(F, it.pericia || 'Armas Brancas'), E = armaEfF(F, it), nv = +F.nivel || 1;
+      return `<div style="display:grid; gap:12px">${MK_HAB()}${barra}${painelBonus}${podeEditar ? '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center"><button class="btn mini" id="novo-ataque">Criar ataque</button><span class="faint" style="font-size:13px">Soco, garra, mordida, chute: ataques que não são itens do inventário.</span></div>' : ''}${armas.length ? `<div class="lista">${armas.map(([it, i]) => { const P = dadosPericia(F, it.pericia || 'Armas Brancas'), E = armaEfF(F, it), nv = +F.nivel || 1;
         return `<div class="item ${it.natural ? 'arma-natural' : ''} ${E.fav ? 'arma-fav' : ''}"><div class="cab"><span class="nm">${E.fav ? '<span class="fav-estrela" title="Arma Favorita">★</span> ' : ''}${esc(it.nome)} <span class="mono dim" style="font-weight:400; font-size:13px">${esc(E.mx !== 1 || E.danoFav ? fmtDano(danoComFav(E)) : it.dano)}</span>${it.danificada ? ' <span class="tag tag-dano">Danificada</span>' : ''}${it.natural ? ` <span class="tag crit">${esc(it.origemNat || 'Vampiro')}</span>` : ''}${it.ataque ? ' <span class="tag">Ataque</span>' : ''}</span><span style="display:flex; gap:6px; flex-wrap:wrap">${it.tipoDano ? `<span class="tag">${esc(it.tipoDano)}</span>` : ''}${it.alcance ? `<span class="tag">${esc(it.alcance)}</span>` : ''}<span class="tag crit">${E.margem < 20 ? `${E.margem}/` : ''}×${E.mult}</span><span class="tag" data-pline="${esc(id + '|a|' + i)}">${(G => `${esc(it.pericia || 'Armas Brancas')} ${G.dados}d20+${G.mod + E.acerto} (${SIGLA[G.atr]})`)(comAtributo(F, P, UI_ARMA['giro|' + id + '|a|' + i]))}</span></span></div>
         ${tagsMods(it) ? `<div style="display:flex; gap:6px; flex-wrap:wrap">${tagsMods(it)}</div>` : ''}${E.notas.length + E.notasFav.length ? `<p class="mono faint" style="font-size:12px">Aplicado: ${esc([...E.notas, ...E.notasFav].join(' · '))}</p>` : ''}
         ${E.fav && ehInventor(F) && (nv >= 3 || nv >= 7 || nv >= 5 || it.danificada) ? `<div class="fav-painel">${nv >= 3 ? `<label class="chk">Modificação Avançada ${podeEditar ? `<select data-fav-mod style="width:auto; padding:3px 6px"><option value="">Escolher</option>${(SIS.melhorias || []).filter(m => modCabe(it, m)).map(m => `<option ${m.nome === F.favMod ? 'selected' : ''}>${esc(m.nome)}</option>`).join('')}</select>` : `<b>${esc(F.favMod || 'nenhuma')}</b>`}</label>` : ''}${nv >= 5 ? `<button class="btn mini" data-fav-extra="${i}" title="Uma vez por rodada: ataque adicional com a Arma Favorita">Ataque adicional · 10 PST</button>` : ''}${nv >= 7 ? `<label class="chk" title="Uma vez por combate, 5 turnos: margem +2, +2d10, +5 nos testes. Ao desligar, a arma fica Danificada."><input type="checkbox" data-fav-exp ${F.favExp ? 'checked' : ''} ${podeEditar ? '' : 'disabled'}> Modo Experimental</label>` : ''}${it.danificada && podeEditar ? `<button class="btn sec mini" data-fav-conserta="${i}">Consertar</button>` : ''}</div>` : ''}
@@ -2162,6 +2162,7 @@ ROTAS.agente = async id => {
     if (aba === 'habilidades') {
       const habCl = (S?.habilidades || []);
       return `<div style="display:grid; gap:14px">
+        ${MK_HAB()}
         <div class="cab-pagina"><h2>Classe · ${esc(F.subclasse)}</h2></div>
         <div class="grade-hab">${habCl.map(h => `<article class="hab ${h.nivel > F.nivel ? 'bloq' : ''}"><div class="cab"><span class="nm">${esc(h.nome)}</span><span class="tag">Nv ${h.nivel}</span></div><p>${esc(h.texto)}</p>${h.nivel > F.nivel ? '' : botoesUso(h.nome)}</article>`).join('') || '<div class="vazio">Sem subclasse.</div>'}</div>
         ${VL_HAB()}
@@ -2231,6 +2232,9 @@ ROTAS.agente = async id => {
       ${F.vetor.descricao ? `<p class="dim" style="max-width:70ch; font-style:italic">${nl(F.vetor.descricao)}</p>` : ''}
       <div class="grade-hab">${hs.map(h => `<article class="hab hab-vetor ${F.vetorVestido && !chakraVest(F) ? '' : 'bloq'}"><span class="nm">${esc(h.nome)}</span><p>${nl(h.texto)}</p></article>`).join('') || '<div class="vazio">O mestre ainda não escreveu habilidades para este vetor.</div>'}</div>`;
   };
+  const MK_HAB = () => { const CK = chakraVest(F); if (!CK) return '';
+    return `<div class="caixa mk-vest-hab" style="--mc:${esc(CK.cor || '#b4333b')}"><div class="cab-pagina"><h2 class="titulo-vetor" style="margin:0">Intenção vestida · ${esc(CK.nome)}</h2><span class="tag tag-vetor">Vestida</span></div>
+      <div class="grade-hab">${(CK.habilidades || []).map(h => `<article class="hab hab-vetor"><span class="nm">${esc(h.nome)}</span><p>${nl(h.texto)}</p>${botoesUso(h.nome)}</article>`).join('') || '<div class="vazio">Esta Marca não tem habilidades escritas.</div>'}</div></div>`; };
   const RES_HAB = window._resHab = window._resHab || {};
   const autoDe = nome => (F.autos || {})[nome];
   const resumoAuto = a => [a.custo?.pv ? `${a.custo.pv} PV` : '', a.custo?.ps ? `${a.custo.ps} PS` : '', a.custo?.pst ? `${a.custo.pst} PST` : '', a.pericia ? `teste de ${a.pericia}${a.dt ? ' DT ' + a.dt : ''}` : '', a.ataques ? `${a.ataques} ataque${a.ataques > 1 ? 's' : ''}${a.ataques > 1 ? { metade: ', seguintes com metade do dano do primeiro', igual: ', seguintes com o dano do primeiro', cada: '' }[a.modo || 'cada'] : ''}` : '', a.expr ? `${a.rotuloExpr || 'rola'} ${a.expr}` : ''].filter(Boolean).join(' · ');
@@ -2616,6 +2620,12 @@ ROTAS.agente = async id => {
     $$('[data-texto]').forEach(t => t.addEventListener('input', debounce(() => salvar({ [t.dataset.texto]: t.value }), 800)));
   }
 };
+const VIT_IC = {
+  pv: '<i class="v-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 5.3 3.1 1.7-1.9 3.2-3.1 5.3-3.1 3.7 0 5.8 3.9 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></i>',
+  ps: '<i class="v-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg></i>',
+  pst: '<i class="v-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 2 4 13.5h6.5L9.5 22 20 9.5h-6.6z"/></svg></i>' };
+// fórmula dos vitais: a base numa linha e cada bônus num chip pequeno
+function formChips(t) { const p = String(t || '').split(/ (?=[+−] \d+ [A-Za-zÀ-ú])/); return `<div class="v-form"><span class="v-base">${esc(p[0])}</span>${p.slice(1).map(x => `<span class="v-chip ${x[0] === '−' ? 'neg' : ''}">${esc(x)}</span>`).join('')}</div>`; }
 function rolaveis(txt) { return [...new Set((String(txt || '').match(/\b\d+d\d+(?:\s*\+\s*\d+(?:d\d+)?)*\b/g) || []).map(x => x.replace(/\s/g, '')))].slice(0, 3); }
 function pentagono(A) {
   const cx = 150, cy = 148, R = 104; const esc_ = Math.max(5, ...ATR.map(a => A?.[a[0]] || 0));

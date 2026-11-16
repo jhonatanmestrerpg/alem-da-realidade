@@ -407,3 +407,33 @@ h2 .ic, h3 .ic, .rotulo .ic, .hoje .ic { opacity: .85; color: var(--ouro); }
 .hb-sub { border: 1px solid var(--linha); border-radius: var(--raio-p); padding: 8px 10px; background: rgba(255,255,255,.02); }
 .hb-sub summary { cursor: pointer; } .hb-hab { padding: 8px 0 0; } .hb-hab p { margin: 4px 0 0; font-size: 13.5px; color: var(--lua-dim); white-space: pre-line; }
 @media (max-width: 560px) { .mk-ficha { grid-template-columns: 1fr; justify-items: start; } }
+
+/* fórmula dos vitais em chips */
+/* vitais: nome com ícone e o máximo em destaque; o cálculo fica recolhido */
+.vital.pv { --vc: #e0505b; } .vital.ps { --vc: #6f9be0; } .vital.pst { --vc: #6fbf93; }
+.vital { gap: 8px; }
+.vital .cab { align-items: center; }
+.v-nome { display: flex; align-items: center; gap: 10px; }
+.v-nome > span { display: grid; line-height: 1.1; }
+.v-nome b { font: 400 21px/1 var(--f-disp); letter-spacing: .04em; color: color-mix(in srgb, var(--vc) 55%, #fff); text-shadow: 0 0 18px color-mix(in srgb, var(--vc) 45%, transparent); }
+.v-nome small { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--lua-faint); margin-top: 3px; }
+.v-ic { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: var(--vc); background: radial-gradient(circle, color-mix(in srgb, var(--vc) 22%, transparent), transparent 70%); border: 1px solid color-mix(in srgb, var(--vc) 45%, transparent); box-shadow: 0 0 16px -4px var(--vc); flex: none; }
+.v-ic svg { width: 17px; height: 17px; }
+.vital.pv .v-ic svg { animation: v-pulso 1.6s ease-in-out infinite; }
+@keyframes v-pulso { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(1); } 45% { transform: scale(1.1); } }
+@media (prefers-reduced-motion: reduce) { .vital.pv .v-ic svg { animation: none; } }
+.v-tot { display: grid; justify-items: end; line-height: 1; }
+.v-tot b { font: 600 22px/1 var(--f-mono); color: var(--lua); }
+.v-tot small { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--lua-faint); margin-top: 3px; }
+.v-calc summary { cursor: pointer; list-style: none; font-size: 12px; color: var(--lua-faint); width: fit-content; padding: 2px 0; }
+.v-calc summary::-webkit-details-marker { display: none; }
+.v-calc summary::before { content: "▸ "; color: var(--vc); }
+.v-calc[open] summary::before { content: "▾ "; }
+.v-calc summary:hover { color: var(--lua); }
+.v-calc .v-form { margin: 4px 0 2px; }
+.v-chip { border-color: color-mix(in srgb, var(--vc) 30%, transparent) !important; }
+.v-form { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 6px; font-size: 11.5px; line-height: 1.3; color: var(--lua-faint); }
+.v-base { font-family: var(--f-mono); white-space: nowrap; }
+.v-chip { white-space: nowrap; padding: 1px 7px; border: 1px solid var(--linha); border-radius: 99px; background: rgba(255,255,255,.03); }
+.v-chip.neg { color: #e3666d; border-color: #e3666d55; }
+.mk-vest-hab { border-color: color-mix(in srgb, var(--mc) 55%, transparent); box-shadow: 0 0 30px -12px var(--mc); display: grid; gap: 10px; }

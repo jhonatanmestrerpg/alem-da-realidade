@@ -27,6 +27,9 @@ const minhasClassesHb = () => Object.values(HB_CLS);
 function registrarClasseFicha(f) { if (f?.classeHb?.nome) HB_SNAP[f.classeHb.nome] = f.classeHb; }
 
 /* ---------- Marcas na ficha ---------- */
+// Marca vinda da classe acompanha a classe (números, habilidades) até alguém editar ela na mão
+const marcaEf = (F, c) => { if (!c || c.proprio) return c; const T = (classe(F?.classe)?.chakras || []).find(t => t && t.nome === (c.tpl || c.nome)); return T ? { ...JSON.parse(JSON.stringify(T)), id: c.id, foto: c.foto || T.foto || '', manifesta: c.manifesta, tpl: T.nome } : c; };
+const marcasDe = F => (F?.chakras || []).map(c => marcaEf(F, c));
 const temMarcas = f => !!(classe(f?.classe)?.chakras || (f?.chakras || []).length);
 const subAtual = f => classe(f?.classe)?.subclasses?.find(s => s.nome === f?.subclasse) || null;
 const NOMES_ATR = { forca: 'FOR', destreza: 'DES', constituicao: 'CON', inteligencia: 'INT', presenca: 'PRE' };
@@ -37,12 +40,12 @@ const fotoMarca = (c, cls = 'mk-ft') => `<span class="${cls}" style="--mc:${esc(
 
 /* a roda atrás do retrato: aparece quando o Ashura está ativo */
 function rodaMarcas(F) {
-  const L = (F?.chakras || []).filter(c => c.id !== F.chakraVestido).slice(0, 12); if (!F?.ashura || !L.length) return '';
+  const L = marcasDe(F).filter(c => c.id !== F.chakraVestido).slice(0, 12); if (!F?.ashura || !L.length) return '';
   return `<div class="roda-ashura" aria-label="Roda de Marcas ativa" style="--n:${L.length}">${L.map((c, i) => `<span class="roda-m" style="--i:${i};--mc:${esc(c.cor || '#c8a35a')}" title="${esc(c.nome)}">${c.foto ? `<i style="background-image:url('${esc(c.foto)}')"></i>` : `<i>${esc((c.nome || '?')[0])}</i>`}</span>`).join('')}</div>`;
 }
 
 function marcasHTML(F, podeEditar) {
-  const L = F.chakras || [], S = subAtual(F), C = classe(F.classe), vest = F.chakraVestido;
+  const L = marcasDe(F), S = subAtual(F), C = classe(F.classe), vest = F.chakraVestido;
   const cap = S?.marcasMax ? Math.max(1, +(atrEf(F)[S.marcasAtr || 'presenca'] || 0)) : 0;
   const regra = S?.regraMarcas || C?.regraMarcas || '';
   return `<div class="marcas"><div class="cab-pagina"><div><h2 style="margin:0">Marcas</h2><p class="dim" style="margin:4px 0 0; max-width:72ch">${regra ? esc(regra) : 'Entidades presas à sua Roda. Vestir uma Marca é vestir a intenção dela: nome, rosto, bônus e habilidades mudam enquanto durar.'}</p></div>
@@ -112,15 +115,15 @@ function ligarMarcas(F, { salvar, render }) {
   const gravar = async (lista, extra = {}) => { F.chakras = lista; Object.assign(F, extra); render(); await salvar({ chakras: lista, ...extra }); };
   const vestir = id => vestirMarca(F, id, { salvar, render });
   $('#mk-ashura')?.addEventListener('click', async () => { const on = !F.ashura; F.ashura = on; render(); await salvar({ ashura: on }); toast(on ? 'A Roda se abriu atrás de você.' : 'A Roda se fechou.'); });
-  $$('[data-mk-ver]').forEach(b => b.onclick = () => verMarca(L()[+b.dataset.mkVer]));
+  $$('[data-mk-ver]').forEach(b => b.onclick = () => verMarca(marcasDe(F)[+b.dataset.mkVer]));
   $$('[data-mk-vest]').forEach(b => b.onclick = () => { const c = L()[+b.dataset.mkVest]; vestir(c.id === F.chakraVestido ? '' : c.id); });
   $$('[data-mk-man]').forEach(b => b.onclick = () => { const l = L(), i = +b.dataset.mkMan; l[i] = { ...l[i], manifesta: !l[i].manifesta }; gravar(l); });
-  $$('[data-mk-ed]').forEach(b => b.onclick = () => { const i = +b.dataset.mkEd; formMarca(L()[i], c => { const l = L(); l[i] = c; gravar(l); }); });
+  $$('[data-mk-ed]').forEach(b => b.onclick = () => { const i = +b.dataset.mkEd; formMarca(marcasDe(F)[i], c => { const l = L(); l[i] = { ...c, proprio: true }; gravar(l); }); });
   $$('[data-mk-rm]').forEach(b => b.onclick = async () => { const i = +b.dataset.mkRm, c = L()[i]; if (!await confirmar(`Soltar ${esc(c.nome)} da Roda?`, { titulo: 'Soltar Marca', ok: 'Soltar' })) return;
     if (c.id === F.chakraVestido) await vestir(''); gravar(L().filter((_, j) => j !== i)); });
   $('#mk-novo')?.addEventListener('click', () => formMarca({}, c => gravar([...L(), c])));
   $('#mk-cls')?.addEventListener('click', () => { const T = classe(F.classe)?.chakras || [], tem = new Set(L().map(c => c.nome));
-    seletor('Marcas da classe', T, c => `${fotoMarca(c, 'mk-ft p')} <b>${esc(c.nome)}</b>${tem.has(c.nome) ? ' <span class="tag">Já na Roda</span>' : ''}${c.titulo ? ` <span class="faint">${esc(c.titulo)}</span>` : ''}`, c => { gravar([...L(), { ...JSON.parse(JSON.stringify(c)), id: uid8() }]); toast(`${c.nome} entrou na Roda.`); }); });
+    seletor('Marcas da classe', T, c => `${fotoMarca(c, 'mk-ft p')} <b>${esc(c.nome)}</b>${tem.has(c.nome) ? ' <span class="tag">Já na Roda</span>' : ''}${c.titulo ? ` <span class="faint">${esc(c.titulo)}</span>` : ''}`, c => { gravar([...L(), { ...JSON.parse(JSON.stringify(c)), id: uid8(), tpl: c.nome }]); toast(`${c.nome} entrou na Roda.`); }); });
   $('#mk-cap')?.addEventListener('click', async () => { const hb = (await homebrewVisivel('ameaca')).map(x => ({ ...x, id: 'hb' + x.id }));
     seletor('Selar ameaça na Roda', [...CRI.filter(a => !a.npc), ...hb], a => `<b>${esc(a.nome)}</b> ${elTag(a.elemento)} <span class="tag">Nv ${esc(a.nivel)}</span>`, a => {
       const fc = a.ficha || {}, habs = [...(fc.poderes || []), ...(fc.acoes || [])].slice(0, 6).map(p => ({ nome: p.nome || 'Poder', texto: p.texto || p.descricao || p.efeito || '' })).filter(h => h.texto);
@@ -189,8 +192,10 @@ function importarHomebrew() {
   i.onchange = async () => { const f = i.files[0]; if (!f) return; let L; try { L = JSON.parse(await f.text()); } catch (e) { return toast('Arquivo inválido.'); }
     L = Array.isArray(L) ? L : L.docs || [L]; const ok = L.filter(x => x && x.tipo && x.nome);
     if (!ok.length) return toast('Nada para importar.');
-    if (!await confirmar(`Importar ${ok.length} criação${ok.length > 1 ? 'ões' : ''} para o seu Homebrew? ${ok.map(x => esc(x.nome)).join(', ')}`, { titulo: 'Importar', ok: 'Importar' })) return;
-    let n = 0; for (const x of ok) { const { id, autor, compartilhado, canonico, ...r } = x; try { await db.collection('homebrew').add({ ...r, autor: ME, compartilhado: false, criado: Date.now() }); n++; } catch (e) { toast(`${x.nome}: ${e.message || e.code}`); } }
-    toast(`${n} importado${n > 1 ? 's' : ''}.`); };
+    if (!await confirmar(`Importar ${ok.length} criação${ok.length > 1 ? 'ões' : ''} para o seu Homebrew? ${ok.map(x => esc(x.nome)).join(', ')}. O que já existir com o mesmo nome é atualizado.`, { titulo: 'Importar', ok: 'Importar' })) return;
+    let meus = []; try { meus = (await db.collection('homebrew').where('autor', '==', ME).get()).docs.map(d => ({ id: d.id, ...d.data() })); } catch (e) {}
+    let n = 0, a = 0; for (const x of ok) { const { id, autor, compartilhado, canonico, ...r } = x, ja = meus.find(d => d.tipo === x.tipo && d.nome === x.nome);
+      try { if (ja) { await db.doc('homebrew/' + ja.id).update({ ...r, editado: Date.now() }); a++; } else { await db.collection('homebrew').add({ ...r, autor: ME, compartilhado: false, criado: Date.now() }); n++; } } catch (e) { toast(`${x.nome}: ${e.message || e.code}`); } }
+    toast([n ? `${n} novo${n > 1 ? 's' : ''}` : '', a ? `${a} atualizado${a > 1 ? 's' : ''}` : ''].filter(Boolean).join(', ') + '.'); };
   i.click();
 }
