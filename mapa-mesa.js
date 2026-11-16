@@ -29,13 +29,15 @@
   /* ---------- névoa: grade de 0 (coberto) e 1 (revelado) ---------- */
   const nevoaCheia = (cols, rows, v = '0') => ({ on: true, cols, rows, v: v.repeat(cols * rows) });
   const revelado = (nv, x, y) => { if (!nv?.on) return true; const c = Math.min(nv.cols - 1, Math.floor(x / 100 * nv.cols)), r = Math.min(nv.rows - 1, Math.floor(y / 100 * nv.rows)); return nv.v[r * nv.cols + c] === '1'; };
+  // quanto a névoa escurece o mapa na tela do mestre (só neste aparelho; a mesa continua sem ver nada)
+  const nevoaMestre = () => { try { const v = +localStorage.getItem('mapa-nevoa-mestre'); return v >= .1 && v <= .95 ? v : .62; } catch (e) { return .62; } };
   function pintarNevoa(cv, nv, mestre) {
     const box = cv.parentElement.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
     cv.width = Math.max(1, Math.round(box.width * dpr)); cv.height = Math.max(1, Math.round(box.height * dpr));
     const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height);
     if (!nv?.on) return;
     const cw = cv.width / nv.cols, ch = cv.height / nv.rows;
-    g.fillStyle = mestre ? 'rgba(8,4,6,.62)' : '#050304';
+    g.fillStyle = mestre ? `rgba(8,4,6,${nevoaMestre()})` : '#050304';
     for (let r = 0; r < nv.rows; r++) for (let c = 0; c < nv.cols; c++) if (nv.v[r * nv.cols + c] !== '1') g.fillRect(Math.floor(c * cw), Math.floor(r * ch), Math.ceil(cw) + 1, Math.ceil(ch) + 1);
     if (mestre) { // hachura para a Diretora saber o que a mesa não vê
       g.strokeStyle = 'rgba(255,255,255,.07)'; g.lineWidth = 1;
@@ -92,7 +94,8 @@
     const px = +g.px, ox = ((+g.ox % px) + px) % px, oy = ((+g.oy % px) + px) % px; let d = '';
     for (let x = ox; x <= g.W + .5; x += px) d += `M${x.toFixed(1)} 0V${g.H}`;
     for (let y = oy; y <= g.H + .5; y += px) d += `M0 ${y.toFixed(1)}H${g.W}`;
-    return `<svg class="mapa-grade ${g.auto ? 'sobre' : ''}" viewBox="0 0 ${g.W} ${g.H}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}" class="gl-e"/><path d="${d}" class="gl-c"/></svg>`;
+    const op = g.op != null && +g.op >= 0 ? Math.min(1, +g.op) : .6;
+    return `<svg class="mapa-grade ${g.auto ? 'sobre' : ''}" style="opacity:${op}" viewBox="0 0 ${g.W} ${g.H}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}" class="gl-e"/><path d="${d}" class="gl-c"/></svg>`;
   }
   // acha a grade que já está desenhada na imagem (perfil de linhas finas + periodicidade)
   const DETECT = {};
@@ -254,6 +257,7 @@
       ${mestre && cena?.img ? `<div class="mapa-ferr">
           <span class="seg"><button type="button" data-modo="mover" class="${ui.modo === 'mover' ? 'aqui' : ''}"><i data-ic="mao"></i> Pinos</button><button type="button" data-modo="revelar" class="${ui.modo === 'revelar' ? 'aqui' : ''}"><i data-ic="lanterna"></i> Revelar</button><button type="button" data-modo="cobrir" class="${ui.modo === 'cobrir' ? 'aqui' : ''}"><i data-ic="nevoa"></i> Cobrir</button></span>
           <label class="pincel" ${ui.modo === 'mover' ? 'hidden' : ''}>Pincel <input type="range" min="0" max="5" step="1" value="${ui.pincel}" data-pincel></label>
+          ${cena.nevoa?.on ? `<label class="pincel" title="Só na sua tela: a mesa continua sem ver o que está coberto">Névoa pra você <input type="range" min="10" max="95" step="5" value="${Math.round(nevoaMestre() * 100)}" data-nevoa-m></label>` : ''}
           <span class="btns">${cena.nevoa?.on ? '<button class="btn mini sec" data-m="tudo1">Revelar tudo</button><button class="btn mini sec" data-m="tudo0">Cobrir tudo</button><button class="btn mini sec" data-m="semnevoa">Tirar névoa</button>' : '<button class="btn mini" data-m="comnevoa"><i data-ic="nevoa"></i> Ligar névoa</button>'}
           <button class="btn mini ${ui.gradeCtl ? '' : 'sec'}" data-m="grade" title="Tamanho e posição dos quadros">▦ Grade</button><button class="btn mini sec" data-m="sobs">+ ${T.quem}</button><button class="btn mini sec" data-m="npc">+ NPC</button><button class="btn mini sec" data-m="ass" title="Coloca no mapa as ameaças que estão no combate">+ ${T.ass}</button><button class="btn mini sec" data-m="novo">+ Pino</button></span></div>` : ''}
       ${mestre && cena?.img && ui.gradeCtl ? (() => { const g = gradeDe(cena); return g ? `<div class="mapa-grade-ctl">
@@ -261,6 +265,7 @@
           <div class="duas" style="gap:10px"><div class="campo"><label class="rotulo">Mover para o lado <b data-gv="ox">${(+g.ox).toFixed(1)}</b></label><div class="gc-l"><button type="button" class="btn mini sec" data-gd="ox|-0.5">−</button><input type="range" data-g="ox" min="0" max="${g.px}" step="0.1" value="${((+g.ox % g.px) + g.px) % g.px}"><button type="button" class="btn mini sec" data-gd="ox|0.5">+</button></div></div>
             <div class="campo"><label class="rotulo">Mover para cima/baixo <b data-gv="oy">${(+g.oy).toFixed(1)}</b></label><div class="gc-l"><button type="button" class="btn mini sec" data-gd="oy|-0.5">−</button><input type="range" data-g="oy" min="0" max="${g.px}" step="0.1" value="${((+g.oy % g.px) + g.px) % g.px}"><button type="button" class="btn mini sec" data-gd="oy|0.5">+</button></div></div></div>
           <div class="campo"><label class="rotulo" for="g-m">Cada quadro vale <b data-gv="m">${fmtM(metrosDe(cena))}</b></label><div class="gc-l gc-m"><input type="number" id="g-m" data-g="m" min="0.01" max="1000" step="0.05" value="${metrosDe(cena)}" inputmode="decimal" aria-label="Metros por quadro"><span class="tag">m</span>${[[0.3, '30 cm'], [1.5, '1,5 m'], [3, '3 m'], [5, '5 m'], [10, '10 m']].map(([v, t]) => `<button type="button" class="btn mini ${metrosDe(cena) === v ? '' : 'sec'}" data-gm="${v}">${t}</button>`).join('')}</div><span class="tag">Bonecos pequenos num mundo grande (Little Fears): use 30 cm. Mapa de cidade: 5 ou 10 m.</span></div>
+          <div class="campo"><label class="rotulo" for="g-op">Força das linhas <b data-gv="op">${Math.round((g.op ?? .6) * 100)}%</b></label><div class="gc-l"><span class="tag">fraca</span><input type="range" id="g-op" data-gop min="5" max="100" step="5" value="${Math.round((g.op ?? .6) * 100)}"><span class="tag">forte</span></div></div>
           <label class="chk"><input type="checkbox" data-g="ver" ${g.ver === false ? '' : 'checked'}> Mostrar as linhas da grade</label>
           <div class="btns"><button class="btn mini" data-gs="salvar">Salvar grade</button><button class="btn mini sec" data-gs="detectar">Reconhecer no mapa</button><button class="btn mini sec" data-gs="padrao">Grade padrão</button><button class="btn mini sec" data-gs="fechar">Fechar</button></div>
           <p class="tag" style="margin:0">${g.auto ? 'Encaixada na grade que o mapa já tinha.' : 'Ajuste até os quadros baterem com o mapa.'} Os bonecos sempre param dentro de um quadro.</p></div>` : '<div class="mapa-grade-ctl"><p class="tag">Calculando a grade…</p></div>'; })() : ''}
@@ -345,13 +350,14 @@
       ctl.querySelectorAll('input[type=range][data-g]').forEach(r => r.oninput = () => pôr(r.dataset.g, r.value));
       ctl.querySelectorAll('[data-gd]').forEach(b => b.onclick = () => { const [k, dv] = b.dataset.gd.split('|'); pôr(k, +gt[k] + +dv); });
       ctl.querySelector('[data-g="ver"]').onchange = e => { gt.ver = e.target.checked; previa(); };
+      ctl.querySelector('[data-gop]').oninput = e => { gt.op = +(e.target.value / 100).toFixed(2); ctl.querySelector('[data-gv="op"]').textContent = e.target.value + '%'; const sv = pal()?.querySelector('.mapa-grade'); if (sv) sv.style.opacity = gt.op; else previa(); };
       const pôrM = v => { v = +String(v).replace(',', '.'); if (!(v > 0)) return; gt.m = +v.toFixed(3); ctl.querySelector('[data-gv="m"]').textContent = fmtM(gt.m); const i = ctl.querySelector('[data-g="m"]'); if (+i.value !== gt.m) i.value = gt.m; ctl.querySelectorAll('[data-gm]').forEach(b => b.classList.toggle('sec', +b.dataset.gm !== gt.m)); };
       ctl.querySelector('[data-g="m"]').oninput = e => pôrM(e.target.value);
       ctl.querySelectorAll('[data-gm]').forEach(b => b.onclick = () => pôrM(b.dataset.gm));
       ctl.querySelector('[data-gs="salvar"]').onclick = async () => { await trocarCena(x => ({ ...x, grade: { ...gt } })); toast('Grade salva.'); refazer(); };
       ctl.querySelector('[data-gs="fechar"]').onclick = () => { ui.gradeCtl = false; refazer(); };
-      ctl.querySelector('[data-gs="padrao"]').onclick = () => { Object.assign(gt, gradePadrao(gt.W, gt.H), gt.m ? { m: gt.m } : {}); ['px', 'ox', 'oy'].forEach(k => { const r = ctl.querySelector(`[data-g="${k}"]`); r.value = gt[k]; }); previa(); };
-      ctl.querySelector('[data-gs="detectar"]').onclick = async () => { delete DETECT[cena.img]; toast('Procurando a grade no mapa…'); const g = await detectarGrade(cena.img); if (!g) return toast('Não deu para ler a imagem.'); Object.assign(gt, g, gt.m ? { m: gt.m } : {}); ['px', 'ox', 'oy'].forEach(k => { const r = ctl.querySelector(`[data-g="${k}"]`); r.max = k === 'px' ? r.max : g.px; r.value = gt[k]; }); previa(); toast(g.auto ? 'Achei a grade do mapa. Confira e salve.' : 'O mapa não tem grade clara. Ficou a padrão.'); };
+      ctl.querySelector('[data-gs="padrao"]').onclick = () => { Object.assign(gt, gradePadrao(gt.W, gt.H), gt.m ? { m: gt.m } : {}, gt.op != null ? { op: gt.op } : {}); ['px', 'ox', 'oy'].forEach(k => { const r = ctl.querySelector(`[data-g="${k}"]`); r.value = gt[k]; }); previa(); };
+      ctl.querySelector('[data-gs="detectar"]').onclick = async () => { delete DETECT[cena.img]; toast('Procurando a grade no mapa…'); const g = await detectarGrade(cena.img); if (!g) return toast('Não deu para ler a imagem.'); Object.assign(gt, g, gt.m ? { m: gt.m } : {}, gt.op != null ? { op: gt.op } : {}); ['px', 'ox', 'oy'].forEach(k => { const r = ctl.querySelector(`[data-g="${k}"]`); r.max = k === 'px' ? r.max : g.px; r.value = gt[k]; }); previa(); toast(g.auto ? 'Achei a grade do mapa. Confira e salve.' : 'O mapa não tem grade clara. Ficou a padrão.'); };
     }
     A.querySelector('[data-m="mostrar"]')?.addEventListener('click', async () => { await salvarC({ mapaAtivo: ui.ver }); toast('A mesa agora vê ' + (atual()?.nome || 'esta cena') + '.'); refazer(); });
     A.querySelector('[data-m="ren"]')?.addEventListener('click', async () => { const n = await perguntarNome('Renomear cena', atual()?.nome); if (!n) return; await trocarCena(x => ({ ...x, nome: n })); refazer(); });
@@ -366,6 +372,7 @@
     A.querySelector('[data-m="tudo0"]')?.addEventListener('click', async () => { await trocarCena(x => ({ ...x, nevoa: { ...x.nevoa, v: '0'.repeat(x.nevoa.cols * x.nevoa.rows) } })); refazer(); });
     A.querySelectorAll('[data-modo]').forEach(b => b.onclick = () => { ui.modo = b.dataset.modo; if (ui.modo !== 'mover' && !cena.nevoa?.on) { toast('Ligue a névoa primeiro.'); ui.modo = 'mover'; } refazer(); });
     A.querySelector('[data-pincel]')?.addEventListener('input', e => { ui.pincel = +e.target.value; });
+    A.querySelector('[data-nevoa-m]')?.addEventListener('input', e => { try { localStorage.setItem('mapa-nevoa-mestre', (e.target.value / 100).toFixed(2)); } catch (x) {} document.querySelectorAll('.mapa-palco .nevoa.mestre, .mapa-palco canvas.nevoa').forEach(cv => { const p = cv.closest('.mapa-palco'); if (p?._cena?.nevoa) pintarNevoa(cv, p._cena.nevoa, !cv.classList.contains('jog')); }); });
     // pinos
     const salvarPinos = l => trocarCena(x => ({ ...x, pinos: l }));
     const pinosAt = () => [...(atual()?.pinos || [])];

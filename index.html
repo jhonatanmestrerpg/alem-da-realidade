@@ -23,10 +23,10 @@
 <script src="banco.js"></script>
 <script src="icones.js"></script>
 <script>window.MAPA_TEMA = 'adr'; window.MAPA_ROTULOS = { dir: 'Mestre', ass: 'Ameaça', quem: 'Agentes', a: 'o' };</script>
-<script src="mapa-mesa.js?v=20261116163450"></script>
+<script src="mapa-mesa.js?v=20261116165333"></script>
 <script src="mesa-extra.js"></script>
 <script src="aparicao.js"></script>
-<script src="base-sistema.js?v=20261116163450"></script>
+<script src="base-sistema.js?v=20261116165333"></script>
 <script src="estetica.js"></script>
 <style>
 /* Layout: barra fixa no topo com a "linha do destino" (ouro > sangue > violeta), páginas em coluna
@@ -836,7 +836,7 @@ button, a, input, select, textarea { touch-action: manipulation; }
 @media (hover: none) { .card-am:hover, .atalho:hover { border-color: var(--linha); background: var(--painel); } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
-<link rel="stylesheet" href="estetica.css?v=20261116163450">
+<link rel="stylesheet" href="estetica.css?v=20261116165333">
 </head>
 <body>
 
@@ -895,7 +895,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261116163450';
+const BUILD = '20261116165333';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
