@@ -22,10 +22,11 @@
 <script src="config.js"></script>
 <script src="banco.js"></script>
 <script src="icones.js"></script>
-<script src="mapa-mesa.js"></script>
+<script>window.MAPA_TEMA = 'adr'; window.MAPA_ROTULOS = { dir: 'Mestre', ass: 'Ameaça', quem: 'Agentes', a: 'o' };</script>
+<script src="mapa-mesa.js?v=20261116163450"></script>
 <script src="mesa-extra.js"></script>
 <script src="aparicao.js"></script>
-<script src="base-sistema.js?v=20261116160704"></script>
+<script src="base-sistema.js?v=20261116163450"></script>
 <script src="estetica.js"></script>
 <style>
 /* Layout: barra fixa no topo com a "linha do destino" (ouro > sangue > violeta), páginas em coluna
@@ -835,7 +836,7 @@ button, a, input, select, textarea { touch-action: manipulation; }
 @media (hover: none) { .card-am:hover, .atalho:hover { border-color: var(--linha); background: var(--painel); } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
-<link rel="stylesheet" href="estetica.css?v=20261116160704">
+<link rel="stylesheet" href="estetica.css?v=20261116163450">
 </head>
 <body>
 
@@ -894,7 +895,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261116160704';
+const BUILD = '20261116163450';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1405,7 +1406,7 @@ async function encolherImagem(file, lado = 1600) {
     if (k === 1 && file.size < 900 * 1024) return file;
     const cv = document.createElement('canvas'); cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
     cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
-    const blob = await new Promise(ok => cv.toBlob(ok, 'image/webp', 0.86)); if (!blob || blob.size >= file.size) return file;
+    const blob = await new Promise(ok => cv.toBlob(ok, 'image/webp', lado > 1600 ? 0.93 : 0.86)); if (!blob || blob.size >= file.size) return file;
     return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.webp', { type: 'image/webp' });
   } catch (e) { return file; }
 }
@@ -1473,8 +1474,9 @@ function recortarImagem(file, opt) {
 }
 async function enviarImagem(file, recorte) {
   if (!sb || !ME) { toast('Entre na sua conta para enviar imagens.'); return null; }
+  const lado = typeof recorte === 'number' ? recorte : 1600; if (typeof recorte === 'number') recorte = null; // número = lado máximo (mapas sobem grandes)
   if (recorte) { file = await recortarImagem(file, recorte); if (!file) return null; }
-  file = await encolherImagem(file);
+  file = await encolherImagem(file, lado);
   if (file.size > 8 * 1024 * 1024) { toast('Imagem acima de 8 MB. Reduza e tente de novo.'); return null; }
   const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '');
   const caminho = `${ME}/${Date.now()}-${uid8()}.${ext}`;
