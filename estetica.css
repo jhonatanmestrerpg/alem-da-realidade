@@ -222,7 +222,7 @@ h2 .ic, h3 .ic, .rotulo .ic, .hoje .ic { opacity: .85; color: var(--ouro); }
 .ed-base { display: grid; gap: 10px; max-height: min(60vh, 640px); overflow: auto; padding-right: 4px; }
 .json-ed { font: 12.5px/1.45 var(--f-mono); white-space: pre; tab-size: 2; }
 .espera-lib { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: var(--raio-p); background: rgba(255,255,255,.04); border: 1px dashed var(--linha-2); }
-.giro { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--linha-2); border-top-color: var(--ouro); animation: girar .8s linear infinite; flex: none; }
+.giro-roda { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--linha-2); border-top-color: var(--ouro); animation: girar .8s linear infinite; flex: none; }
 @keyframes girar { to { transform: rotate(360deg); } }
 .motivo-lib { margin: 0; padding: 8px 12px; border-left: 3px solid var(--ouro); background: rgba(255,255,255,.03); border-radius: 0 var(--raio-p) var(--raio-p) 0; font-style: italic; }
 #nav a[data-pend]:not([data-pend=""])::before { content: attr(data-pend); position: absolute; top: -6px; right: -12px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--sangue-hi); color: #fff; font: 700 10px/16px var(--f-mono); text-align: center; animation: pulsar 1.2s ease-in-out infinite; }

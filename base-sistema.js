@@ -92,7 +92,7 @@ function pedirLiberacao(area, depois) {
   const nomeArea = AREA(area)?.[1] || 'Fundamentos';
   abrirModal('Fundamento travado', `<p style="margin:0">${IC('travar')} <b>${esc(nomeArea)}</b> é fundamento do sistema. Para mexer, o dono do site precisa liberar sua conta. A liberação vale <b>24 horas</b>.</p>
     <div class="campo"><label class="rotulo" for="lib-mot">O que você quer mudar (o dono vê)</label><textarea id="lib-mot" rows="3" maxlength="300" placeholder="Ex.: ajustar o PV da classe Bruxa"></textarea></div>
-    <div class="espera-lib" hidden><span class="giro" aria-hidden="true"></span><span>Pedido enviado. Esta janela fecha sozinha quando o dono liberar.</span></div>
+    <div class="espera-lib" hidden><span class="giro-roda" aria-hidden="true"></span><span>Pedido enviado. Esta janela fecha sozinha quando o dono liberar.</span></div>
     <div class="btns"><button class="btn" id="lib-ok">${IC('aviso')} Pedir liberação</button></div>`, (m, fechar) => {
     const espera = m.querySelector('.espera-lib'), ok = m.querySelector('#lib-ok');
     const aguardar = () => { espera.hidden = false; ok.disabled = true; ok.textContent = 'Aguardando o dono…';
