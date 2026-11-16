@@ -7,8 +7,31 @@
 
   // marca os cards e cuida do papel das abas sempre que a página muda
   let pendente = false;
+  // caixas do Escudo que dobram: o Escudo deixa de ser um paredão (lembra aberta/fechada)
+  const LS = { get: k => { try { return localStorage.getItem('adr-dobra:' + k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem('adr-dobra:' + k, v); } catch (e) {} } };
+  const dobrar = cx => {
+    if (cx.dataset.dobra) return; cx.dataset.dobra = '1';
+    const t = cx.querySelector(':scope > h3, :scope > .btns:first-child > h3, :scope > .sec-f:first-child > h3'); if (!t || cx.children.length < 2) return;
+    t.classList.add('dobra-t'); t.tabIndex = 0; t.setAttribute('role', 'button');
+    const k = t.textContent.replace(/[^\p{L} ]/gu, '').trim().slice(0, 40), salvo = LS.get(k);
+    const por = f => { cx.classList.toggle('dobrada', f); t.setAttribute('aria-expanded', String(!f)); }; por(salvo === '1');
+    const alt = e => { if (e.target.closest('button, a, input, select') && e.target !== t) return; const f = !cx.classList.contains('dobrada'); por(f); LS.set(k, f ? '1' : '0'); };
+    t.addEventListener('click', alt); t.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alt(e); } });
+  };
+  // seletor de arquivo: o nativo fica escondido, o botão é nosso
+  let nArq = 0;
+  const arquivo = i => {
+    if (i.classList.contains('arq-oculto')) return; if (!i.id) i.id = 'arq-' + (++nArq);
+    i.classList.add('arq-oculto');
+    const l = document.createElement('span'); l.className = 'arq-linha';
+    l.innerHTML = `<label class="btn sec mini arq-botao" for="${i.id}">${window.IC ? IC('imagem') : ''} ${i.multiple ? 'Escolher arquivos' : 'Escolher arquivo'}</label><span class="arq-nome" data-arq="${i.id}">nenhum</span>`;
+    i.after(l);
+  };
+  document.addEventListener('change', e => { const i = e.target; if (i?.type !== 'file' || !i.classList?.contains('arq-oculto')) return; const n = document.querySelector(`.arq-nome[data-arq="${CSS.escape(i.id)}"]`); if (n) n.textContent = [...(i.files || [])].map(f => f.name).join(', ') || 'nenhum'; }, true);
   const arrumar = () => {
     pendente = false;
+    document.querySelectorAll('#corpo-e .caixa').forEach(dobrar);
+    document.querySelectorAll('input[type=file]:not(.arq-oculto):not([hidden])').forEach(i => { if (!i.closest('.zona-img') && i.style.display !== 'none') arquivo(i); });
     document.querySelectorAll(FLUT).forEach(el => el.classList.add('flut'));
     document.querySelectorAll('.abas').forEach(t => {
       if (!t.hasAttribute('role')) t.setAttribute('role', 'tablist');

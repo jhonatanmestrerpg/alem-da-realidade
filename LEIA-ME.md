@@ -77,3 +77,11 @@ turn: [{ urls: ['turn:seu-servidor:3478', 'turns:seu-servidor:443?transport=tcp'
 - `mapa-mesa.js`: mapa da campanha com cenas, pinos, névoa com pincel, zoom e mapa flutuante (botão 🗺). Fica em `campanhas/<id>/publico/mesa`.
 - `mesa-extra.js`: NPCs, suspeitos, quadro da equipe com barbante, arquivo (papel, foto e áudio), calendário de sessões, roleplay com vozes, apagar rolagens e histórico completo (`#historico-<id>`).
 - O quadro da equipe grava em `campanhas/<id>/quadro/estado`, que qualquer membro pode alterar. Para isso valer no banco, rode o `seguranca.sql` de novo no SQL Editor do Supabase.
+
+## Vindo do site RPGs e base do sistema (nov/2026)
+- `icones.js`: ícones desenhados (SVG) no lugar dos emojis. Em HTML, `<i data-ic="nome"></i>`; em JS, `IC('nome')`.
+- `aparicao.js`: entrada em cena de ameaça (som e efeito gerados no navegador). No Escudo › Combate, ficha da ameaça › "Entrada em cena".
+- `base-sistema.js`: tela `#base` (só administradores). Muda itens, rituais, classes etc. para o site inteiro, guardando as mudanças em `sistema/base` e `sistema/fundamental`. Fundamentos ficam travados para administradores até o dono (`dono` no config.js) liberar por 24 h (`sistema-pedidos/<uid>` e `sistema-liberacoes/<uid>`).
+- Itens da ficha que vieram do livro acompanham a base (`base: nome`); editar o item dentro da ficha deixa ele só daquela ficha (`proprio: true`).
+- NPC oculto: fica em `mestre/<uid>/npcs/<campanha>` e só vai para a mesa ao revelar.
+- Depois de atualizar, rode de novo o `seguranca.sql` no SQL Editor do Supabase.

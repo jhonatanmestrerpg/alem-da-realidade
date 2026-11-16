@@ -21,8 +21,11 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="banco.js"></script>
+<script src="icones.js"></script>
 <script src="mapa-mesa.js"></script>
 <script src="mesa-extra.js"></script>
+<script src="aparicao.js"></script>
+<script src="base-sistema.js"></script>
 <script src="estetica.js"></script>
 <style>
 /* Layout: barra fixa no topo com a "linha do destino" (ouro > sangue > violeta), páginas em coluna
@@ -850,8 +853,9 @@ button, a, input, select, textarea { touch-action: manipulation; }
       <a href="#homebrew" data-sec="homebrew">Homebrew</a>
       <a href="#patente" data-sec="patente">Patente</a>
       <a href="#livro" data-sec="livro">Livro</a>
+      <a href="#base" data-sec="base" hidden>Base</a>
     </nav>
-    <a class="volta-camp" id="volta-camp" hidden></a><button type="button" class="volta-camp mapa-camp" id="mapa-camp" hidden title="Mapa da campanha" aria-label="Abrir o mapa da campanha">🗺</button>
+    <a class="volta-camp" id="volta-camp" hidden></a><button type="button" class="volta-camp mapa-camp" id="mapa-camp" hidden title="Mapa da campanha" aria-label="Abrir o mapa da campanha"><i data-ic="mapa"></i></button>
     <div class="quem" id="quem"></div>
   </div>
   <div class="linha-destino"></div>
@@ -890,7 +894,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261111030143';
+const BUILD = '20261116053111';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -953,7 +957,7 @@ async function carregarBase() {
   let [s, c, r, f, k] = await Promise.all(['dados/sistema.json', 'dados/criaturas.json', 'dados/rituais.json', 'dados/feiticos.json', 'dados/cacador.json'].map(u => fetch(u).then(x => x.json())));
   c = c.map(x => x.ficha ? { ...x, ficha: fichaCompat(x.ficha) } : x); // habilidades e poderes novos, com ataques e traços derivados para as telas antigas
   SIS = s; CRI = c; RIT = r; FEIT = f; CACADOR = k.cacador; ABATES = { ...k.abates };
-  BASE_ORIG = { CRI: [...c], RIT: [...r], FEIT: [...f], passivas: [...s.passivas], itens: [...s.itens] };
+  BASE_ORIG = { CRI: [...c], RIT: [...r], FEIT: [...f], passivas: [...s.passivas], itens: [...s.itens] }; BASE_SIS = structuredClone(s);
 }
 // classes do livro + classes e subclasses criadas no homebrew das campanhas carregadas
 // nível 0 = mundano: sem classe, só perícias e uma passiva
@@ -1067,7 +1071,7 @@ function vigiarTurnos() {
 }
 async function popCondicoes(fid, camp, rodada, porMestre) {
   const chave = `${camp}:${rodada}`; if (document.querySelector(`.pop-cond[data-chave="${CSS.escape(fid + '|' + chave)}"]`)) return;
-  const ref = db.doc('fichas/' + fid); const F0 = (await ref.get()).data(); if (!F0) return; const F = { id: fid, ...F0 };
+  const ref = db.doc('fichas/' + fid); const F0 = (await ref.get()).data(); if (!F0) return; const F = vincularItens({ id: fid, ...F0 });
   const K = calc(F); let atual = { ...K.max, ...(F.atual || {}) };
   const quedaFeita = {};
   const conds = (F.condicoes || []).map(condObj), feito = conds.map(c => { const r = COND_TURNO[c.nome] || {}; return !(r.teste || /[+-]/.test(c.porTurno || '')); }), linhas = [];
@@ -2008,7 +2012,7 @@ ROTAS.agente = async id => {
     if (!s.exists) { app.innerHTML = '<div class="vazio">Esta ficha não existe ou foi apagada.</div>'; return; }
     const novo = { id: s.id, ...s.data() };
     if (pendente && F) novo.atual = F.atual;
-    const primeira = !F; F = novo;
+    const primeira = !F; F = vincularItens(novo);
     if (primeira) { await checarPermissao(); await carregarRegras(F.campanhas, () => { if (F) render(); }); }
     else carregarRegras(F.campanhas, () => { if (F) render(); });
     if (!document.activeElement?.closest?.('#ficha [data-texto]')) render();
@@ -2030,7 +2034,7 @@ ROTAS.agente = async id => {
         ${VA ? `<h1 class="nome-vetor">${esc(F.vetor.nome || 'Vetor')}</h1><div class="dim" style="margin-top:-4px">${esc(F.nome)}, vestindo o vetor</div>` : `<h1>${esc(F.nome)}</h1>`}
         <div class="dim">${nivelDe(F) === 0 ? 'Mundano' : `${esc(F.classe)} · ${esc(F.subclasse)}`} · Nível ${nivelDe(F)}${F.vontade ? ` · Vontade de ${esc(F.vontade)}` : ''}</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px">
-          ${ehMestre ? (F.morto ? '<button class="btn ouro" id="reviver">Reviver</button>' : '<button class="btn sec" id="matar" title="Só o mestre declara a morte">Declarar morte</button>') : ''}${podeEditar ? `<button class="btn ${editando ? '' : 'sec'}" id="editar">${editando ? 'Concluir edição' : 'Editar ficha'}</button>${editando ? '<button class="btn sec" id="corrigir" title="Ajusta atributos, perícias, passivas e vitais às regras do nível e da patente">Corrigir ficha</button>' : ''}${F.dono === ME || DONO ? '<button class="btn sec" id="entregar-ag" title="Passar esta ficha para outro jogador">🎁 Entregar</button>' : ''}${editando && (F.dono === ME || DONO) ? '<button class="btn sec perigo" id="apagar-ag">Apagar agente</button>' : ''}` : ''}
+          ${ehMestre ? (F.morto ? '<button class="btn ouro" id="reviver">Reviver</button>' : '<button class="btn sec" id="matar" title="Só o mestre declara a morte">Declarar morte</button>') : ''}${podeEditar ? `<button class="btn ${editando ? '' : 'sec'}" id="editar">${editando ? 'Concluir edição' : 'Editar ficha'}</button>${editando ? '<button class="btn sec" id="corrigir" title="Ajusta atributos, perícias, passivas e vitais às regras do nível e da patente">Corrigir ficha</button>' : ''}${F.dono === ME || DONO ? '<button class="btn sec" id="entregar-ag" title="Passar esta ficha para outro jogador"><i data-ic="entregar"></i> Entregar</button>' : ''}${editando && (F.dono === ME || DONO) ? '<button class="btn sec perigo" id="apagar-ag">Apagar agente</button>' : ''}` : ''}
           ${VL ? (podeEditar ? `<button class="btn btn-vetor ${VA ? 'ativo' : ''}" id="vestir">${VA ? 'Tirar o vetor' : 'Vestir vetor'}</button>` : '')
             : `<button class="btn btn-vetor" disabled title="Só o mestre libera">${CADEADO} Vestir vetor</button>`}
           ${F.dono === ME ? (MEU_PRINCIPAL === id ? `<a class="btn sec principal-on" href="#dossie-${esc(ME)}" title="Abrir seu dossiê de caçador">★ Personagem principal · caçador</a>` : `<button class="btn sec" id="tornar-principal" title="Vira seu caçador no Bestiário, com dossiê e registro de abates">☆ Tornar personagem principal</button>`) : ''}
@@ -2140,7 +2144,7 @@ ROTAS.agente = async id => {
       return `<div style="display:grid; gap:14px"><div class="cab-pagina"><div><h2 style="margin:0">Arsenal</h2><p class="dim" style="margin:4px 0 0; max-width:70ch">Criaturas absorvidas com Absorção de Maldição. Cabem ${cap} (seu Intelecto). Usar manda o pedido ao mestre; se ele aceitar, a criatura entra no combate e você paga 5 PS. ${nv >= 7 ? 'Até 2 em combate ao mesmo tempo (Enxame de Maldições).' : 'Uma em combate por vez.'}</p></div>${podeEditar ? `<button class="btn" id="ars-add" ${L.length >= cap ? 'disabled title="Arsenal cheio"' : ''}>Absorver criatura</button>` : ''}</div>
         <span class="rotulo">${L.length}/${cap} no arsenal · ${ativos}/${lim} em combate</span>
         ${nv < 3 ? '<div class="vazio">Absorção de Maldição chega no nível 3.</div>' : ''}
-        <div class="grade-ars">${L.map((x, i) => `<article class="ars-card ${x.invocada ? 'ativa' : ''}"><div class="ars-img" style="${x.imagem ? `background-image:url('${esc(x.imagem)}')` : ''}">${x.imagem ? '' : '🐾'}</div><div class="ars-tx"><b>${esc(x.nome)}</b>
+        <div class="grade-ars">${L.map((x, i) => `<article class="ars-card ${x.invocada ? 'ativa' : ''}"><div class="ars-img" style="${x.imagem ? `background-image:url('${esc(x.imagem)}')` : ''}">${x.imagem ? '' : '<i data-ic="caveira"></i>'}</div><div class="ars-tx"><b>${esc(x.nome)}</b>
           <div class="ars-tags">${elTag(x.elemento)}<span class="tag">Nv ${esc(x.nivel)}</span><span class="tag">PV ${esc(x.pv)}</span>${x.defesa ? `<span class="tag">Defesa ${esc(x.defesa)}</span>` : ''}${x.invocada ? '<span class="tag crit">Em combate</span>' : x.pedido ? '<span class="tag">Esperando o mestre</span>' : ''}</div>
           <div class="acoes">${podeEditar ? (x.invocada ? `<button class="btn sec mini" data-ars-dis="${i}">Dispensar</button>` : `<button class="btn ouro mini" data-ars-usar="${i}" ${x.pedido ? 'disabled' : ''}>Usar</button>`) : ''}<a class="btn sec mini" href="#ameaca-${esc(x.ref)}" style="text-decoration:none">Bestiário</a>${podeEditar ? `<button class="btn-x" data-ars-rm="${i}" aria-label="Soltar ${esc(x.nome)}" title="Soltar do arsenal">×</button>` : ''}</div></div></article>`).join('') || '<div class="vazio">Nenhuma criatura absorvida ainda.</div>'}</div></div>`;
     }
@@ -2538,7 +2542,7 @@ ROTAS.agente = async id => {
       F.atual = { ...calc(F).max, ...(F.atual || {}) }; F.atual.pst -= 10; ajustarQueda(F); pendente = true; salvarVitais();
       $('#res-' + i).innerHTML = UI_ARMA[id + '|r|' + i] = `<b>Ataque adicional</b> <span class="faint">(Aprimoramento Avançado, −10 PST)</span><br>${a.html}<br>${dn.txt}<br>Dano total: <b>${dn.total}</b>`;
       publicarRolagem(F, `Ataque adicional · ${it.nome}`, { tipo: 'ataque', titulo: `${it.nome} (adicional)`, ataque: a.r.total, dano: dn.total, critico: a.critou, total: dn.total, detalhe: limparTxt(`${a.html} · ${dn.txt}`) }); setTimeout(render, 60); });
-    $$('[data-ed-item]').forEach(b => b.onclick = () => { const i = +b.dataset.edItem, velho = F.equipamentos[i]; formItem(novo => { F.equipamentos[i] = { ...velho, ...novo }; salvar({ equipamentos: F.equipamentos }); render(); }, velho); });
+    $$('[data-ed-item]').forEach(b => b.onclick = () => { const i = +b.dataset.edItem, velho = F.equipamentos[i]; formItem(novo => { const it = { ...velho, ...novo }; if (!velho.ataque && JSON.stringify(novo) !== JSON.stringify(Object.fromEntries(Object.keys(novo).map(k => [k, velho[k]])))) { it.proprio = true; delete it.base; } F.equipamentos[i] = it; salvar({ equipamentos: F.equipamentos }); render(); }, velho); });
     $$('[data-rm-item]').forEach(b => b.onclick = () => { F.equipamentos.splice(+b.dataset.rmItem, 1); salvar({ equipamentos: F.equipamentos }); render(); });
     // adicionar
     const add = (lista, obj) => { if (lista === 'equipamentos') { const ja = (F.equipamentos || []).find(x => x.nome === obj.nome && !x.dano === !obj.dano && (x.obs || '') === (obj.obs || '')); if (ja) { ja.qtd = (+ja.qtd || 1) + (+obj.qtd || 1); salvar({ equipamentos: F.equipamentos }); render(); return toast(`${obj.nome}: agora ×${ja.qtd}.`); } }
@@ -2590,7 +2594,7 @@ ROTAS.agente = async id => {
     $('#al-rit')?.addEventListener('click', () => { const el = elDe(F.alinhamento.nome);
       seletor(`Rituais de ${el}`, RIT.filter(r => r.elemento === el), r => `<b>${esc(r.nome)}</b>${r.antigo ? ' <span class="tag">Antigo</span>' : ''} <span class="tag">${esc(r.custo || '')}</span><p>${esc(r.efeito)}</p>`, r => add('rituais', { nome: r.nome, elemento: r.elemento, alvo: r.alvo, custo: r.custo, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] })); });
     const doHb = it => ({ nome: it.nome, dano: it.dano, mult: +it.mult || 1, margem: +it.margem || 20, peso: +it.peso || 0, pericia: it.pericia, tipoDano: it.tipoDano, alcance: it.alcance, rd: +it.rd || 0, alivio: +it.alivio || 0, obs: it.obs, descricao: it.descricao, imagem: it.imagem, categoria: it.categoria, qtd: 1 });
-    $('#add-item')?.addEventListener('click', () => escolherItem('livro', it => add('equipamentos', { ...it, qtd: 1 }), it => add('equipamentos', doHb(it))));
+    $('#add-item')?.addEventListener('click', () => escolherItem('livro', it => add('equipamentos', { ...it, base: it.canon ? undefined : it.nome, qtd: 1 }), it => add('equipamentos', doHb(it))));
     $('#add-item-hb')?.addEventListener('click', () => escolherItem('hb', it => add('equipamentos', { ...it, qtd: 1 }), it => add('equipamentos', doHb(it))));
     $('#novo-item')?.addEventListener('click', () => formItem(it => add('equipamentos', it)));
     $('#novo-ataque')?.addEventListener('click', () => formItem(it => { F.equipamentos = [...(F.equipamentos || []), { ...it, ataque: true, peso: 0 }]; salvar({ equipamentos: F.equipamentos }); render(); toast(`${it.nome} criado.`); }, { ataque: true, dano: '1d4', mult: 2, margem: 20, pericia: 'Lutar', alcance: 'Corpo a corpo', peso: 0 }));
@@ -2762,7 +2766,7 @@ async function escolherItem(abaIni, addLivro, addHb) {
   });
 }
 function formItem(salvarFn, it = {}) {
-  abrirModal(it.ataque ? (it.nome ? 'Editar ataque' : 'Novo ataque') : it.nome ? 'Editar item' : 'Novo item', `${campoImagem('fi-img', it.imagem || '', 'Imagem do item')}<div class="grade-campos"><div class="campo"><label class="rotulo" for="fi-n">Nome</label><input type="text" id="fi-n" value="${esc(it.nome)}"></div>
+  abrirModal(it.ataque ? (it.nome ? 'Editar ataque' : 'Novo ataque') : it.nome ? 'Editar item' : 'Novo item', `${it.base ? `<p class="aviso-base">${IC('aviso')} Este item segue o livro e muda junto quando a base do sistema muda. Se você alterar algo aqui, ele vira <b>só desta ficha</b>.</p>` : it.proprio ? `<p class="aviso-base">${IC('editar')} Versão só desta ficha: não acompanha mudanças da base.</p>` : ''}${campoImagem('fi-img', it.imagem || '', 'Imagem do item')}<div class="grade-campos"><div class="campo"><label class="rotulo" for="fi-n">Nome</label><input type="text" id="fi-n" value="${esc(it.nome)}"></div>
     <div class="campo"><label class="rotulo" for="fi-p">Peso (kg)</label><input type="number" step="0.1" id="fi-p" value="${esc(it.peso ?? 0)}"></div>
     <div class="campo"><label class="rotulo" for="fi-q">Quantidade</label><input type="number" id="fi-q" value="${esc(it.qtd ?? 1)}"></div>
     <div class="campo"><label class="rotulo" for="fi-d">Dano (se for arma)</label><input type="text" id="fi-d" value="${esc(it.dano)}" placeholder="2d8+6"></div>
@@ -2810,16 +2814,19 @@ function formItem(salvarFn, it = {}) {
    HOMEBREW
    ================================================================= */
 // canonizado pelo administrador: deixa de ser homebrew e entra junto com o conteúdo original do sistema
-let BASE_ORIG = null, CANON = [];
+let BASE_ORIG = null, BASE_SIS = null, CANON = [];
 async function carregarCanon() {
   if (!db || !BASE_ORIG) return;
   try { CANON = (await db.collection('homebrew').where('canonico', '==', true).get()).docs.map(d => ({ id: d.id, ...d.data() })); } catch (e) { CANON = []; }
   const de = t => CANON.filter(x => x.tipo === t), limpo = x => { const { autor, compartilhado, canonico, canonizadoEm, canonizadoPor, criado, tipo, ...resto } = x; return resto; };
+  // base do sistema: o livro com as mudanças feitas pelos administradores (vale para o site inteiro)
+  await lerBasePatch(); const B = aplicarBasePatch(BASE_SIS, BASE_ORIG.RIT, BASE_ORIG.FEIT); SIS = B.S;
   CRI = [...BASE_ORIG.CRI, ...CANON.filter(x => x.tipo === 'ameaca' || x.tipo === 'npc').map(x => ({ ...x, id: 'hb' + x.id, homebrew: false, canon: true, npc: x.tipo === 'npc' }))];
-  RIT = [...BASE_ORIG.RIT, ...de('ritual').map(x => ({ ...limpo(x), canon: true }))];
-  FEIT = [...BASE_ORIG.FEIT, ...de('feitico').map(x => ({ ...limpo(x), canon: true }))];
-  SIS.passivas = [...BASE_ORIG.passivas, ...de('habilidade').map(x => ({ nome: x.nome, texto: x.texto || '', canon: true }))];
-  SIS.itens = [...BASE_ORIG.itens, ...de('item').map(x => ({ ...limpo(x), categoria: x.categoria || 'Gerais', canon: true }))];
+  RIT = [...B.R, ...de('ritual').map(x => ({ ...limpo(x), canon: true }))];
+  FEIT = [...B.F, ...de('feitico').map(x => ({ ...limpo(x), canon: true }))];
+  SIS.passivas = [...SIS.passivas, ...de('habilidade').map(x => ({ nome: x.nome, texto: x.texto || '', canon: true }))];
+  SIS.itens = [...SIS.itens, ...de('item').map(x => ({ ...limpo(x), categoria: x.categoria || 'Gerais', canon: true }))];
+  vigiarPedidos();
 }
 async function canonizar(x, sim) {
   try { await db.doc('homebrew/' + x.id).update({ canonico: !!sim, canonizadoEm: sim ? Date.now() : null, canonizadoPor: sim ? ME : null }); x.canonico = !!sim; await carregarCanon();
@@ -2852,7 +2859,7 @@ ROTAS.homebrew = async () => {
   }
   const cardHB = x => {
     if (x.tipo === 'ameaca' || x.tipo === 'npc') { const meu = x.autor === ME || DONO;
-      return `<div class="hb-am">${bannerAmeaca({ ...x, npc: x.tipo === 'npc' }, `<div class="hb-acoes">${meu ? `<div class="menu-pop"><button class="btn-x engr" data-menu aria-label="Opções de ${esc(x.nome)}">⚙</button><div hidden>${DONO ? `<button data-canon="${esc(x.id)}">${x.canonico ? 'Voltar a ser homebrew' : 'Canonizar (vira original)'}</button>` : ''}<button data-comp="${esc(x.id)}">${x.compartilhado ? 'Parar de compartilhar' : 'Compartilhar com a mesa'}</button><button data-ed="${esc(x.id)}">Editar</button><button class="del" data-del="${esc(x.id)}">Apagar</button></div></div>` : '<span></span>'}
+      return `<div class="hb-am">${bannerAmeaca({ ...x, npc: x.tipo === 'npc' }, `<div class="hb-acoes">${meu ? `<div class="menu-pop"><button class="btn-x engr" data-menu aria-label="Opções de ${esc(x.nome)}"><i data-ic="engrenagem"></i></button><div hidden>${DONO ? `<button data-canon="${esc(x.id)}">${x.canonico ? 'Voltar a ser homebrew' : 'Canonizar (vira original)'}</button>` : ''}<button data-comp="${esc(x.id)}">${x.compartilhado ? 'Parar de compartilhar' : 'Compartilhar com a mesa'}</button><button data-ed="${esc(x.id)}">Editar</button><button class="del" data-del="${esc(x.id)}">Apagar</button></div></div>` : '<span></span>'}
         <span style="display:flex; gap:6px; align-items:center">${x.canonico ? '<span class="tag canon">Original</span>' : x.compartilhado ? '<span class="tag crit">Compartilhado</span>' : ''}<button class="btn mini" data-ver-am="${esc(x.id)}">Ficha</button></span></div>`)}</div>`; }
     let corpo = '';
     if (x.tipo === 'ameaca' || x.tipo === 'npc') corpo = `<div style="display:flex; gap:8px; flex-wrap:wrap">${x.tipo === 'npc' ? `<span class="tag">NPC${x.papel ? ' · ' + esc(x.papel) : ''}</span>${x.elemento ? elTag(x.elemento) : ''}` : elTag(x.elemento)}<span class="tag">Nv ${esc(x.nivel)}${x.tipo === 'npc' ? '' : ' · ' + esc(nivelAm(x.nivel)[1])}</span><span class="tag">PV ${esc(x.ficha?.pv)}</span></div><p class="dim" style="font-size:13.5px">${esc((x.descricao || '').slice(0, 220))}</p>`;
@@ -3551,6 +3558,7 @@ ROTAS.dossie = async arg => {
 // livro de regras oficial (PDF), com sumário que abre na página certa
 const LIVRO_PDF = 'livro/AdR-RPG.pdf';
 const LIVRO_CAP = [['História Principal', 2], ['Sistema de Jogo', 6], ['Classes e Subclasses', 7], ['Habilidades Passivas', 26], ['Itens Gerais e Inventário', 32], ['Efeitos e Condições', 39], ['Perícias', 40], ['Vontades', 42], ['Bênçãos, Maldições e Melhorias', 43], ['Alinhamentos', 48], ['Considerações Finais', 53]];
+ROTAS.base = async () => { rotaBase(); };
 ROTAS.livro = async () => {
   const pg = +(sessionStorage.getItem('livroPg') || 1) || 1;
   app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Regras oficiais</span><h1>Livro de Regras</h1><p class="dim" style="margin:0">Além da Realidade RPG · 54 páginas</p></div>
@@ -3587,7 +3595,7 @@ ROTAS.campanhas = async () => {
   const desenhar = () => {
     const l = Object.values(camps).filter(Boolean).sort((a, b) => (b.criado || 0) - (a.criado || 0));
     $('#lista-c').innerHTML = l.length ? l.map(c => `<article class="card-camp" style="${c.capa ? `background-image:url('${esc(c.capa)}')` : ''}"><span class="qtd">${c.mestre === ME ? 'Mestre' : 'Jogador'} · desde ${dataBR(c.criado)}</span>
-      <div class="corpo"><div><h3 style="font-size:24px">${esc(c.nome)}</h3>${c.descricao ? `<p class="dim" style="font-size:13px; max-width:40ch">${esc(c.descricao.slice(0, 90))}${c.descricao.length > 90 ? '…' : ''}</p>` : ''}</div><span style="display:flex; gap:6px"><a class="btn" href="#campanha-${esc(c.id)}" style="text-decoration:none">Acessar</a>${c.mestre === ME ? `<button class="btn sec" data-x-camp="${esc(c.id)}" title="Apagar campanha" aria-label="Apagar ${esc(c.nome)}">🗑</button>` : ''}</span></div></article>`).join('')
+      <div class="corpo"><div><h3 style="font-size:24px">${esc(c.nome)}</h3>${c.descricao ? `<p class="dim" style="font-size:13px; max-width:40ch">${esc(c.descricao.slice(0, 90))}${c.descricao.length > 90 ? '…' : ''}</p>` : ''}</div><span style="display:flex; gap:6px"><a class="btn" href="#campanha-${esc(c.id)}" style="text-decoration:none">Acessar</a>${c.mestre === ME ? `<button class="btn sec" data-x-camp="${esc(c.id)}" title="Apagar campanha" aria-label="Apagar ${esc(c.nome)}"><i data-ic="apagar"></i></button>` : ''}</span></div></article>`).join('')
       : '<div class="vazio">Você ainda não está em nenhuma campanha. Crie uma ou entre com o código que o mestre passou.</div>';
   };
   $('#lista-c').addEventListener('click', e => { const b = e.target.closest('[data-x-camp]'); if (!b) return; const c = camps[b.dataset.xCamp]; if (c) pedirExcluirCampanha(c.id, c.nome, () => { delete camps[c.id]; desenhar(); }); });
@@ -3663,12 +3671,12 @@ function ouvirCampanha(id, aoMudar) {
   assinar(db.doc('campanhas/' + id).onSnapshot(s => { st.camp = s.exists ? { id, ...s.data() } : false; aoMudar(st); }));
   assinar(db.collection(`campanhas/${id}/agentes`).onSnapshot(s => {
     const ids = s.docs.map(x => x.id); st.agentes = Object.fromEntries(s.docs.map(x => [x.id, x.data()]));
-    ids.forEach(fid => { if (!subsFicha[fid]) subsFicha[fid] = assinar(db.doc('fichas/' + fid).onSnapshot(fs => { st.fichas[fid] = fs.exists ? { id: fid, ...fs.data() } : null; aoMudar(st); })); });
+    ids.forEach(fid => { if (!subsFicha[fid]) subsFicha[fid] = assinar(db.doc('fichas/' + fid).onSnapshot(fs => { st.fichas[fid] = fs.exists ? vincularItens({ id: fid, ...fs.data() }) : null; aoMudar(st); })); });
     Object.keys(subsFicha).forEach(fid => { if (!ids.includes(fid)) { subsFicha[fid](); delete subsFicha[fid]; delete st.fichas[fid]; } });
     aoMudar(st);
   }));
   assinar(db.collection(`campanhas/${id}/membros`).onSnapshot(s => { st.membros = s.docs.map(x => x.data()); aoMudar(st); }));
-  assinar(db.collection(`campanhas/${id}/rolagens`).orderBy('t', 'desc').limit(40).onSnapshot(s => { st.rolagens = s.docs.map(x => ({ id: x.id, ...x.data() })); aoMudar(st, 'rolagens'); }));
+  assinar(db.collection(`campanhas/${id}/rolagens`).orderBy('t', 'desc').limit(40).onSnapshot(s => { st.rolagens = s.docs.map(x => ({ id: x.id, ...x.data() })); try { window.APAR?.ouvir(st.rolagens, { diretora: st.camp?.mestre === ME }); } catch (e) {} aoMudar(st, 'rolagens'); }));
   assinar(db.doc(`campanhas/${id}/publico/pistas`).onSnapshot(s => { st.pistas = s.exists ? s.data().itens || [] : []; aoMudar(st); }));
   assinar(db.doc(`campanhas/${id}/publico/relatorios`).onSnapshot(s => { st.relatorios = s.exists ? s.data().itens || [] : []; aoMudar(st); }));
   assinar(db.doc(`campanhas/${id}/publico/combate`).onSnapshot(s => { st.combate = s.exists ? s.data() : null; aoMudar(st); }));
@@ -3732,7 +3740,7 @@ function atualizarFeed(el, cfg, tipo) {
   if (tipo === 'chat') {
     const lista = el.querySelector('.chat-lista');
     if (lista) { const noFim = lista.scrollHeight - lista.scrollTop - lista.clientHeight < 60; lista.innerHTML = chatLista(st); if (noFim) lista.scrollTop = lista.scrollHeight; marcarVisto(id); }
-    else { const n = novasChat(st, id), bd = el.querySelector('[data-nchat]'); if (bd) { bd.textContent = n; bd.hidden = !n; } const ult = st.chat?.[0]; if (ult && ult.uid !== ME && Date.now() - ult.t < 8000 && !(ult.rp && aba === 'rp')) toast(`${ult.rp ? '🎭 ' : ''}${ult.autor}: ${ult.rolagem ? `rolou ${ult.rolagem.total}` : String(ult.texto || '').slice(0, 80)}`); }
+    else { const n = novasChat(st, id), bd = el.querySelector('[data-nchat]'); if (bd) { bd.textContent = n; bd.hidden = !n; } const ult = st.chat?.[0]; if (ult && ult.uid !== ME && Date.now() - ult.t < 8000 && !(ult.rp && aba === 'rp')) toast(`${ult.autor}: ${ult.rolagem ? `rolou ${ult.rolagem.total}` : String(ult.texto || '').slice(0, 80)}`); }
   } else if (aba === 'rol') { const l = el.querySelector('.feed-lista'); if (l) l.innerHTML = cfg.listaRol(); const n = el.querySelector('[data-nrol]'); if (n) n.textContent = cfg.nRol(); }
   marcarPuxador(st, id);
 }
@@ -3740,10 +3748,11 @@ const marcarPuxador = (st, id) => { const p = app.querySelector('.puxador.esq');
 // detalhe de rolagem vem do banco: só deixa passar as marcas que o próprio site gera
 const htmlSeguro = h => String(h ?? '').replace(/<(\/?)([a-z0-9]+)([^>]*)>/gi, (m, f, t, at) => { t = t.toLowerCase(); if (!['span', 'b', 'i', 'br'].includes(t)) return ''; const c = /class="([\w -]*)"/.exec(at); return `<${f}${t}${!f && c ? ` class="${c[1]}"` : ''}>`; });
 const invHtml = r => { const c = r.criatura || {}, st = r.status || 'pendente';
-  return `<div class="rol2 inv-rol ${st}"><div class="rc-autor">${esc(r.autor)}</div><div class="inv-corpo"><div class="ars-img mini" style="${c.imagem ? `background-image:url('${esc(c.imagem)}')` : ''}">${c.imagem ? '' : '🐾'}</div>
+  return `<div class="rol2 inv-rol ${st}"><div class="rc-autor">${esc(r.autor)}</div><div class="inv-corpo"><div class="ars-img mini" style="${c.imagem ? `background-image:url('${esc(c.imagem)}')` : ''}">${c.imagem ? '' : '<i data-ic="caveira"></i>'}</div>
     <div><b>${esc(r.autor)} quer colocar ${esc(c.nome || 'uma criatura')} no combate</b><div class="ars-tags">${elTag(c.elemento)}<span class="tag">Nv ${esc(c.nivel)}</span><span class="tag">PV ${esc(c.pv)}</span></div>
-    ${st === 'pendente' ? `<div class="inv-acoes"><button class="btn mini ouro" data-inv-ok="${esc(r.id)}">Aceitar</button><button class="btn mini sec" data-inv-nao="${esc(r.id)}">Negar</button></div><span class="faint inv-espera">Esperando o mestre…</span>` : `<span class="tag ${st === 'aceito' ? 'crit' : ''}">${st === 'aceito' ? '✔ Aceito: entrou no combate' : '✖ Negado pelo mestre'}</span>`}</div></div></div>`; };
-const rolHtml = r => { if (r.tipo === 'invocacao') return invHtml(r); const tit = r.titulo || String(r.rotulo || '').replace(/^(Acerto|Dano) · /, '');
+    ${st === 'pendente' ? `<div class="inv-acoes"><button class="btn mini ouro" data-inv-ok="${esc(r.id)}">Aceitar</button><button class="btn mini sec" data-inv-nao="${esc(r.id)}">Negar</button></div><span class="faint inv-espera">Esperando o mestre…</span>` : `<span class="tag ${st === 'aceito' ? 'crit' : ''}">${st === 'aceito' ? '<i data-ic="vencedor"></i> Aceito: entrou no combate' : '<i data-ic="cadeado"></i> Negado pelo mestre'}</span>`}</div></div></div>`; };
+document.addEventListener('click', e => { const b = e.target.closest?.('[data-rever-ap]'); if (!b) return; try { window.APAR?.rodar(JSON.parse(b.dataset.reverAp)); } catch (x) {} });
+const rolHtml = r => { if (r.tipo === 'invocacao') return invHtml(r); if (r.tipo === 'aparicao') { const a = r.ap || {}; return `<div class="rol rol-ap" style="--apc:${esc(a.cor || '#b4333b')}"><span class="rol-ap-ft" style="${a.foto ? `background-image:url('${esc(a.foto)}')` : ''}">${a.foto ? '' : IC('raio')}</span><span><span class="rotulo">${esc(a.rotulo || 'Apareceu')}</span><b>${esc(a.nome || '???')}</b>${a.frase ? `<i>"${esc(a.frase)}"</i>` : ''}</span><button class="btn mini sec" data-rever-ap="${esc(JSON.stringify(a))}" title="Ver a entrada de novo">${IC('raio')}</button></div>`; } const tit = r.titulo || String(r.rotulo || '').replace(/^(Acerto|Dano) · /, '');
   const tipo = r.tipo || (/^Acerto · /.test(r.rotulo || '') ? 'acerto' : /^Dano · /.test(r.rotulo || '') ? 'dano' : '');
   const aviso = !tipo && (r.total === '' || r.total == null);
   const corpo = aviso ? `<div class="rc-aviso">${htmlSeguro(r.detalhe)}</div>` : tipo === 'ataque'
@@ -4172,7 +4181,7 @@ ROTAS.campanha = async id => {
   const desenharAbaViva = () => { const A = ABA_EL; if (!A?.isConnected || !st.camp) return false; const mestre = st.camp.mestre === ME;
     if (aba === 'mapa') { const fs = Object.values(st.fichas).filter(Boolean), meu = fs.find(f => f.dono === ME && f.id === MEU_PRINCIPAL) || fs.find(f => f.dono === ME);
       desenharMapa(A, getMesa, { mestre, salvarC: salvarMesaC, vivo: vivoMapa(st.fichas), combate: () => (st.combate?.ordem || []).map(o => ({ nome: o.nome, tipo: o.tipo, imagem: o.img || '' })), DETS: fs.map(f => ({ id: f.id, nome: f.nome, foto: fotoEf(f), oculto: ocultosDe(st).has(f.dono) })), ...opcoesMapa(id, getQd, fs.filter(f => f.dono === ME).map(f => f.id), mestre, mestre ? 'Mestre' : meu?.nome) }); return true; }
-    if (aba === 'npcs') { desenharNpcs(A, getMesa, { mestre, salvarC: salvarMesaC }); return true; }
+    if (aba === 'npcs') { desenharNpcs(A, getMesa, { mestre, salvarC: salvarMesaC, campId: id }); return true; }
     if (aba === 'suspeitos') { desenharSuspeitos(A, getMesa, getQd, id); return true; }
     if (aba === 'quadro') { if (!QUADRO || !A.querySelector('#q-quadro')) QUADRO = abrirAbaQuadro(A, id, getMesa, getQd, pistasQuadro); else QUADRO.desenhar(); return true; }
     return false; };
@@ -4191,8 +4200,8 @@ ROTAS.campanha = async id => {
     const nomes = await nomeDe([...new Set([C.mestre, ...st.membros.map(m => m.uid), ...fichas.map(f => f.dono).filter(Boolean)])]);
     let corpo = '';
     if (aba === 'agentes') corpo = `<div class="grade-cards">${fichas.map(f => { const K = calc(f); const a = { ...K.max, ...(f.atual || {}) };
-      return cardAgente(f, `${OC.has(f.dono) ? `<span class="tag tag-oculta" title="Só o mestre e o dono veem este agente">🕶 Oculta</span>` : ''}<div class="vit">${vitalMini('pv', a.pv, K.max.pv)}${vitalMini('ps', a.ps, K.max.ps)}${vitalMini('pst', a.pst, K.max.pst)}</div>${f.dono === ME || mestre || DONO ? `<button class="btn mini sec" data-rm-ag="${esc(f.id)}" title="Tirar da campanha">Remover</button>` : ''}`, nomes[f.dono] || f.jogador || ''); }).join('') || '<div class="vazio">Nenhum agente nesta campanha ainda.</div>'}</div>`;
-    if (aba === 'jogadores') corpo = `<div class="lista">${[...new Set([C.mestre, ...st.membros.map(m => m.uid)])].map(u => `<div class="item"><div class="cab"><span style="display:flex; gap:10px; align-items:center"><span class="ava" style="background:${corDe(u)}">${esc(iniciais(nomes[u]))}</span><b>${esc(nomes[u])}${u === ME ? ' (você)' : ''}</b></span><span style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">${OC.has(u) && (mestre || u === ME) ? `<span class="tag tag-oculta">🕶 Ficha oculta</span>` : ''}${mestre && u !== C.mestre ? `<button class="btn mini ${OC.has(u) ? '' : 'sec'}" data-ocultar="${esc(u)}" title="${OC.has(u) ? 'Mostrar os agentes desta pessoa para a mesa' : 'Esconder os agentes desta pessoa dos outros jogadores'}">${OC.has(u) ? 'Mostrar ficha' : '🕶 Ocultar ficha'}</button>` : ''}<span class="tag ${u === C.mestre ? 'crit' : ''}">${u === C.mestre ? 'Mestre' : 'Jogador'}</span></span></div>${OC.has(u) && u === ME && !mestre ? '<p class="faint" style="margin:6px 0 0; font-size:13px">O mestre deixou sua ficha oculta: só você e ele veem seus agentes e suas rolagens nesta campanha.</p>' : ''}</div>`).join('')}</div>`;
+      return cardAgente(f, `${OC.has(f.dono) ? `<span class="tag tag-oculta" title="Só o mestre e o dono veem este agente"><i data-ic="esconder"></i> Oculta</span>` : ''}<div class="vit">${vitalMini('pv', a.pv, K.max.pv)}${vitalMini('ps', a.ps, K.max.ps)}${vitalMini('pst', a.pst, K.max.pst)}</div>${f.dono === ME || mestre || DONO ? `<button class="btn mini sec" data-rm-ag="${esc(f.id)}" title="Tirar da campanha">Remover</button>` : ''}`, nomes[f.dono] || f.jogador || ''); }).join('') || '<div class="vazio">Nenhum agente nesta campanha ainda.</div>'}</div>`;
+    if (aba === 'jogadores') corpo = `<div class="lista">${[...new Set([C.mestre, ...st.membros.map(m => m.uid)])].map(u => `<div class="item"><div class="cab"><span style="display:flex; gap:10px; align-items:center"><span class="ava" style="background:${corDe(u)}">${esc(iniciais(nomes[u]))}</span><b>${esc(nomes[u])}${u === ME ? ' (você)' : ''}</b></span><span style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">${OC.has(u) && (mestre || u === ME) ? `<span class="tag tag-oculta"><i data-ic="esconder"></i> Ficha oculta</span>` : ''}${mestre && u !== C.mestre ? `<button class="btn mini ${OC.has(u) ? '' : 'sec'}" data-ocultar="${esc(u)}" title="${OC.has(u) ? 'Mostrar os agentes desta pessoa para a mesa' : 'Esconder os agentes desta pessoa dos outros jogadores'}">${OC.has(u) ? 'Mostrar ficha' : '<i data-ic="esconder"></i> Ocultar ficha'}</button>` : ''}<span class="tag ${u === C.mestre ? 'crit' : ''}">${u === C.mestre ? 'Mestre' : 'Jogador'}</span></span></div>${OC.has(u) && u === ME && !mestre ? '<p class="faint" style="margin:6px 0 0; font-size:13px">O mestre deixou sua ficha oculta: só você e ele veem seus agentes e suas rolagens nesta campanha.</p>' : ''}</div>`).join('')}</div>`;
     if (aba === 'combate') corpo = st.combate?.ativo ? `<div class="cb-topo"><h2>Rodada ${st.combate.rodada || 1}</h2><span class="dim">Ordem de iniciativa</span></div>
       <section class="ini-lista" style="max-width:560px">${(st.combate.ordem || []).map((o, i) => { const f = o.tipo === 'agente' ? st.fichas[o.ref] : null; if (f && !vePessoa(st, f.dono, mestre)) return ''; const K = f ? calc(f) : null; const a = f ? { ...K.max, ...(f.atual || {}) } : null;
         return cardIni({ i, nome: f ? nomeEf(f) : o.nome, foto: f ? fotoEf(f) : (o.img || ''), ameaca: o.tipo !== 'agente', pv: a?.pv, pvM: K?.max.pv, ps: a?.ps, psM: K?.max.ps, conds: o.cond || [], ini: o.ini, vez: i === st.combate.turno, meu: f?.dono === ME, morto: !!f?.morto, mostrarPV: !!f, rotTipo: o.tipo === 'ameaca' ? 'Ameaça' : o.tipo === 'npc' ? 'NPC' : '' }); }).join('')}</section>`
@@ -4200,10 +4209,10 @@ ROTAS.campanha = async id => {
     const nSus = suspeitosDe(st.mesa).filter(x => !inocentado(x, st.quadro)).length;
     if (ABAS_INV.includes(aba)) abaInv = aba;
     const sessao = +(st.mesa?.sessao || 1), pistasV = (st.pistas || []).filter(p => p.tipo !== 'arquivo');
-    if (aba === 'pistas') { const hoje = pistasV.filter(p => !p.sessao); corpo = `<div class="caixa bloco"><div class="hoje">📌 Pistas da sessão ${sessao}</div><div class="mural">${hoje.map(papelPista).join('') || '<div class="vazio">Nenhuma pista nesta sessão. Ainda.</div>'}</div><p class="tag" style="white-space:normal">Pistas de sessões anteriores ficam no Calendário.</p></div>`; }
-    if (aba === 'arquivo') { const H = (st.pistas || []).filter(p => p.tipo === 'arquivo'); corpo = `<div class="caixa bloco"><h3>📜 Arquivo</h3><p class="tag" style="white-space:normal">Pedaços da história que vocês desenterraram: documentos, fotos e gravações.</p><div class="mural">${H.map(pedacoHTML).join('') || '<div class="vazio">Nada desenterrado ainda. Revirem as coisas.</div>'}</div></div>`; }
+    if (aba === 'pistas') { const hoje = pistasV.filter(p => !p.sessao); corpo = `<div class="caixa bloco"><div class="hoje"><i data-ic="pista"></i> Pistas da sessão ${sessao}</div><div class="mural">${hoje.map(papelPista).join('') || '<div class="vazio">Nenhuma pista nesta sessão. Ainda.</div>'}</div><p class="tag" style="white-space:normal">Pistas de sessões anteriores ficam no Calendário.</p></div>`; }
+    if (aba === 'arquivo') { const H = (st.pistas || []).filter(p => p.tipo === 'arquivo'); corpo = `<div class="caixa bloco"><h3><i data-ic="arquivo"></i> Arquivo</h3><p class="tag" style="white-space:normal">Pedaços da história que vocês desenterraram: documentos, fotos e gravações.</p><div class="mural">${H.map(pedacoHTML).join('') || '<div class="vazio">Nada desenterrado ainda. Revirem as coisas.</div>'}</div></div>`; }
     if (aba === 'calendario') { const ss = {}; pistasV.filter(p => p.sessao).forEach(p => (ss[p.sessao] = ss[p.sessao] || []).push(p)); const ns = Object.keys(ss).map(Number).sort((a, b) => b - a);
-      corpo = `<div class="caixa bloco"><div class="hoje">📅 Agora é a sessão ${sessao}</div><p class="tag" style="white-space:normal">Cada sessão de jogo é um dia. Quando o mestre encerra a sessão, as pistas dela vêm para cá.</p>
+      corpo = `<div class="caixa bloco"><div class="hoje"><i data-ic="calendario"></i> Agora é a sessão ${sessao}</div><p class="tag" style="white-space:normal">Cada sessão de jogo é um dia. Quando o mestre encerra a sessão, as pistas dela vêm para cá.</p>
         ${ns.map(n => `<details class="dia" ${n === ns[0] ? 'open' : ''}><summary>Sessão ${n}<span>${ss[n].length} pista(s)${st.mesa?.sessoesFim?.[n] ? ' · encerrada em ' + dataBR(st.mesa.sessoesFim[n]) : ''}</span></summary><div class="mural">${ss[n].map(papelPista).join('')}</div></details>`).join('') || '<div class="vazio">Nenhuma sessão encerrada ainda.</div>'}</div>`; }
     if (['mapa', 'npcs', 'suspeitos', 'quadro'].includes(aba)) corpo = '<div id="aba-viva"></div>';
     if (aba === 'relatorios') corpo = `<div class="lista">${st.relatorios.slice().reverse().map(r => `<div class="item"><div class="cab"><span class="nm">${esc(r.titulo)}</span><span class="faint">${dataBR(r.t)}</span></div><p class="dim">${nl(r.texto)}</p></div>`).join('') || '<div class="vazio">Nenhum relatório de missão ainda.</div>'}</div>`;
@@ -4213,8 +4222,8 @@ ROTAS.campanha = async id => {
         ${RG.subExtras.length ? `<h2 style="margin:0">Subclasses novas</h2><div class="grade-cards">${RG.subExtras.map(sc => `<div class="caixa"><span class="rotulo">${esc(sc.classe)}</span><h3 style="margin:0">${esc(sc.nome)}</h3><p class="dim">${esc(sc.descricao || '')}</p>${(sc.habilidades || []).filter(h => h.nome).map(h => `<div><span class="tag">Nv ${h.nivel}</span> <b>${esc(h.nome)}</b> <span class="dim">${esc(h.texto)}</span></div>`).join('')}</div>`).join('')}</div>` : ''}</div>`; }
     if (aba === 'ligacao') corpo = membro ? '<div id="ligacao"></div>' : '<div class="vazio">Entre na campanha para usar a ligação.</div>';
     app.innerHTML = `<div class="barra-acoes">
-        <div class="grupo-acoes" role="group" aria-label="Mesa"><span class="rotulo">Mesa</span>${membro ? `<button class="btn sec" data-abrir-mapa="campanhas/${esc(id)}/publico|mesa">🗺 Mapa</button><a class="btn" href="#novo-${esc(id)}" style="text-decoration:none">Criar agente da campanha</a><button class="btn sec" id="add-ag">Adicionar agente</button><button class="btn sec" id="convidar">Convidar jogadores</button>` : '<button class="btn" id="entrar-c">Entrar nesta campanha</button>'}${membro && !mestre ? '<button class="btn sec" id="sair">Sair da campanha</button>' : ''}</div>
-        ${mestre ? `<div class="grupo-acoes" role="group" aria-label="Mestre"><span class="rotulo">Mestre</span><a class="btn ouro" href="#escudo-${esc(id)}" style="text-decoration:none">Escudo do mestre</a><button class="btn sec" id="editar-c">Editar campanha</button><a class="btn sec" href="#regras-${esc(id)}" style="text-decoration:none">Homebrew da campanha</a><button class="btn sec perigo" id="x-camp" title="Apagar campanha">🗑 Apagar</button></div>` : ''}</div>
+        <div class="grupo-acoes" role="group" aria-label="Mesa"><span class="rotulo">Mesa</span>${membro ? `<button class="btn sec" data-abrir-mapa="campanhas/${esc(id)}/publico|mesa"><i data-ic="mapa"></i> Mapa</button><a class="btn" href="#novo-${esc(id)}" style="text-decoration:none">Criar agente da campanha</a><button class="btn sec" id="add-ag">Adicionar agente</button><button class="btn sec" id="convidar">Convidar jogadores</button>` : '<button class="btn" id="entrar-c">Entrar nesta campanha</button>'}${membro && !mestre ? '<button class="btn sec" id="sair">Sair da campanha</button>' : ''}</div>
+        ${mestre ? `<div class="grupo-acoes" role="group" aria-label="Mestre"><span class="rotulo">Mestre</span><a class="btn ouro" href="#escudo-${esc(id)}" style="text-decoration:none">Escudo do mestre</a><button class="btn sec" id="editar-c">Editar campanha</button><a class="btn sec" href="#regras-${esc(id)}" style="text-decoration:none">Homebrew da campanha</a><button class="btn sec perigo" id="x-camp" title="Apagar campanha"><i data-ic="apagar"></i> Apagar</button></div>` : ''}</div>
       <section class="camp-topo ${C.capa ? 'com-capa' : ''}">
         ${C.capa ? `<img src="${esc(C.capa)}" alt="" style="border:1px solid var(--linha-2); width:100%">` : ''}
         <div style="display:grid; gap:10px"><span class="rotulo">Mestre: ${esc(nomes[C.mestre])}</span><h1>${esc(C.nome)}</h1>${C.descricao ? `<p class="dim" style="font-size:17px; max-width:60ch">${nl(C.descricao)}</p>` : ''}</div>
@@ -4247,7 +4256,7 @@ ROTAS.campanha = async id => {
     });
     const meuAg = fichas.find(f => f.dono === ME && f.id === MEU_PRINCIPAL) || fichas.find(f => f.dono === ME);
     cfgFeed = { id, st, nRol: () => rolVis().length, listaRol: mestre ? () => st.rolagens.map(r => comLixeira(rolHtml(r), r.id)).join('') || listaRol() : listaRol,
-      rodapeRol: `<div class="btns feed-rodape"><a class="btn mini sec" href="#historico-${esc(id)}" style="text-decoration:none">Histórico completo</a>${mestre ? '<button class="btn mini sec" data-limpar-hist>🗑 Limpar</button>' : ''}</div>`,
+      rodapeRol: `<div class="btns feed-rodape"><a class="btn mini sec" href="#historico-${esc(id)}" style="text-decoration:none">Histórico completo</a>${mestre ? '<button class="btn mini sec" data-limpar-hist><i data-ic="apagar"></i> Limpar</button>' : ''}</div>`,
       extraRol: membro ? `<div class="feed-dados"><input type="text" id="dados-expr" placeholder="Rolar na mesa: 2d6+3" style="min-width:0"><button class="btn mini" id="dados-ok">Rolar</button></div>` : '',
       autor: () => mestre ? { autor: 'Mestre', foto: '' } : meuAg ? { autor: meuAg.nome, foto: fotoEf(meuAg) } : { autor: nomes[ME] || 'Jogador', foto: '' },
       aoMontar: () => {
@@ -4270,7 +4279,7 @@ ROTAS.historico = async id => {
   let ROLS = [], fAut = 'todos', OCH = new Set();
   if (!mestre) { try { OCH = new Set((await db.collection(`campanhas/${id}/membros`).get()).docs.map(d => d.data()).filter(m => m.oculto && m.uid !== ME).map(m => m.uid)); } catch (e) {} }
   app.innerHTML = `<div class="cab-pagina"><div><span class="rotulo">Histórico</span><h1>${esc(C.nome)}</h1><p class="dim">Todas as rolagens da campanha, da mais nova para a mais antiga.</p></div>
-    <div class="btns">${mestre ? '<button class="btn sec" id="h-limpar">🗑 Limpar histórico</button>' : ''}<a class="btn sec" href="#${mestre ? 'escudo' : 'campanha'}-${esc(id)}" style="text-decoration:none">Voltar para a campanha</a></div></div>
+    <div class="btns">${mestre ? '<button class="btn sec" id="h-limpar"><i data-ic="apagar"></i> Limpar histórico</button>' : ''}<a class="btn sec" href="#${mestre ? 'escudo' : 'campanha'}-${esc(id)}" style="text-decoration:none">Voltar para a campanha</a></div></div>
     <div class="caixa hist-filtros"><div class="campo"><label class="rotulo" for="h-aut">Quem rolou</label><select id="h-aut"></select></div><span class="faint" id="h-n"></span></div>
     <div class="feed-lista hist-lista" id="h-feed"><div class="vazio">Desenterrando os registros…</div></div>`;
   const desenhar = () => {
@@ -4339,11 +4348,11 @@ ROTAS.escudo = async id => {
     <div class="escudo" id="escudo"><aside class="feed" id="feed"></aside><div style="display:grid; gap:16px; min-width:0"><div class="abas" id="abas-e"></div><div id="corpo-e"></div></div></div>`;
   const todasRol = () => [...(st?.rolagens || []), ...(E.ocultas || [])].sort((a, b) => b.t - a.t).slice(0, 40);
   const cfgFeedE = { id, get st() { return st; }, nRol: () => todasRol().length, listaRol: () => todasRol().map(r => comLixeira(rolHtml(r), r.id)).join('') || '<div class="vazio" style="font-size:15px">As rolagens dos jogadores aparecem aqui.</div>', autor: () => ({ autor: 'Mestre', foto: '' }),
-    rodapeRol: `<div class="btns feed-rodape"><a class="btn mini sec" href="#historico-${esc(id)}" style="text-decoration:none">Histórico completo</a><button class="btn mini sec" data-limpar-hist>🗑 Limpar</button></div>` };
+    rodapeRol: `<div class="btns feed-rodape"><a class="btn mini sec" href="#historico-${esc(id)}" style="text-decoration:none">Histórico completo</a><button class="btn mini sec" data-limpar-hist><i data-ic="apagar"></i> Limpar</button></div>` };
   const salvarMesaE = async p => { st.mesa = { ...(st.mesa || {}), ...p }; try { await salvarMesa(id, p); } catch (e) { toast('Não salvou: ' + (e.message || e.code)); } };
   const desenharVivaE = () => { const A = $('#aba-viva-e'); if (!A) return false; const DETS = Object.values(st.fichas).filter(Boolean).map(f => ({ id: f.id, nome: f.nome, foto: fotoEf(f), oculto: ocultosDe(st).has(f.dono) }));
     if (aba === 'mapa') { desenharMapa(A, () => st.mesa || {}, { mestre: true, salvarC: salvarMesaE, DETS, vivo: vivoMapa(st.fichas), combate: () => (E.combate?.lista || []).map(x => ({ nome: x.nome, tipo: x.tipo, imagem: x.tipo === 'ameaca' ? (x.imagem || CRI.find(k => String(k.id) === String(x.ref))?.imagem || '') : (x.imagem || '') })), ...opcoesMapa(id, () => st.quadro || {}, [], true, 'Mestre') }); return true; }
-    if (aba === 'npcs') { desenharNpcs(A, () => st.mesa || {}, { mestre: true, salvarC: salvarMesaE }); return true; }
+    if (aba === 'npcs') { desenharNpcs(A, () => st.mesa || {}, { mestre: true, salvarC: salvarMesaE, campId: id }); return true; }
     return false; };
   function desenharFeed(tipo) { if (!st) return; atualizarFeed($('#feed'), cfgFeedE, tipo); $('#feed')?.classList.add('sou-mestre'); if (tipo === 'rolagens' || !tipo) avisarInvocacoes(); }
   // pedidos de invocação (Arsenal da Manipuladora): aparece na hora para o mestre aceitar ou negar
@@ -4376,8 +4385,14 @@ ROTAS.escudo = async id => {
   function render() { segurarAltura(); renderE(); if (!$('#escudo')) return; laterais({ esq: $('#feed'), dir: aba === 'combate' ? $('#cb-det') : null, rot: { esq: 'Mesa', dir: 'Ficha' } }); marcarPuxador(st, id); }
   function renderE() {
     const ABAS = [['agentes', 'Agentes'], ['combate', 'Combate'], ['npcs', 'NPCs'], ['mapa', 'Mapa'], ['investigacao', 'Investigação'], ['relatorios', 'Relatórios'], ['dados', 'Dados'], ['vetores', 'Vetores'], ['anotacoes', 'Anotações'], ['ligacao', 'Ligação']];
-    $('#abas-e').innerHTML = ABAS.map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('');
-    $$('#abas-e [data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; lembrarAba(aba); render(); });
+    const NOME = new Map(ABAS), GR = [['Mesa', ['agentes', 'combate', 'npcs', 'mapa']], ['Investigação', ['investigacao']], ['Registro', ['relatorios', 'anotacoes', 'dados']], ['Extras', ['vetores', 'ligacao']]];
+    const gAt = GR.find(([, ks]) => ks.includes(aba)) || GR[0]; window.ABA_GRUPO_E ||= {}; window.ABA_GRUPO_E[gAt[0]] = aba;
+    const abE = $('#abas-e'); abE.classList.add('abas-grupo'); abE.setAttribute('role', 'tablist'); abE.setAttribute('aria-label', 'Seções do Escudo');
+    abE.innerHTML = GR.map(([n, ks]) => { const alvo = ks.includes(window.ABA_GRUPO_E[n]) ? window.ABA_GRUPO_E[n] : ks[0]; return `<button role="tab" aria-selected="${gAt[0] === n}" class="${gAt[0] === n ? 'aqui' : ''}" data-aba="${alvo}">${n}${ks.length > 1 ? `<small>${ks.length}</small>` : ''}</button>`; }).join('');
+    let sub = $('#abas-e-sub'); if (!sub) { sub = document.createElement('div'); sub.id = 'abas-e-sub'; sub.className = 'abas abas-sub'; sub.setAttribute('role', 'tablist'); abE.after(sub); }
+    sub.hidden = gAt[1].length < 2; sub.setAttribute('aria-label', gAt[0]);
+    sub.innerHTML = gAt[1].length > 1 ? gAt[1].map(k => `<button role="tab" aria-selected="${aba === k}" class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${NOME.get(k)}</button>`).join('') : '';
+    $$('#abas-e [data-aba], #abas-e-sub [data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; lembrarAba(aba); render(); });
     const fichas = Object.values(st.fichas).filter(Boolean);
     const corpo = $('#corpo-e');
     if (aba === 'mapa' || aba === 'npcs') { corpo.innerHTML = '<div id="aba-viva-e"></div>'; desenharVivaE(); return; }
@@ -4424,7 +4439,7 @@ ROTAS.escudo = async id => {
           <div class="abas abas-mini">${[['atributos', 'Atributos'], ['combate', 'Combate'], ['condicoes', `Condições${I0.conds.length ? ' ' + I0.conds.length : ''}`]].map(([k, l]) => `<button class="${ab === k ? 'aqui' : ''}" data-dab="${k}">${l}</button>`).join('')}</div>
           ${caixaDano(rdTxtX(x0), window._dnRes?.k === chave0 ? window._dnRes.txt : '')}<div style="display:grid; gap:10px">${cx}</div><div class="res" id="cb-res"></div>
           <div class="lin-acoes">${f.morto ? `<span class="tag crit">Morto${f.morto.causa ? ': ' + esc(f.morto.causa) : ''}</span><button class="btn mini ouro" data-cb-reviver>Reviver</button>` : '<button class="btn mini sec" data-cb-matar>Declarar morte</button>'}<button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`; }
-      else if (x0 && (x0.tipo === 'ameaca' || x0.ficha)) det = `<div id="cb-amf"></div>${caixaDano(rdTxtX(x0), window._dnRes?.k === chave0 ? window._dnRes.txt : '')}${blocoCond}<div class="lin-acoes"><button class="btn mini sec" data-cb-editar>Editar ficha</button>${x0.fase === 2 ? '<button class="btn mini sec" data-fase="1">Voltar à fase 1</button>' : `<button class="btn mini fase2-btn" data-fase="2" title="${x0.ficha?.fase2 ? 'Usa a segunda fase da ficha' : 'Sem fase 2 na ficha: você define na hora'}">Segunda fase</button>`}<button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`;
+      else if (x0 && (x0.tipo === 'ameaca' || x0.ficha)) det = `<div id="cb-amf"></div>${caixaDano(rdTxtX(x0), window._dnRes?.k === chave0 ? window._dnRes.txt : '')}${blocoCond}<div class="lin-acoes"><button class="btn mini perigo" data-cb-aparecer>${IC('raio')} Entrada em cena</button><button class="btn mini sec" data-cb-editar>Editar ficha</button>${x0.fase === 2 ? '<button class="btn mini sec" data-fase="1">Voltar à fase 1</button>' : `<button class="btn mini fase2-btn" data-fase="2" title="${x0.ficha?.fase2 ? 'Usa a segunda fase da ficha' : 'Sem fase 2 na ficha: você define na hora'}">Segunda fase</button>`}<button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`;
       else if (x0) det = `<div class="am-banner" style="--bc:var(--ouro)"><div class="am-ft ag">${esc(iniciais(x0.nome))}</div><div class="am-tx"><b>${esc(x0.nome)}</b><span class="am-el">NPC</span></div></div>
           ${barraCris('pv', x0.pv, x0.pvMax, 'data-cbv-pv', [10, 1]).replace('<span class="v">', '<span class="v clicavel" data-npcaj role="button" tabindex="0">')}${caixaDano(rdTxtX(x0), window._dnRes?.k === chave0 ? window._dnRes.txt : '')}${blocoCond}<div class="lin-acoes"><button class="btn mini sec" data-cb-editar>Completar ficha</button><button class="btn mini sec" data-rmx="${sel}">Tirar do combate</button></div>`;
       corpo.innerHTML = `<div style="display:grid; gap:14px">
@@ -4472,6 +4487,23 @@ ROTAS.escudo = async id => {
         const o = $('#dn-res'); if (o) o.innerHTML = txt; toast(`${x0.nome}: −${R2.final} PV`);
         rolarMestre(`${x0.nome} sofreu dano`, { total: R2.final, detalhe: esc(R2.linhas.join(' ')) }, x0.tipo !== 'agente'); });
       $('#dn-v')?.addEventListener('keydown', e => { if (e.key === 'Enter') $('#dn-ok').click(); });
+      $('[data-cb-aparecer]')?.addEventListener('click', () => { const foto = I0?.foto || '', ent = x0.ap || {}, A = window.APAR; if (!A) return toast('A entrada em cena não carregou.');
+        abrirModal('Entrada em cena', `<p class="faint" style="margin:0">Na tela de cada jogador, ${esc(x0.nome)} entra com som e efeito no estilo escolhido. Ensaie antes, só você vê.</p>
+          <div class="ap-grade"><div class="campo"><label class="rotulo" for="ap-est">Estilo</label><select id="ap-est">${A.opcoesEstilo(ent.estilo || A.estiloDe(x0.nome + ' ' + (x0.ficha?.descricao || '')) || 'sangue')}</select></div>
+          <div class="campo"><label class="rotulo" for="ap-cor">Cor</label><input type="color" id="ap-cor" value="${esc(ent.cor || A.corDe(ent.estilo || 'sangue'))}"></div>
+          <div class="campo"><label class="rotulo" for="ap-rot">Rótulo em cima do nome</label><input type="text" id="ap-rot" maxlength="30" value="${esc(ent.rotulo || '')}" placeholder="Apareceu"></div></div>
+          <div class="campo"><label class="rotulo" for="ap-frase">Frase da entrada</label><input type="text" id="ap-frase" maxlength="120" value="${esc(ent.frase || '')}" placeholder="O que ela diz ao aparecer"></div>
+          <label class="chk"><input type="checkbox" id="ap-cine" ${ent.cine !== false ? 'checked' : ''}> Cinemática antes do efeito: moldura na cor dela, com retrato, nome e frase</label>
+          <div class="btns"><button class="btn perigo" id="ap-ir">${IC('raio')} Aparecer para a mesa</button><button class="btn sec" id="ap-ver">Ensaiar só para mim</button><button class="btn sec mini" id="ap-mudo">${A.mudo ? 'Ligar o som' : 'Silenciar aqui'}</button></div>`, (m, fechar) => {
+          const q = s2 => m.querySelector(s2), ler = () => ({ estilo: q('#ap-est').value, cor: q('#ap-cor').value, rotulo: q('#ap-rot').value.trim(), frase: q('#ap-frase').value.trim(), cine: q('#ap-cine').checked });
+          q('#ap-est').onchange = () => { q('#ap-cor').value = A.corDe(q('#ap-est').value); };
+          const pacote = () => ({ ...ler(), nome: x0.nome, foto });
+          q('#ap-ver').onclick = () => A.rodar(pacote());
+          q('#ap-mudo').onclick = () => { q('#ap-mudo').textContent = A.alternarMudo() ? 'Ligar o som' : 'Silenciar aqui'; };
+          q('#ap-ir').onclick = async () => { const ap = pacote(); x0.ap = ler(); salvarE(); q('#ap-ir').disabled = true;
+            try { await db.collection(`campanhas/${id}/rolagens`).add({ uid: ME, tipo: 'aparicao', autor: 'Mestre', rotulo: `${x0.nome} apareceu`, ap, t: Date.now() }); fechar(); toast(`${x0.nome} entrou em cena.`); }
+            catch (e) { q('#ap-ir').disabled = false; toast('Não deu: ' + (e.message || e.code)); } };
+        }); });
       $('[data-cb-editar]')?.addEventListener('click', () => { const base = x0.tipo === 'ameaca' ? CRI.find(k => String(k.id) === String(x0.ref)) || {} : {};
         const tipoF = x0.tipo === 'npc' ? 'npc' : 'ameaca';
         formAmeaca({ ...base, tipo: tipoF, nome: x0.nome, papel: x0.papel, elemento: x0.elemento ?? base.elemento, nivel: x0.nivel || base.nivel || 1, imagem: x0.imagem || base.imagem || '', descricao: x0.descricao || base.descricao || '', tipoCriatura: x0.tipoCriatura || base.tipoCriatura, tamanho: x0.tamanho || base.tamanho, elementosSec: x0.elementosSec || base.elementosSec, ficha: { ...(base.ficha || {}), ...(x0.ficha || { pv: x0.pvMax }) } }, novo => {
@@ -4531,8 +4563,8 @@ ROTAS.escudo = async id => {
     }
     if (aba === 'investigacao') {
       const sessao = +(st.mesa?.sessao || 1), abertas = E.pistas.filter(p => p.revelada && p.tipo !== 'arquivo' && !p.sessao).length;
-      corpo.innerHTML = `<div class="cab-pagina"><h2>Fichas de investigação</h2><div class="btns"><button class="btn sec" id="fim-sessao" title="As pistas reveladas nesta sessão vão para o Calendário dos jogadores">📅 Encerrar sessão ${sessao}${abertas ? ` (${abertas})` : ''}</button><button class="btn" id="nova-p">Adicionar</button></div></div><p class="dim">Pistas ficam escondidas até você revelar. Reveladas aparecem para os jogadores na aba Pistas; as do tipo Arquivo (documento, foto ou gravação) vão para a aba Arquivo.</p>
-        <div class="lista">${E.pistas.map((p, i) => `<div class="item"><div class="cab"><span class="nm">${p.tipo === 'arquivo' ? '📜 ' : ''}${p.audio ? '🎧 ' : ''}${esc(p.titulo)}${p.sessao ? ` <span class="tag">Sessão ${p.sessao}</span>` : ''}</span><span style="display:flex; gap:8px; align-items:center"><button class="btn mini ${p.revelada ? 'sec' : 'ouro'}" data-rev="${i}">${p.revelada ? 'Esconder' : 'Revelar'}</button><button class="btn mini sec" data-edp="${i}">Editar</button><button class="btn-x" data-rmp="${i}" aria-label="Apagar">×</button></span></div><p class="dim">${nl(p.texto)}</p>${p.revelada ? '<span class="tag crit" style="justify-self:start">Visível aos jogadores</span>' : ''}</div>`).join('') || '<div class="vazio">Nenhuma pista ainda.</div>'}</div>`;
+      corpo.innerHTML = `<div class="cab-pagina"><h2>Fichas de investigação</h2><div class="btns"><button class="btn sec" id="fim-sessao" title="As pistas reveladas nesta sessão vão para o Calendário dos jogadores"><i data-ic="calendario"></i> Encerrar sessão ${sessao}${abertas ? ` (${abertas})` : ''}</button><button class="btn" id="nova-p">Adicionar</button></div></div><p class="dim">Pistas ficam escondidas até você revelar. Reveladas aparecem para os jogadores na aba Pistas; as do tipo Arquivo (documento, foto ou gravação) vão para a aba Arquivo.</p>
+        <div class="lista">${E.pistas.map((p, i) => `<div class="item"><div class="cab"><span class="nm">${p.tipo === 'arquivo' ? '<i data-ic="arquivo"></i> ' : ''}${p.audio ? '<i data-ic="fone"></i> ' : ''}${esc(p.titulo)}${p.sessao ? ` <span class="tag">Sessão ${p.sessao}</span>` : ''}</span><span style="display:flex; gap:8px; align-items:center"><button class="btn mini ${p.revelada ? 'sec' : 'ouro'}" data-rev="${i}">${p.revelada ? 'Esconder' : 'Revelar'}</button><button class="btn mini sec" data-edp="${i}">Editar</button><button class="btn-x" data-rmp="${i}" aria-label="Apagar">×</button></span></div><p class="dim">${nl(p.texto)}</p>${p.revelada ? '<span class="tag crit" style="justify-self:start">Visível aos jogadores</span>' : ''}</div>`).join('') || '<div class="vazio">Nenhuma pista ainda.</div>'}</div>`;
       const formP = (p, aoSalvar) => abrirModal(p ? 'Editar pista' : 'Nova pista', `<div class="campo"><label class="rotulo" for="p-t">Título</label><input type="text" id="p-t" value="${esc(p?.titulo)}"></div><div class="campo"><label class="rotulo" for="p-x">Conteúdo</label><textarea id="p-x">${esc(p?.texto)}</textarea></div><div class="campo"><label class="rotulo" for="p-tp">Tipo</label><select id="p-tp"><option value="pista" ${p?.tipo !== 'arquivo' ? 'selected' : ''}>Pista (aba Pistas e quadro da equipe)</option><option value="arquivo" ${p?.tipo === 'arquivo' ? 'selected' : ''}>Arquivo: pedaço da história (aba Arquivo)</option></select></div><div class="campo"><label class="rotulo" for="p-i">Imagem (opcional)</label><input type="file" id="p-i" accept="image/*"></div><div class="campo"><label class="rotulo" for="p-a">Áudio (opcional, até 25 MB)</label><input type="file" id="p-a" accept="audio/*"><span class="faint" id="p-a-st" style="font-size:12.5px">${p?.audio ? 'Já tem áudio. Escolha outro para trocar.' : ''}</span></div><button class="btn" id="p-ok">Salvar</button>`, (m, fechar) => {
         let img = p?.imagem || '', audio = p?.audio || '', subindo = null; m.querySelector('#p-i').onchange = async e => { const u = e.target.files[0] && await enviarImagem(e.target.files[0], 'capa'); e.target.value = ''; if (u) img = u; };
         m.querySelector('#p-a').onchange = e => { const f = e.target.files[0]; if (!f) return; const stA = m.querySelector('#p-a-st'); stA.textContent = 'Enviando o áudio…'; subindo = enviarArquivo(f).then(u => { if (u) { audio = u; stA.textContent = 'Áudio pronto.'; } else stA.textContent = 'Não foi.'; subindo = null; }); };
@@ -4911,6 +4943,7 @@ ROTAS.entrar = async () => {
         <div class="linha-acao"><span><span class="rotulo">E-mail</span> ${esc(email || '(sem e-mail)')}</span></div>
         <div class="linha-acao"><span style="min-width:0; overflow-wrap:anywhere"><span class="rotulo">ID</span> <span class="mono" style="font-size:12px">${esc(ME)}</span></span><button class="btn mini sec" id="pf-copiar">Copiar</button></div>
         <p class="faint" style="margin:0; font-size:13px">${DONO ? 'Seu acesso de administrador está preso ao seu ID e ao seu e-mail, não ao nome. Pode trocar o nome e a foto à vontade.' : 'O nome e a foto podem mudar quando quiser; a conta é reconhecida pelo ID e pelo e-mail.'}</p>
+        <form class="campo" id="pf-senha-f" style="margin:0"><label class="rotulo" for="pf-senha">Senha (opcional): entra direto, sem esperar e-mail</label><div class="btns"><input type="password" id="pf-senha" autocomplete="new-password" minlength="6" maxlength="72" placeholder="Pelo menos 6 caracteres" style="flex:1 1 200px"><button class="btn sec" type="submit">Salvar senha</button></div></form>
         <button class="btn sec" id="sair-conta" style="justify-self:start">Sair da conta</button></div>
       ${DONO ? `<div class="caixa" style="display:grid; gap:10px"><div class="sec-f"><h3 style="margin:0">Contas da mesa</h3><a class="btn mini" href="#admin" style="text-decoration:none">Abrir painel do administrador</a></div><p class="faint" style="margin:0; font-size:13px">Busque pelo nome para ver o ID de alguém. Administrador é marcado no banco pelo ID, então trocar de nome não tira o acesso.</p>
         <div class="busca">${ICON_BUSCA}<input type="search" id="pf-busca" placeholder="Nome, por exemplo: Yonne"></div><div id="pf-contas" class="lista"></div></div>` : ''}`;
@@ -4924,6 +4957,9 @@ ROTAS.entrar = async () => {
         try { await db.doc('usuarios/' + ME).set({ uid: ME, ...extra, t: Date.now() }); } catch (e) { return toast('O nome salvou, a foto e a frase não.'); }
         Object.assign(PERFIL, { nome, ...extra }); PERFIS[ME] = nome; desenharQuem(); toast('Perfil salvo.'); app.innerHTML = des(); ligarP(); };
       $('#sair-conta').onclick = async () => { await sb.auth.signOut(); location.hash = 'inicio'; location.reload(); };
+      $('#pf-senha-f').onsubmit = async e => { e.preventDefault(); const password = $('#pf-senha').value; if (password.length < 6) return toast('A senha precisa de pelo menos 6 caracteres.');
+        const { error } = await sb.auth.updateUser({ password }); if (error) return toast(/reauth|nonce/i.test(error.message) ? 'O Supabase pediu confirmação extra: desligue "Secure password change" em Authentication.' : 'Não salvou: ' + error.message);
+        $('#pf-senha').value = ''; toast('Senha salva. Na próxima, entre com e-mail e senha.'); };
       const buscar = debounce(async () => { const el = $('#pf-contas'); if (!el) return; const q = $('#pf-busca').value.trim();
         const { data, error } = await sb.from('perfis').select('id,nome,papel').ilike('nome', `%${q}%`).limit(30);
         el.innerHTML = error ? `<span class="falha">${esc(error.message)}</span>` : (data || []).map(u => `<div class="linha-acao"><span style="min-width:0; overflow-wrap:anywhere"><b>${esc(u.nome || '(sem nome)')}</b> ${u.papel === 'admin' ? '<span class="tag crit">Admin</span>' : ''}<br><span class="mono faint" style="font-size:11.5px">${esc(u.id)}</span></span><span style="display:flex; gap:6px"><a class="btn mini sec" href="#usuario-${esc(u.id)}" style="text-decoration:none">Ver perfil</a><button class="btn mini sec" data-cp-id="${esc(u.id)}">Copiar ID</button></span></div>`).join('') || '<span class="faint">Ninguém com esse nome.</span>';
@@ -4935,21 +4971,37 @@ ROTAS.entrar = async () => {
   }
   app.innerHTML = `<div><span class="rotulo">Acesso ao arquivo</span><h1>Entrar</h1></div>
     <div class="caixa" style="display:grid; gap:14px">
-      <p class="dim">Digite seu e-mail. Você recebe um link de acesso, sem senha.</p>
+      <p class="dim">Digite seu e-mail. Chega um link e um código de 6 dígitos: use o que for mais fácil. Quem já criou senha entra direto.</p>
       <div class="campo"><label class="rotulo" for="email">E-mail</label><input type="text" id="email" inputmode="email" autocomplete="email" placeholder="voce@exemplo.com"></div>
-      <button class="btn" id="enviar-link" style="justify-self:start">Enviar link de acesso</button>
+      <div class="btns"><button class="btn" id="enviar-link">Enviar link e código</button><button class="btn sec" id="abre-senha" type="button">Já tenho senha</button></div>
       <div id="msg-login" class="dim"></div>
+      <div class="campo" id="cod-c" hidden><label class="rotulo" for="cod">Código que veio no e-mail</label><input type="text" id="cod" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456"><div class="btns" style="margin-top:8px"><button class="btn" id="cod-ok">Entrar com o código</button></div></div>
+      <form class="campo" id="senha-c" hidden><label class="rotulo" for="senha">Senha</label><input type="password" id="senha" autocomplete="current-password" maxlength="72"><div class="btns" style="margin-top:8px"><button class="btn" type="submit">Entrar com senha</button></div></form>
+      <p class="faint" style="margin:0; font-size:13px">Abriu o site pelo ícone da tela inicial? Prefira o código ou a senha: o link do e-mail pode abrir em outro navegador e a conta fica presa lá.</p>
       <hr style="border:none; border-top:1px solid var(--linha); width:100%">
       <button class="btn sec" id="discord" style="justify-self:start">Entrar com Discord</button>
     </div>`;
+  const traduz = m => { m = String(m || ''); if (/invalid login credentials/i.test(m)) return 'E-mail ou senha não batem. Se ainda não criou senha, entre pelo código e crie uma na sua conta.'; if (/expired|invalid.*(otp|token)|token.*(expired|invalid)/i.test(m)) return 'Código vencido ou errado. Peça outro.'; if (/rate limit|seconds/i.test(m)) return 'Calma: o e-mail só manda outro daqui a pouco.'; return m; };
+  const pegaEmail = () => { const e = $('#email').value.trim(); if (!/^\S+@\S+\.\S+$/.test(e)) { toast('E-mail inválido.'); return ''; } try { localStorage.setItem('adr-email', e); } catch (x) {} return e; };
+  try { $('#email').value = localStorage.getItem('adr-email') || ''; } catch (e) {}
   $('#enviar-link').onclick = async () => {
-    const email = $('#email').value.trim(); if (!/^\S+@\S+\.\S+$/.test(email)) return toast('E-mail inválido.');
+    const email = pegaEmail(); if (!email) return;
     const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
-    $('#msg-login').innerHTML = error ? `<span class="falha">${esc(error.message)}</span>` : 'Link enviado. Abra o e-mail neste mesmo navegador.';
+    $('#msg-login').innerHTML = error ? `<span class="falha">${esc(traduz(error.message))}</span>` : 'Enviado. Toque no link do e-mail ou digite o código aqui embaixo.';
+    if (!error) { $('#cod-c').hidden = false; $('#cod').focus(); }
   };
+  const entrouCod = async () => { const email = pegaEmail(); if (!email) return; const token = $('#cod').value.replace(/\D/g, ''); if (token.length < 6) return toast('O código tem 6 dígitos.');
+    const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' }); if (error) { $('#msg-login').innerHTML = `<span class="falha">${esc(traduz(error.message))}</span>`; return; }
+    try { navigator.storage?.persist?.(); } catch (e) {} location.hash = '#inicio'; };
+  $('#cod-ok').onclick = entrouCod; $('#cod').onkeydown = e => { if (e.key === 'Enter') entrouCod(); };
+  $('#abre-senha').onclick = () => { $('#senha-c').hidden = !$('#senha-c').hidden; if (!$('#senha-c').hidden) $('#senha').focus(); };
+  $('#senha-c').onsubmit = async e => { e.preventDefault(); const email = pegaEmail(); if (!email) return; const password = $('#senha').value; if (!password) return toast('Falta a senha.');
+    const { error } = await sb.auth.signInWithPassword({ email, password }); if (error) { $('#msg-login').innerHTML = `<span class="falha">${esc(traduz(error.message))}</span>`; return; }
+    try { navigator.storage?.persist?.(); } catch (x) {} location.hash = '#inicio'; };
   $('#discord').onclick = async () => { const { error } = await sb.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: location.origin + location.pathname } }); if (error) toast('Discord não está ativado no Supabase: ' + error.message); };
 };
 function desenharQuem() {
+  const nb = document.querySelector('#nav [data-sec="base"]'); if (nb) nb.hidden = !DONO;
   $('#quem').innerHTML = ME ? `<a href="#entrar" style="display:flex; gap:8px; align-items:center; color:var(--lua-dim); text-decoration:none"><span>${esc(PERFIL?.nome || '')}</span><span class="ava" style="${PERFIL?.foto ? `background:center/cover url('${esc(PERFIL.foto)}')` : `background:${esc(PERFIL?.cor || corDe(ME))}`}">${PERFIL?.foto ? '' : esc(iniciais(PERFIL?.nome || '?'))}</span></a>`
     : '<a class="btn mini" href="#entrar" style="text-decoration:none">Entrar</a>';
 }

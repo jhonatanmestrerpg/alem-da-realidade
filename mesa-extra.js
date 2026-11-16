@@ -83,25 +83,45 @@ document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === 
 const idPista = p => p.id || 'p' + [...String(p.titulo || '') + String(p.texto || '')].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
 const papelPista = p => `<div class="pista">${p.titulo ? `<b>${esc(p.titulo)}</b>` : ''}${p.imagem ? `<img src="${esc(p.imagem)}" alt="" loading="lazy">` : ''}${p.texto ? `<p>${nl(p.texto)}</p>` : ''}${p.audio ? `<audio controls preload="none" src="${esc(p.audio)}"></audio>` : ''}</div>`;
 const pedacoHTML = p => p.audio && !p.texto && !p.imagem
-  ? `<div class="pista arquivo audio"><b>🎧 ${esc(p.titulo || 'Gravação')}</b><audio controls preload="none" src="${esc(p.audio)}"></audio></div>`
-  : `<div class="pista arquivo ${p.audio ? 'audio' : ''}">${p.imagem ? `<img src="${esc(p.imagem)}" alt="" loading="lazy">` : ''}${p.titulo ? `<b>${p.audio ? '🎧 ' : ''}${esc(p.titulo)}</b>` : ''}${p.audio ? `<audio controls preload="none" src="${esc(p.audio)}"></audio>` : ''}${p.texto ? nl(p.texto) : ''}</div>`;
+  ? `<div class="pista arquivo audio"><b><i data-ic="fone"></i> ${esc(p.titulo || 'Gravação')}</b><audio controls preload="none" src="${esc(p.audio)}"></audio></div>`
+  : `<div class="pista arquivo ${p.audio ? 'audio' : ''}">${p.imagem ? `<img src="${esc(p.imagem)}" alt="" loading="lazy">` : ''}${p.titulo ? `<b>${p.audio ? '<i data-ic="fone"></i> ' : ''}${esc(p.titulo)}</b>` : ''}${p.audio ? `<audio controls preload="none" src="${esc(p.audio)}"></audio>` : ''}${p.texto ? nl(p.texto) : ''}</div>`;
 
 /* ---------- NPCs: quem vai aparecendo na história ---------- */
-function desenharNpcs(A, getC, { mestre, salvarC }) {
-  const C = getC() || {}, L = (C.npcs || []).slice().sort((a, b) => (b.t || 0) - (a.t || 0));
-  A.innerHTML = `<div class="caixa bloco"><div class="btns" style="justify-content:space-between;align-items:center"><h3>🎭 NPCs</h3>${mestre ? '<button class="btn mini" data-npc="novo">+ NPC</button>' : ''}</div>
-    <p class="tag" style="margin:0; white-space:normal">${mestre ? 'Poste aqui quem for aparecendo. "Suspeito" manda a pessoa para a aba Suspeitos e para o quadro da equipe.' : 'Quem já apareceu na história.'}</p>
-    ${L.length ? `<div class="npc-grade">${L.map(n => `<div class="npc-card ${n.suspeito ? 'susp' : ''}"><span class="foto-s p" ${n.foto ? `data-zoom-img="${esc(n.foto)}" data-zoom-tit="${esc(n.nome)}" data-zoom-sub="${esc(n.papel || '')}" role="button" tabindex="0" title="Ver maior"` : ''} style="${n.foto ? `background-image:url('${esc(n.foto)}')` : ''}">${n.foto ? '' : esc(iniciais(n.nome))}</span>
-      <div class="npc-tx"><b>${esc(n.nome)}</b>${n.papel ? `<span class="tag">${esc(n.papel)}</span>` : ''}${n.suspeito ? '<span class="tag tag-sus">Suspeito</span>' : ''}${n.txt ? `<p>${esc(n.txt)}</p>` : ''}
-      ${mestre ? `<div class="btns"><button class="btn mini ${n.suspeito ? 'sec' : 'perigo'}" data-npc-s="${esc(n.id)}">${n.suspeito ? 'Tirar dos suspeitos' : '🔎 Suspeito'}</button><button class="btn mini sec" data-npc-e="${esc(n.id)}">Editar</button><button class="btn mini sec" data-npc-x="${esc(n.id)}" aria-label="Tirar ${esc(n.nome)}">✕</button></div>` : ''}</div></div>`).join('')}</div>`
-      : '<div class="vazio">Ninguém apareceu ainda.</div>'}</div>`;
+/* NPCs ocultos: ficam só no espaço do mestre (mestre/<uid>/npcs/<campanha>), os jogadores nem recebem.
+   Revelar devolve o NPC para a lista pública da mesa, no topo, como quem acabou de aparecer. */
+const NPC_OC = {};
+function npcsOcultos(camp) {
+  if (!camp || typeof db === 'undefined' || !db || typeof ME === 'undefined' || !ME) return null;
+  if (NPC_OC[camp]) return NPC_OC[camp];
+  const ref = db.doc(`mestre/${ME}/npcs/${camp}`), o = { lista: [], pronto: false, ouvintes: new Set() };
+  o.get = () => o.lista;
+  o.salvar = async lista => { o.lista = lista; o.ouvintes.forEach(f => f()); try { await ref.set({ lista, t: Date.now() }); } catch (e) { toast('Não salvou os NPCs ocultos: ' + (e.message || e.code)); } };
+  o.ouvir = f => { o.ouvintes.add(f); return () => o.ouvintes.delete(f); };
+  try { ref.onSnapshot(s => { o.lista = (s.exists ? s.data()?.lista : null) || []; o.pronto = true; o.ouvintes.forEach(f => f()); }); } catch (e) {}
+  return (NPC_OC[camp] = o);
+}
+function desenharNpcs(A, getC, { mestre, salvarC, campId }) {
+  const OC = mestre && campId ? npcsOcultos(campId) : null;
+  const C = getC() || {}, L = (C.npcs || []).slice().sort((a, b) => (b.t || 0) - (a.t || 0)), LO = OC ? OC.get().slice().sort((a, b) => (b.t || 0) - (a.t || 0)) : [];
+  const foto = n => `<span class="foto-s p" ${n.foto ? `data-zoom-img="${esc(n.foto)}" data-zoom-tit="${esc(n.nome)}" data-zoom-sub="${esc(n.papel || '')}" role="button" tabindex="0" title="Ver maior"` : ''} style="${n.foto ? `background-image:url('${esc(n.foto)}')` : ''}">${n.foto ? '' : esc(iniciais(n.nome))}</span>`;
+  const card = (n, oculto) => `<div class="npc-card ${n.suspeito ? 'susp' : ''} ${oculto ? 'oculto' : ''}">${foto(n)}
+      <div class="npc-tx"><b>${esc(n.nome)}</b>${n.papel ? `<span class="tag">${esc(n.papel)}</span>` : ''}${oculto ? `<span class="tag tag-oc">${IC('esconder')} Oculto</span>` : ''}${n.suspeito ? '<span class="tag tag-sus">Suspeito</span>' : ''}${n.txt ? `<p>${esc(n.txt)}</p>` : ''}
+      ${mestre ? `<div class="btns">${OC ? (oculto ? `<button class="btn mini ouro" data-npc-rev="${esc(n.id)}">${IC('ver')} Revelar agora</button>` : `<button class="btn mini sec" data-npc-oc="${esc(n.id)}" title="Some da tela dos jogadores; você revela quando quiser">${IC('esconder')} Ocultar</button>`) : ''}${oculto ? '' : `<button class="btn mini ${n.suspeito ? 'sec' : 'perigo'}" data-npc-s="${esc(n.id)}">${n.suspeito ? 'Tirar dos suspeitos' : IC('suspeito') + ' Suspeito'}</button>`}<button class="btn mini sec" data-npc-e="${esc(n.id)}" data-oc="${oculto ? 1 : ''}">${IC('editar')} Editar</button><button class="btn mini sec" data-npc-x="${esc(n.id)}" data-oc="${oculto ? 1 : ''}" aria-label="Tirar ${esc(n.nome)}">${IC('apagar')}</button></div>` : ''}</div></div>`;
+  A.innerHTML = `<div class="caixa bloco"><div class="btns" style="justify-content:space-between;align-items:center"><h3>${IC('npcs')} NPCs</h3>${mestre ? '<button class="btn mini" data-npc="novo">+ NPC</button>' : ''}</div>
+    <p class="tag" style="margin:0; white-space:normal">${mestre ? (OC ? 'Poste aqui quem for aparecendo. NPC oculto fica só com você, os jogadores não recebem nada dele, até você tocar em "Revelar agora". "Suspeito" manda a pessoa para a aba Suspeitos e para o quadro da equipe.' : 'Poste aqui quem for aparecendo. "Suspeito" manda a pessoa para a aba Suspeitos e para o quadro da equipe.') : 'Quem já apareceu na história.'}</p>
+    ${OC && LO.length ? `<div class="npc-ocultos"><span class="rotulo">${IC('esconder')} Ocultos, só você vê (${LO.length})</span><div class="npc-grade">${LO.map(n => card(n, true)).join('')}</div></div>` : ''}
+    ${L.length ? `${OC && LO.length ? `<span class="rotulo">${IC('ver')} Na mesa (${L.length})</span>` : ''}<div class="npc-grade">${L.map(n => card(n, false)).join('')}</div>`
+      : `<div class="vazio">${LO.length ? 'Nenhum NPC revelado ainda.' : 'Ninguém apareceu ainda.'}</div>`}</div>`;
   if (!mestre) return;
-  const refazer = () => desenharNpcs(A, getC, { mestre, salvarC });
-  const form = (n, novo) => abrirModal(novo ? 'Novo NPC' : 'Editar NPC', `<div class="campo"><label class="rotulo" for="np-n">Nome</label><input type="text" id="np-n" maxlength="60" value="${esc(n.nome || '')}"></div>
+  const refazer = () => { if (A.isConnected) desenharNpcs(A, getC, { mestre, salvarC, campId }); };
+  if (OC && !A._npcOuvindo) { A._npcOuvindo = OC.ouvir(() => { if (!A.isConnected) { A._npcOuvindo?.(); A._npcOuvindo = null; return; } refazer(); }); }
+  const pub = () => [...((getC() || {}).npcs || [])], ocl = () => [...(OC ? OC.get() : [])];
+  const form = (n, novo, oculto) => abrirModal(novo ? 'Novo NPC' : 'Editar NPC', `<div class="campo"><label class="rotulo" for="np-n">Nome</label><input type="text" id="np-n" maxlength="60" value="${esc(n.nome || '')}"></div>
       <div class="campo"><label class="rotulo" for="np-p">Quem é (curto)</label><input type="text" id="np-p" maxlength="60" value="${esc(n.papel || '')}" placeholder="Ex.: Legista do necrotério"></div>
       <div class="campo"><label class="rotulo" for="np-t">O que a mesa sabe</label><textarea id="np-t" rows="3" maxlength="500">${esc(n.txt || '')}</textarea></div>
       <div class="campo"><label class="rotulo" for="np-f">Retrato (opcional)</label><input type="file" id="np-f" accept="image/*"></div>
       <label class="chk"><input type="checkbox" id="np-s" ${n.suspeito ? 'checked' : ''}> É suspeito</label>
+      ${OC ? `<label class="chk"><input type="checkbox" id="np-o" ${oculto ? 'checked' : ''}> Oculto: só eu vejo até revelar</label>` : ''}
       <button class="btn" id="np-ok">${novo ? 'Postar' : 'Salvar'}</button>`, (m, fechar) => {
     m.querySelector('#np-ok').onclick = async () => {
       const b = m.querySelector('#np-ok'); b.disabled = true;
@@ -109,13 +129,22 @@ function desenharNpcs(A, getC, { mestre, salvarC }) {
       let foto = n.foto || ''; const arq = m.querySelector('#np-f').files[0];
       if (arq) { b.textContent = 'Enviando…'; foto = (await enviarImagem(arq, 'circulo')) || foto; }
       const n2 = { ...n, nome, papel: m.querySelector('#np-p').value.trim(), txt: m.querySelector('#np-t').value.trim(), foto, suspeito: m.querySelector('#np-s').checked, t: n.t || Date.now() };
-      const l = [...((getC() || {}).npcs || [])], i = l.findIndex(x => x.id === n.id); if (i < 0) l.push(n2); else l[i] = n2;
-      fechar(); await salvarC({ npcs: l }); refazer(); };
+      const vaiOculto = OC ? m.querySelector('#np-o').checked : false;
+      const P = pub().filter(x => x.id !== n.id), O = ocl().filter(x => x.id !== n.id);
+      fechar();
+      if (vaiOculto) { if (!oculto && !novo) await salvarC({ npcs: P }); await OC.salvar([...O, n2]); }
+      else { const ip = pub().findIndex(x => x.id === n.id); const P2 = pub(); if (ip < 0) P2.push(oculto ? { ...n2, t: Date.now() } : n2); else P2[ip] = n2; await salvarC({ npcs: P2 }); if (oculto) await OC.salvar(O); }
+      refazer(); };
   });
-  A.querySelector('[data-npc="novo"]').onclick = () => form({ id: 'npc-' + Date.now().toString(36) }, true);
-  A.querySelectorAll('[data-npc-e]').forEach(b => b.onclick = () => form(((getC() || {}).npcs || []).find(x => x.id === b.dataset.npcE), false));
-  A.querySelectorAll('[data-npc-x]').forEach(b => b.onclick = async () => { if (!await confirmar('Tirar este NPC da lista? Ele sai também dos suspeitos e do quadro.', { ok: 'Tirar' })) return; await salvarC({ npcs: ((getC() || {}).npcs || []).filter(x => x.id !== b.dataset.npcX) }); refazer(); });
-  A.querySelectorAll('[data-npc-s]').forEach(b => b.onclick = async () => { const l = ((getC() || {}).npcs || []).map(x => x.id === b.dataset.npcS ? { ...x, suspeito: !x.suspeito } : x); await salvarC({ npcs: l }); refazer(); });
+  A.querySelector('[data-npc="novo"]').onclick = () => form({ id: 'npc-' + Date.now().toString(36) }, true, false);
+  A.querySelectorAll('[data-npc-e]').forEach(b => b.onclick = () => { const oc = !!b.dataset.oc; form((oc ? ocl() : pub()).find(x => x.id === b.dataset.npcE), false, oc); });
+  A.querySelectorAll('[data-npc-x]').forEach(b => b.onclick = async () => { const oc = !!b.dataset.oc; if (!await confirmar(oc ? 'Apagar este NPC oculto?' : 'Tirar este NPC da lista? Ele sai também dos suspeitos e do quadro.', { ok: 'Tirar' })) return;
+    if (oc) await OC.salvar(ocl().filter(x => x.id !== b.dataset.npcX)); else await salvarC({ npcs: pub().filter(x => x.id !== b.dataset.npcX) }); refazer(); });
+  A.querySelectorAll('[data-npc-s]').forEach(b => b.onclick = async () => { const l = pub().map(x => x.id === b.dataset.npcS ? { ...x, suspeito: !x.suspeito } : x); await salvarC({ npcs: l }); refazer(); });
+  A.querySelectorAll('[data-npc-oc]').forEach(b => b.onclick = async () => { const n = pub().find(x => x.id === b.dataset.npcOc); if (!n) return;
+    await OC.salvar([...ocl().filter(x => x.id !== n.id), n]); await salvarC({ npcs: pub().filter(x => x.id !== n.id) }); toast(`${n.nome} sumiu da tela dos jogadores.`); refazer(); });
+  A.querySelectorAll('[data-npc-rev]').forEach(b => b.onclick = async () => { const n = ocl().find(x => x.id === b.dataset.npcRev); if (!n) return;
+    await salvarC({ npcs: [...pub().filter(x => x.id !== n.id), { ...n, t: Date.now() }] }); await OC.salvar(ocl().filter(x => x.id !== n.id)); toast(`${n.nome} apareceu para a mesa.`); refazer(); });
 }
 
 /* ---------- suspeitos: a equipe inocenta e volta atrás (vale para todos da mesa) ---------- */
@@ -124,9 +153,9 @@ const inocentado = (s, Q) => !!(Q?.inoc && Q.inoc[s.id]);
 const cardSusp = (s, Q, acao) => `<div class="suspeito ${inocentado(s, Q) ? 'inocente' : ''} ${s.foto ? 'com-foto' : ''}">${s.foto ? `<span class="foto-s p" data-zoom-img="${esc(s.foto)}" data-zoom-tit="${esc(s.nome)}" data-zoom-sub="${esc(s.papel || '')}" role="button" tabindex="0" title="Ver maior" style="background-image:url('${esc(s.foto)}')"></span>` : ''}<b>${esc(s.nome)}</b><span class="tg">${esc(s.papel || 'NPC')}</span><p>${esc(s.txt || '')}</p>${acao}</div>`;
 function desenharSuspeitos(A, getC, getQ, id) {
   const C = getC(), Q = getQ() || {}, L = suspeitosDe(C), sus = L.filter(x => !inocentado(x, Q)), ino = L.filter(x => inocentado(x, Q));
-  A.innerHTML = `<div class="caixa bloco"><h3>🕵️ Suspeitos</h3><p class="tag" style="white-space:normal">Quem a equipe ainda acha que pode estar por trás de tudo. Inocentar vale para todos da mesa.</p>
+  A.innerHTML = `<div class="caixa bloco"><h3><i data-ic="suspeito"></i> Suspeitos</h3><p class="tag" style="white-space:normal">Quem a equipe ainda acha que pode estar por trás de tudo. Inocentar vale para todos da mesa.</p>
     <div class="lista-sus">${sus.map(x => cardSus2(x, Q, false)).join('') || '<div class="vazio">Ninguém sob suspeita.</div>'}</div>
-    ${ino.length ? `<h3 style="margin-top:8px">😇 Inocentados</h3><div class="lista-sus">${ino.map(x => cardSus2(x, Q, true)).join('')}</div>` : ''}</div>`;
+    ${ino.length ? `<h3 style="margin-top:8px"><i data-ic="brilho"></i> Inocentados</h3><div class="lista-sus">${ino.map(x => cardSus2(x, Q, true)).join('')}</div>` : ''}</div>`;
   A.querySelectorAll('[data-inoc]').forEach(b => b.onclick = async () => { const v = b.dataset.v === '1', Q2 = getQ() || {}; Q2.inoc = { ...(Q2.inoc || {}), [b.dataset.inoc]: v }; desenharSuspeitos(A, getC, getQ, id); await salvarQ(id, { inoc: { [b.dataset.inoc]: v } }); });
 }
 const cardSus2 = (x, Q, ino) => cardSusp(x, Q, `<div class="btns"><button class="btn mini ${ino ? 'perigo' : ''}" data-inoc="${esc(x.id)}" data-v="${ino ? '0' : '1'}">${ino ? 'Voltar a suspeito' : 'Inocentar'}</button></div>`);
@@ -177,10 +206,10 @@ function montarQuadro(el, id, getC, getQ, getPistas) {
     else { desenhar(); abrirItem(a.k); }
   };
   const achar = k => { const t = k[0], i = k.slice(2); if (t === 's') return suspeitosDe(getC()).find(x => x.id === i); if (t === 'p') return getPistas().find(y => idPista(y) === i); return null; };
-  const rotulo = k => { const Q = getQ() || {}, t = k[0]; if (t === 's') return '🖼️ ' + (achar(k)?.nome || '?'); if (t === 'p') { const x = txtP(achar(k) || {}) || '?'; return '📄 ' + (x.length > 50 ? x.slice(0, 48) + '…' : x); } const n = Q.notas?.[k.slice(2)]?.txt || '?'; return '📝 ' + (n.length > 50 ? n.slice(0, 48) + '…' : n); };
+  const rotulo = k => { const Q = getQ() || {}, t = k[0]; if (t === 's') return  (achar(k)?.nome || '?'); if (t === 'p') { const x = txtP(achar(k) || {}) || '?'; return  (x.length > 50 ? x.slice(0, 48) + '…' : x); } const n = Q.notas?.[k.slice(2)]?.txt || '?'; return  (n.length > 50 ? n.slice(0, 48) + '…' : n); };
   const fiosDe = k => Object.entries((getQ() || {}).fios || {}).filter(([f, v]) => v && f.split('|').includes(k)).map(([f]) => f);
   const cortar = async lista => { const Q = getQ() || {}, p = Object.fromEntries(lista.map(f => [f, null])); Q.fios = { ...(Q.fios || {}), ...p }; desenhar(); await salvarQ(id, { fios: p }); };
-  const blocoFios = k => { const l = fiosDe(k); return `<div class="fios-lista"><span class="rotulo">🧶 Barbantes (${l.length})</span>${l.map(f => `<div class="linha"><span>${esc(rotulo(f.split('|').find(x => x !== k)))}</span><button class="btn mini perigo" data-cortar="${esc(f)}">✂️ Cortar</button></div>`).join('') || '<span class="tag">Nada ligado aqui. Use "Ligar com barbante".</span>'}${l.length > 1 ? '<button class="btn mini perigo" data-cortar-todos style="justify-self:start">✂️ Cortar todos</button>' : ''}</div>`; };
+  const blocoFios = k => { const l = fiosDe(k); return `<div class="fios-lista"><span class="rotulo"><i data-ic="quadro"></i> Barbantes (${l.length})</span>${l.map(f => `<div class="linha"><span>${esc(rotulo(f.split('|').find(x => x !== k)))}</span><button class="btn mini perigo" data-cortar="${esc(f)}"><i data-ic="cortar"></i> Cortar</button></div>`).join('') || '<span class="tag">Nada ligado aqui. Use "Ligar com barbante".</span>'}${l.length > 1 ? '<button class="btn mini perigo" data-cortar-todos style="justify-self:start"><i data-ic="cortar"></i> Cortar todos</button>' : ''}</div>`; };
   const ligarCortes = (m, k, reabrir) => {
     m.querySelectorAll('[data-cortar]').forEach(b => b.onclick = async () => { await cortar([b.dataset.cortar]); reabrir(); });
     m.querySelector('[data-cortar-todos]')?.addEventListener('click', async () => { if (!await confirmar('Cortar todos os barbantes deste item?', { ok: 'Cortar' })) return; await cortar(fiosDe(k)); reabrir(); });
@@ -200,7 +229,7 @@ function montarQuadro(el, id, getC, getQ, getPistas) {
   el.addEventListener('pointerup', soltar); el.addEventListener('pointercancel', soltar);
   el.addEventListener('click', async e => {
     const fio = e.target.closest('[data-fio]');
-    if (fio) { const [fa, fb] = fio.dataset.fio.split('|'); if (!await confirmar(`${esc(rotulo(fa))}  ↔  ${esc(rotulo(fb))}`, { titulo: '✂️ Cortar este barbante?', ok: 'Cortar' })) return; const Q = getQ() || {}; Q.fios = { ...(Q.fios || {}), [fio.dataset.fio]: null }; desenhar(); await salvarQ(id, { fios: { [fio.dataset.fio]: null } }); return; }
+    if (fio) { const [fa, fb] = fio.dataset.fio.split('|'); if (!await confirmar(`${esc(rotulo(fa))}  ↔  ${esc(rotulo(fb))}`, { titulo: 'Cortar este barbante?', ok: 'Cortar' })) return; const Q = getQ() || {}; Q.fios = { ...(Q.fios || {}), [fio.dataset.fio]: null }; desenhar(); await salvarQ(id, { fios: { [fio.dataset.fio]: null } }); return; }
     if (!ligando) return;
     const it = e.target.closest('.q-item'); if (!it) return;
     if (!sel) { sel = it.dataset.k; desenhar(); return; }
@@ -216,13 +245,13 @@ function montarQuadro(el, id, getC, getQ, getPistas) {
 }
 // aba Quadro inteira: barra, zoom, tela cheia (no iPhone imita com position: fixed)
 function abrirAbaQuadro(A, id, getC, getQ, getPistas) {
-  A.innerHTML = `<div class="caixa bloco"><div class="quadro-bar"><button class="btn mini" id="q-ligar" data-ligar>🧶 Ligar com barbante</button><button class="btn mini sec" data-nota>📝 Anotação</button><button class="btn mini sec" id="q-cheia">⛶ Tela cheia</button><span class="quadro-zoom"><button class="btn mini sec" data-zoom="-1" aria-label="Diminuir">−</button><span id="q-zv">100%</span><button class="btn mini sec" data-zoom="1" aria-label="Aumentar">+</button><button class="btn mini sec" data-zoom="0">Ajustar</button></span>
+  A.innerHTML = `<div class="caixa bloco"><div class="quadro-bar"><button class="btn mini" id="q-ligar" data-ligar><i data-ic="quadro"></i> Ligar com barbante</button><button class="btn mini sec" data-nota><i data-ic="notas"></i> Anotação</button><button class="btn mini sec" id="q-cheia"><i data-ic="foco"></i> Tela cheia</button><span class="quadro-zoom"><button class="btn mini sec" data-zoom="-1" aria-label="Diminuir">−</button><span id="q-zv">100%</span><button class="btn mini sec" data-zoom="1" aria-label="Aumentar">+</button><button class="btn mini sec" data-zoom="0">Ajustar</button></span>
       <span class="tag" style="white-space:normal">Arraste fotos e papéis. Toque num item para ler e ver ou cortar os barbantes dele. Para ligar, ative o barbante e toque em dois itens.</span></div>
-    <div class="quadro-wrap" id="q-wrap"><div class="quadro-palco" id="q-palco"><div class="quadro" id="q-quadro"></div></div><div class="q-fs-bar" id="q-fs-bar"><button class="btn mini sec" data-recolher title="Recolher o painel" aria-label="Recolher o painel">»</button><button class="btn mini" data-ligar title="Ligar com barbante" aria-label="Ligar com barbante">🧶</button><button class="btn mini sec" data-nota title="Anotação" aria-label="Anotação">📝</button><button class="btn mini sec" data-zoom="-1" aria-label="Diminuir">−</button><button class="btn mini sec" data-zoom="1" aria-label="Aumentar">+</button><button class="btn mini sec" data-zoom="0" title="Ver o quadro inteiro" aria-label="Ajustar">⤢</button><button class="btn mini perigo" id="q-sair">✕ Sair</button></div></div>
+    <div class="quadro-wrap" id="q-wrap"><div class="quadro-palco" id="q-palco"><div class="quadro" id="q-quadro"></div></div><div class="q-fs-bar" id="q-fs-bar"><button class="btn mini sec" data-recolher title="Recolher o painel" aria-label="Recolher o painel">»</button><button class="btn mini" data-ligar title="Ligar com barbante" aria-label="Ligar com barbante"><i data-ic="quadro"></i></button><button class="btn mini sec" data-nota title="Anotação" aria-label="Anotação"><i data-ic="notas"></i></button><button class="btn mini sec" data-zoom="-1" aria-label="Diminuir">−</button><button class="btn mini sec" data-zoom="1" aria-label="Aumentar">+</button><button class="btn mini sec" data-zoom="0" title="Ver o quadro inteiro" aria-label="Ajustar">⤢</button><button class="btn mini perigo" id="q-sair">✕ Sair</button></div></div>
     <p class="tag" style="white-space:normal">O quadro é da equipe toda: o que um agente mexe, os outros veem. Suspeitos vêm da aba NPCs; pistas, das pistas reveladas.</p></div>`;
   const Q = montarQuadro(A.querySelector('#q-quadro'), id, getC, getQ, getPistas);
   let lig = false;
-  A.querySelectorAll('[data-ligar]').forEach(b => b.onclick = () => { lig = !lig; Q.ligar(lig); A.querySelectorAll('[data-ligar]').forEach(x => { x.textContent = x.id ? (lig ? '✋ Parar de ligar' : '🧶 Ligar com barbante') : (lig ? '✋' : '🧶'); x.classList.toggle('perigo', lig); }); });
+  A.querySelectorAll('[data-ligar]').forEach(b => b.onclick = () => { lig = !lig; Q.ligar(lig); A.querySelectorAll('[data-ligar]').forEach(x => { x.innerHTML = x.id ? (lig ? IC('mao') + ' Parar de ligar' : IC('quadro') + ' Ligar com barbante') : (lig ? IC('mao') : IC('quadro')); x.classList.toggle('perigo', lig); }); });
   A.querySelectorAll('[data-nota]').forEach(b => b.onclick = () => Q.nota());
   let zoom = null, manual = false;
   const wrap = A.querySelector('#q-wrap'), palco = A.querySelector('#q-palco'), qd = A.querySelector('#q-quadro');
@@ -247,7 +276,7 @@ function abrirAbaQuadro(A, id, getC, getQ, getPistas) {
 }
 
 /* ---------- a mestre/o mestre apaga rolagens (uma por uma ou o histórico inteiro) ---------- */
-const comLixeira = (html, rid) => rid ? html.replace(/^(<div class="rol[^"]*"[^>]*>)/, `$1<button class="apagar-rol" data-del-rol="${esc(rid)}" title="Apagar esta rolagem" aria-label="Apagar esta rolagem">🗑</button>`) : html;
+const comLixeira = (html, rid) => rid ? html.replace(/^(<div class="rol[^"]*"[^>]*>)/, `$1<button class="apagar-rol" data-del-rol="${esc(rid)}" title="Apagar esta rolagem" aria-label="Apagar esta rolagem"><i data-ic="apagar"></i></button>`) : html;
 async function apagarRolagem(camp, rid) {
   if (!await confirmar('Apagar esta rolagem do histórico? Some para todo mundo.', { titulo: 'Apagar rolagem', ok: 'Apagar' })) return;
   try { await db.doc(`campanhas/${camp}/rolagens/${rid}`).delete(); toast('Rolagem apagada.'); } catch (e) { toast('Não deu: ' + (e.message || e.code)); }
@@ -296,11 +325,11 @@ const RPX = (() => {
   const VOZ_PADRAO = { fala: { preset: 'jovem-f', lang: 'pt-BR', gen: 'f', nome: '', tom: 1.12, vel: 1.04 }, acao: { preset: 'narrador', lang: 'pt-BR', gen: 'm', nome: '', tom: 0.45, vel: 0.82 } };
   const minhasVozes = () => { try { return { ...VOZ_PADRAO, ...JSON.parse(LS.get('adr-vozes|' + ME_(), '{}')) }; } catch (e) { return VOZ_PADRAO; } };
   const FALAS_TOCADAS = new Set(), RP = { auto: false, desde: Date.now() };
-  function marcarAuto() { const b = document.querySelector('[data-rp-auto]'), t = document.querySelector('[data-rp-auto-tag]'); if (b) { b.textContent = RP.auto ? '🔓 Voz automática: ligada' : '🔒 Voz automática: desligada'; b.classList.toggle('sec', !RP.auto); } if (t) t.hidden = !RP.auto || CTX?.mestre === ME_(); }
+  function marcarAuto() { const b = document.querySelector('[data-rp-auto]'), t = document.querySelector('[data-rp-auto-tag]'); if (b) { b.textContent = RP.auto ? 'Voz automática: ligada' : 'Voz automática: desligada'; b.classList.toggle('sec', !RP.auto); } if (t) t.hidden = !RP.auto || CTX?.mestre === ME_(); }
   const temBloco = (t, i) => RP.auto || !!(t?.blocos && t.blocos[i]);
   function blocoHTML(p, i, m, dir) {
-    const lib = m.id !== 'previa' && temBloco(m.tocar, i), btn = m.id === 'previa' ? '' : dir ? `<button type="button" class="rp-lib ${lib ? 'on' : ''}" data-rp-b="${i}" data-id="${ES(m.id)}" title="${lib ? 'Liberado: tocar de novo para todos' : 'Liberar a voz deste trecho para a mesa'}">${lib ? '🔊' : p.tipo === 'fala' ? '🗣' : '🎬'}</button>`
-      : lib ? `<button type="button" class="rp-lib on" data-rp-ouvir-b="${i}" data-id="${ES(m.id)}" title="Ouvir de novo">🔊</button>` : '';
+    const lib = m.id !== 'previa' && temBloco(m.tocar, i), btn = m.id === 'previa' ? '' : dir ? `<button type="button" class="rp-lib ${lib ? 'on' : ''}" data-rp-b="${i}" data-id="${ES(m.id)}" title="${lib ? 'Liberado: tocar de novo para todos' : 'Liberar a voz deste trecho para a mesa'}">${lib ? IC('som') : p.tipo === 'fala' ? IC('voz') : IC('cena')}</button>`
+      : lib ? `<button type="button" class="rp-lib on" data-rp-ouvir-b="${i}" data-id="${ES(m.id)}" title="Ouvir de novo"><i data-ic="som"></i></button>` : '';
     if (p.tipo === 'fala') return `<div class="rp-bloco rp-fala" data-bloco="${ES(m.id)}|${i}"><div class="rp-balao"><span class="rp-aspas">“</span>${fmt(p.txt)}<span class="rp-aspas fim">”</span></div>${btn}</div>`;
     if (p.tipo === 'acao') return `<div class="rp-bloco rp-acao" data-bloco="${ES(m.id)}|${i}"><span class="rp-rotulo">ação</span><p>${fmt(p.txt)}</p>${btn}</div>`;
     return `<div class="rp-bloco rp-narra" data-bloco="${ES(m.id)}|${i}"><p>${fmt(p.txt)}</p>${btn}</div>`;
@@ -312,7 +341,7 @@ const RPX = (() => {
       <div class="rp-retrato">${avHTML({ nome: m.autor, foto: m.foto, cor: m.cor }, m.uid)}</div>
       <div class="rp-cena">
         <header><b>${ES(m.autor || 'Alguém')}</b>${m.jogador && !String(m.autor).includes(m.jogador) ? `<span class="rp-jog">${ES(m.jogador)}</span>` : ''}<span class="rp-hora">${hora(m.t)}</span>
-          <span class="rp-acoes">${dir && partes.length > 1 ? `<button type="button" class="rp-mini ${todos ? 'on' : ''}" data-rp-tudo="${ES(m.id)}" title="Liberar a cena inteira">${todos ? '🔊 Tudo liberado' : '▶ Liberar tudo'}</button>` : ''}${pode ? `<button type="button" class="rp-mini" data-ms-del="${ES(m.id)}" title="Apagar" aria-label="Apagar">✕</button>` : ''}</span></header>
+          <span class="rp-acoes">${dir && partes.length > 1 ? `<button type="button" class="rp-mini ${todos ? 'on' : ''}" data-rp-tudo="${ES(m.id)}" title="Liberar a cena inteira">${todos ? IC('som') + ' Tudo liberado' : '▶ Liberar tudo'}</button>` : ''}${pode ? `<button type="button" class="rp-mini" data-ms-del="${ES(m.id)}" title="Apagar" aria-label="Apagar">✕</button>` : ''}</span></header>
         <div class="rp-corpo">${partes.map((p, i) => blocoHTML(p, i, m, dir)).join('')}</div>
       </div></article>`;
   }
@@ -410,56 +439,56 @@ const RPX = (() => {
   const NOMES_M = /antonio|ant[oô]nio|daniel|duarte|ricardo|valerio|julio|j[uú]lio|david|mark|george|pablo|ra[uú]l|diego|cosimo|paul|henri|claude|stefan|conrad|ichiro|keita|pavel|dmitry|jorge|f[aá]bio|donato|humberto|felipe|thomas|alex|fred|ralph|bruce|guy|ryan|eric|davis|tony|male|masculin|homem/i;
   const generoVoz = v => NOMES_F.test(v.name) ? 'f' : NOMES_M.test(v.name) ? 'm' : /google/i.test(v.name) ? 'f' : '?';
   const VOZES_CAT = [
-    { g: 'Idades', id: 'menina', nome: 'Menina', d: 'uns 8 anos', ic: '👧', lang: 'pt-BR', gen: 'f', tom: 1.75, vel: 1.12 },
-    { g: 'Idades', id: 'menino', nome: 'Menino', d: 'uns 9 anos', ic: '👦', lang: 'pt-BR', gen: 'm', tom: 1.6, vel: 1.12 },
-    { g: 'Idades', id: 'adol-f', nome: 'Adolescente', d: 'garota de 15', ic: '🧑‍🎤', lang: 'pt-BR', gen: 'f', tom: 1.35, vel: 1.1 },
-    { g: 'Idades', id: 'adol-m', nome: 'Adolescente', d: 'garoto de 15', ic: '🧢', lang: 'pt-BR', gen: 'm', tom: 1.2, vel: 1.1 },
-    { g: 'Idades', id: 'jovem-f', nome: 'Jovem', d: 'mulher de 20 e poucos', ic: '👩', lang: 'pt-BR', gen: 'f', tom: 1.12, vel: 1.04 },
-    { g: 'Idades', id: 'jovem-m', nome: 'Jovem', d: 'homem de 20 e poucos', ic: '👨', lang: 'pt-BR', gen: 'm', tom: 1.0, vel: 1.04 },
-    { g: 'Idades', id: 'adulta', nome: 'Adulta', d: 'mulher de 40', ic: '👩‍💼', lang: 'pt-BR', gen: 'f', tom: 0.98, vel: 0.98 },
-    { g: 'Idades', id: 'adulto', nome: 'Adulto', d: 'homem de 40', ic: '👨‍💼', lang: 'pt-BR', gen: 'm', tom: 0.85, vel: 0.98 },
-    { g: 'Idades', id: 'senhora', nome: 'Senhora', d: 'uns 65 anos', ic: '👵', lang: 'pt-BR', gen: 'f', tom: 0.9, vel: 0.86 },
-    { g: 'Idades', id: 'senhor', nome: 'Senhor', d: 'uns 65 anos', ic: '👴', lang: 'pt-BR', gen: 'm', tom: 0.72, vel: 0.86 },
-    { g: 'Idades', id: 'vovo-f', nome: 'Vovó bem velhinha', d: 'devagarinho, voz fina', ic: '🧓', lang: 'pt-BR', gen: 'f', tom: 1.15, vel: 0.74 },
-    { g: 'Idades', id: 'vovo-m', nome: 'Vovô rouco', d: 'grave e arrastado', ic: '🦯', lang: 'pt-BR', gen: 'm', tom: 0.55, vel: 0.74 },
-    { g: 'Sotaques', id: 'pt-pt-f', nome: 'Portuguesa', d: 'sotaque de Portugal', ic: '🇵🇹', lang: 'pt-PT', gen: 'f', tom: 1.05, vel: 1 },
-    { g: 'Sotaques', id: 'pt-pt-m', nome: 'Português', d: 'sotaque de Portugal', ic: '🇵🇹', lang: 'pt-PT', gen: 'm', tom: 0.9, vel: 1 },
-    { g: 'Sotaques', id: 'en-us-f', nome: 'Gringa americana', d: 'inglês dos EUA falando português', ic: '🇺🇸', lang: 'en-US', gen: 'f', tom: 1.05, vel: 0.95 },
-    { g: 'Sotaques', id: 'en-us-m', nome: 'Gringo americano', d: 'inglês dos EUA falando português', ic: '🇺🇸', lang: 'en-US', gen: 'm', tom: 0.9, vel: 0.95 },
-    { g: 'Sotaques', id: 'en-gb-f', nome: 'Britânica', d: 'inglês de Londres', ic: '🇬🇧', lang: 'en-GB', gen: 'f', tom: 1.05, vel: 0.95 },
-    { g: 'Sotaques', id: 'en-gb-m', nome: 'Britânico', d: 'inglês de Londres', ic: '🇬🇧', lang: 'en-GB', gen: 'm', tom: 0.88, vel: 0.95 },
-    { g: 'Sotaques', id: 'es-es', nome: 'Espanhola', d: 'castelhano', ic: '🇪🇸', lang: 'es-ES', gen: 'f', tom: 1.05, vel: 1 },
-    { g: 'Sotaques', id: 'es-es-m', nome: 'Espanhol', d: 'castelhano', ic: '🇪🇸', lang: 'es-ES', gen: 'm', tom: 0.9, vel: 1 },
-    { g: 'Sotaques', id: 'es-mx', nome: 'Mexicana', d: 'espanhol latino', ic: '🇲🇽', lang: 'es-MX', gen: 'f', tom: 1.05, vel: 1.02 },
-    { g: 'Sotaques', id: 'es-ar', nome: 'Hermano', d: 'espanhol latino, homem', ic: '🧉', lang: 'es-US', gen: 'm', tom: 0.9, vel: 1.02 },
-    { g: 'Sotaques', id: 'it', nome: 'Italiana', d: 'com as mãos falando junto', ic: '🇮🇹', lang: 'it-IT', gen: 'f', tom: 1.05, vel: 1.02 },
-    { g: 'Sotaques', id: 'it-m', nome: 'Italiano', d: 'cantado', ic: '🇮🇹', lang: 'it-IT', gen: 'm', tom: 0.9, vel: 1.02 },
-    { g: 'Sotaques', id: 'fr', nome: 'Francesa', d: 'charmosa', ic: '🇫🇷', lang: 'fr-FR', gen: 'f', tom: 1.05, vel: 0.98 },
-    { g: 'Sotaques', id: 'fr-m', nome: 'Francês', d: 'blasé', ic: '🇫🇷', lang: 'fr-FR', gen: 'm', tom: 0.9, vel: 0.98 },
-    { g: 'Sotaques', id: 'de', nome: 'Alemã', d: 'seca e firme', ic: '🇩🇪', lang: 'de-DE', gen: 'f', tom: 1.0, vel: 0.96 },
-    { g: 'Sotaques', id: 'de-m', nome: 'Alemão', d: 'seco e firme', ic: '🇩🇪', lang: 'de-DE', gen: 'm', tom: 0.85, vel: 0.96 },
-    { g: 'Sotaques', id: 'ru', nome: 'Russo', d: 'pesado', ic: '🇷🇺', lang: 'ru-RU', gen: 'm', tom: 0.75, vel: 0.92 },
-    { g: 'Sotaques', id: 'ja', nome: 'Japonesa', d: 'educada e rápida', ic: '🇯🇵', lang: 'ja-JP', gen: 'f', tom: 1.2, vel: 1.05 },
-    { g: 'Sotaques', id: 'ja-m', nome: 'Japonês', d: 'contido', ic: '🇯🇵', lang: 'ja-JP', gen: 'm', tom: 0.95, vel: 1.0 },
-    { g: 'Sotaques', id: 'zh', nome: 'Chinesa', d: 'mandarim', ic: '🇨🇳', lang: 'zh-CN', gen: 'f', tom: 1.15, vel: 1.0 },
-    { g: 'Sotaques', id: 'ko', nome: 'Coreana', d: 'doce', ic: '🇰🇷', lang: 'ko-KR', gen: 'f', tom: 1.15, vel: 1.02 },
-    { g: 'Sotaques', id: 'nl', nome: 'Holandês', d: 'gutural', ic: '🇳🇱', lang: 'nl-NL', gen: 'm', tom: 0.9, vel: 0.98 },
-    { g: 'Sotaques', id: 'ar', nome: 'Árabe', d: 'grave', ic: '🌙', lang: 'ar', gen: 'm', tom: 0.85, vel: 0.95 },
-    { g: 'Sotaques', id: 'hi', nome: 'Indiana', d: 'melódica', ic: '🇮🇳', lang: 'hi-IN', gen: 'f', tom: 1.1, vel: 1.04 },
-    { g: 'Personagens', id: 'narrador', nome: 'Narrador de trailer', d: 'grave, pausado, épico', ic: '🎬', lang: 'pt-BR', gen: 'm', tom: 0.45, vel: 0.82 },
-    { g: 'Personagens', id: 'locutora', nome: 'Locutora de rádio', d: 'animada e clara', ic: '📻', lang: 'pt-BR', gen: 'f', tom: 1.15, vel: 1.15 },
-    { g: 'Personagens', id: 'vilao', nome: 'Vilão', d: 'baixo e frio', ic: '🦹', lang: 'pt-BR', gen: 'm', tom: 0.4, vel: 0.85 },
-    { g: 'Personagens', id: 'vila', nome: 'Vilã', d: 'calma e venenosa', ic: '🕷️', lang: 'pt-BR', gen: 'f', tom: 0.75, vel: 0.85 },
-    { g: 'Personagens', id: 'sussurro', nome: 'Sussurro', d: 'baixinho e lento', ic: '🤫', lang: 'pt-BR', gen: 'f', tom: 0.8, vel: 0.72 },
-    { g: 'Personagens', id: 'nervosa', nome: 'Em pânico', d: 'rápida e aguda', ic: '😱', lang: 'pt-BR', gen: 'f', tom: 1.45, vel: 1.35 },
-    { g: 'Personagens', id: 'nervoso', nome: 'Desesperado', d: 'rápido e tenso', ic: '😰', lang: 'pt-BR', gen: 'm', tom: 1.15, vel: 1.35 },
-    { g: 'Personagens', id: 'bebado', nome: 'Bêbado', d: 'arrastado', ic: '🍺', lang: 'pt-BR', gen: 'm', tom: 0.8, vel: 0.68 },
-    { g: 'Personagens', id: 'fofo', nome: 'Bichinho fofo', d: 'esquilo, pelúcia', ic: '🐿️', lang: 'pt-BR', gen: 'f', tom: 2, vel: 1.25 },
-    { g: 'Personagens', id: 'gigante', nome: 'Gigante', d: 'enorme e lento', ic: '🧌', lang: 'pt-BR', gen: 'm', tom: 0.1, vel: 0.7 },
-    { g: 'Personagens', id: 'fantasma', nome: 'Fantasma', d: 'distante e arrastado', ic: '👻', lang: 'pt-BR', gen: 'f', tom: 0.6, vel: 0.62 },
-    { g: 'Personagens', id: 'robo', nome: 'Robô', d: 'monótono', ic: '🤖', lang: 'pt-BR', gen: 'm', tom: 0.3, vel: 0.9 },
-    { g: 'Personagens', id: 'demonio', nome: 'Demônio', d: 'do fundo do poço', ic: '😈', lang: 'pt-BR', gen: 'm', tom: 0, vel: 0.65 },
-    { g: 'Personagens', id: 'boneca', nome: 'Boneca assustadora', d: 'fininha e lenta', ic: '🪆', lang: 'pt-BR', gen: 'f', tom: 1.9, vel: 0.78 },
+    { g: 'Idades', id: 'menina', nome: 'Menina', d: 'uns 8 anos', ic: '', lang: 'pt-BR', gen: 'f', tom: 1.75, vel: 1.12 },
+    { g: 'Idades', id: 'menino', nome: 'Menino', d: 'uns 9 anos', ic: '', lang: 'pt-BR', gen: 'm', tom: 1.6, vel: 1.12 },
+    { g: 'Idades', id: 'adol-f', nome: 'Adolescente', d: 'garota de 15', ic: '', lang: 'pt-BR', gen: 'f', tom: 1.35, vel: 1.1 },
+    { g: 'Idades', id: 'adol-m', nome: 'Adolescente', d: 'garoto de 15', ic: '', lang: 'pt-BR', gen: 'm', tom: 1.2, vel: 1.1 },
+    { g: 'Idades', id: 'jovem-f', nome: 'Jovem', d: 'mulher de 20 e poucos', ic: '', lang: 'pt-BR', gen: 'f', tom: 1.12, vel: 1.04 },
+    { g: 'Idades', id: 'jovem-m', nome: 'Jovem', d: 'homem de 20 e poucos', ic: '', lang: 'pt-BR', gen: 'm', tom: 1.0, vel: 1.04 },
+    { g: 'Idades', id: 'adulta', nome: 'Adulta', d: 'mulher de 40', ic: '', lang: 'pt-BR', gen: 'f', tom: 0.98, vel: 0.98 },
+    { g: 'Idades', id: 'adulto', nome: 'Adulto', d: 'homem de 40', ic: '', lang: 'pt-BR', gen: 'm', tom: 0.85, vel: 0.98 },
+    { g: 'Idades', id: 'senhora', nome: 'Senhora', d: 'uns 65 anos', ic: '', lang: 'pt-BR', gen: 'f', tom: 0.9, vel: 0.86 },
+    { g: 'Idades', id: 'senhor', nome: 'Senhor', d: 'uns 65 anos', ic: '', lang: 'pt-BR', gen: 'm', tom: 0.72, vel: 0.86 },
+    { g: 'Idades', id: 'vovo-f', nome: 'Vovó bem velhinha', d: 'devagarinho, voz fina', ic: '', lang: 'pt-BR', gen: 'f', tom: 1.15, vel: 0.74 },
+    { g: 'Idades', id: 'vovo-m', nome: 'Vovô rouco', d: 'grave e arrastado', ic: '', lang: 'pt-BR', gen: 'm', tom: 0.55, vel: 0.74 },
+    { g: 'Sotaques', id: 'pt-pt-f', nome: 'Portuguesa', d: 'sotaque de Portugal', ic: '', lang: 'pt-PT', gen: 'f', tom: 1.05, vel: 1 },
+    { g: 'Sotaques', id: 'pt-pt-m', nome: 'Português', d: 'sotaque de Portugal', ic: '', lang: 'pt-PT', gen: 'm', tom: 0.9, vel: 1 },
+    { g: 'Sotaques', id: 'en-us-f', nome: 'Gringa americana', d: 'inglês dos EUA falando português', ic: '', lang: 'en-US', gen: 'f', tom: 1.05, vel: 0.95 },
+    { g: 'Sotaques', id: 'en-us-m', nome: 'Gringo americano', d: 'inglês dos EUA falando português', ic: '', lang: 'en-US', gen: 'm', tom: 0.9, vel: 0.95 },
+    { g: 'Sotaques', id: 'en-gb-f', nome: 'Britânica', d: 'inglês de Londres', ic: '', lang: 'en-GB', gen: 'f', tom: 1.05, vel: 0.95 },
+    { g: 'Sotaques', id: 'en-gb-m', nome: 'Britânico', d: 'inglês de Londres', ic: '', lang: 'en-GB', gen: 'm', tom: 0.88, vel: 0.95 },
+    { g: 'Sotaques', id: 'es-es', nome: 'Espanhola', d: 'castelhano', ic: '', lang: 'es-ES', gen: 'f', tom: 1.05, vel: 1 },
+    { g: 'Sotaques', id: 'es-es-m', nome: 'Espanhol', d: 'castelhano', ic: '', lang: 'es-ES', gen: 'm', tom: 0.9, vel: 1 },
+    { g: 'Sotaques', id: 'es-mx', nome: 'Mexicana', d: 'espanhol latino', ic: '', lang: 'es-MX', gen: 'f', tom: 1.05, vel: 1.02 },
+    { g: 'Sotaques', id: 'es-ar', nome: 'Hermano', d: 'espanhol latino, homem', ic: '', lang: 'es-US', gen: 'm', tom: 0.9, vel: 1.02 },
+    { g: 'Sotaques', id: 'it', nome: 'Italiana', d: 'com as mãos falando junto', ic: '', lang: 'it-IT', gen: 'f', tom: 1.05, vel: 1.02 },
+    { g: 'Sotaques', id: 'it-m', nome: 'Italiano', d: 'cantado', ic: '', lang: 'it-IT', gen: 'm', tom: 0.9, vel: 1.02 },
+    { g: 'Sotaques', id: 'fr', nome: 'Francesa', d: 'charmosa', ic: '', lang: 'fr-FR', gen: 'f', tom: 1.05, vel: 0.98 },
+    { g: 'Sotaques', id: 'fr-m', nome: 'Francês', d: 'blasé', ic: '', lang: 'fr-FR', gen: 'm', tom: 0.9, vel: 0.98 },
+    { g: 'Sotaques', id: 'de', nome: 'Alemã', d: 'seca e firme', ic: '', lang: 'de-DE', gen: 'f', tom: 1.0, vel: 0.96 },
+    { g: 'Sotaques', id: 'de-m', nome: 'Alemão', d: 'seco e firme', ic: '', lang: 'de-DE', gen: 'm', tom: 0.85, vel: 0.96 },
+    { g: 'Sotaques', id: 'ru', nome: 'Russo', d: 'pesado', ic: '', lang: 'ru-RU', gen: 'm', tom: 0.75, vel: 0.92 },
+    { g: 'Sotaques', id: 'ja', nome: 'Japonesa', d: 'educada e rápida', ic: '', lang: 'ja-JP', gen: 'f', tom: 1.2, vel: 1.05 },
+    { g: 'Sotaques', id: 'ja-m', nome: 'Japonês', d: 'contido', ic: '', lang: 'ja-JP', gen: 'm', tom: 0.95, vel: 1.0 },
+    { g: 'Sotaques', id: 'zh', nome: 'Chinesa', d: 'mandarim', ic: '', lang: 'zh-CN', gen: 'f', tom: 1.15, vel: 1.0 },
+    { g: 'Sotaques', id: 'ko', nome: 'Coreana', d: 'doce', ic: '', lang: 'ko-KR', gen: 'f', tom: 1.15, vel: 1.02 },
+    { g: 'Sotaques', id: 'nl', nome: 'Holandês', d: 'gutural', ic: '', lang: 'nl-NL', gen: 'm', tom: 0.9, vel: 0.98 },
+    { g: 'Sotaques', id: 'ar', nome: 'Árabe', d: 'grave', ic: '', lang: 'ar', gen: 'm', tom: 0.85, vel: 0.95 },
+    { g: 'Sotaques', id: 'hi', nome: 'Indiana', d: 'melódica', ic: '', lang: 'hi-IN', gen: 'f', tom: 1.1, vel: 1.04 },
+    { g: 'Personagens', id: 'narrador', nome: 'Narrador de trailer', d: 'grave, pausado, épico', ic: '', lang: 'pt-BR', gen: 'm', tom: 0.45, vel: 0.82 },
+    { g: 'Personagens', id: 'locutora', nome: 'Locutora de rádio', d: 'animada e clara', ic: '', lang: 'pt-BR', gen: 'f', tom: 1.15, vel: 1.15 },
+    { g: 'Personagens', id: 'vilao', nome: 'Vilão', d: 'baixo e frio', ic: '', lang: 'pt-BR', gen: 'm', tom: 0.4, vel: 0.85 },
+    { g: 'Personagens', id: 'vila', nome: 'Vilã', d: 'calma e venenosa', ic: '', lang: 'pt-BR', gen: 'f', tom: 0.75, vel: 0.85 },
+    { g: 'Personagens', id: 'sussurro', nome: 'Sussurro', d: 'baixinho e lento', ic: '', lang: 'pt-BR', gen: 'f', tom: 0.8, vel: 0.72 },
+    { g: 'Personagens', id: 'nervosa', nome: 'Em pânico', d: 'rápida e aguda', ic: '', lang: 'pt-BR', gen: 'f', tom: 1.45, vel: 1.35 },
+    { g: 'Personagens', id: 'nervoso', nome: 'Desesperado', d: 'rápido e tenso', ic: '', lang: 'pt-BR', gen: 'm', tom: 1.15, vel: 1.35 },
+    { g: 'Personagens', id: 'bebado', nome: 'Bêbado', d: 'arrastado', ic: '', lang: 'pt-BR', gen: 'm', tom: 0.8, vel: 0.68 },
+    { g: 'Personagens', id: 'fofo', nome: 'Bichinho fofo', d: 'esquilo, pelúcia', ic: '', lang: 'pt-BR', gen: 'f', tom: 2, vel: 1.25 },
+    { g: 'Personagens', id: 'gigante', nome: 'Gigante', d: 'enorme e lento', ic: '', lang: 'pt-BR', gen: 'm', tom: 0.1, vel: 0.7 },
+    { g: 'Personagens', id: 'fantasma', nome: 'Fantasma', d: 'distante e arrastado', ic: '', lang: 'pt-BR', gen: 'f', tom: 0.6, vel: 0.62 },
+    { g: 'Personagens', id: 'robo', nome: 'Robô', d: 'monótono', ic: '', lang: 'pt-BR', gen: 'm', tom: 0.3, vel: 0.9 },
+    { g: 'Personagens', id: 'demonio', nome: 'Demônio', d: 'do fundo do poço', ic: '', lang: 'pt-BR', gen: 'm', tom: 0, vel: 0.65 },
+    { g: 'Personagens', id: 'boneca', nome: 'Boneca assustadora', d: 'fininha e lenta', ic: '', lang: 'pt-BR', gen: 'f', tom: 1.9, vel: 0.78 },
   ];
   // acha a voz do aparelho mais perto do pedido: nome exato, depois idioma + gênero, depois idioma, depois português
   function vozResolver(c) {
@@ -517,7 +546,7 @@ const RPX = (() => {
       div.innerHTML = `<div class="modal largo vz-modal" role="dialog" aria-label="Vozes do roleplay"><div class="cab-m"><h2>Vozes do roleplay</h2><button class="btn-x" data-f>✕</button></div>
         <div class="vz-abas"><button type="button" data-vz-aba="fala" class="${aba === 'fala' ? 'aqui' : ''}">— Falas da personagem<small>${ES(VOZES_CAT.find(v => v.id === esc.fala.preset)?.nome || 'Personalizada')}</small></button><button type="button" data-vz-aba="acao" class="${aba === 'acao' ? 'aqui' : ''}">✦ Ações e narração<small>${ES(VOZES_CAT.find(v => v.id === esc.acao.preset)?.nome || 'Personalizada')}</small></button></div>
         ${grupos.map(gr => `<h3 class="vz-g">${gr}</h3><div class="vz-grade">${VOZES_CAT.filter(v => v.g === gr).map(v => { const tem = temIdioma(v.lang); return `<div class="vz-card ${c.preset === v.id ? 'aqui' : ''} ${tem ? '' : 'falta'}" data-vz-p="${v.id}" role="button" tabindex="0">
-          <span class="vz-ic">${v.ic}</span><b>${ES(v.nome)}</b><small>${ES(v.d)}${v.gen ? ` · ${v.gen === 'f' ? '♀' : '♂'}` : ''}</small>${tem ? '' : '<small class="vz-falta">sem esse idioma aqui: usa português</small>'}
+          <span class="vz-ic">${v.ic || ES((v.nome || "?")[0])}</span><b>${ES(v.nome)}</b><small>${ES(v.d)}${v.gen ? ` · ${v.gen === 'f' ? '♀' : '♂'}` : ''}</small>${tem ? '' : '<small class="vz-falta">sem esse idioma aqui: usa português</small>'}
           <button type="button" class="vz-play" data-vz-ouvir="${v.id}" title="Ouvir" aria-label="Ouvir ${ES(v.nome)}">▶</button></div>`; }).join('')}</div>`).join('')}
         <details class="vz-av"><summary>Ajuste fino e voz exata do aparelho</summary>
           <label>Voz do aparelho <select data-vz-nome><option value="">Automática pelo estilo escolhido</option>${todas.map(v => `<option value="${ES(v.name)}" ${v.name === c.nome ? 'selected' : ''}>${ES(v.name)} (${ES(v.lang)})</option>`).join('')}</select></label>
@@ -547,7 +576,7 @@ const RPX = (() => {
     if (!todas.length) speechSynthesis.onvoiceschanged = () => { speechSynthesis.onvoiceschanged = null; if (div.isConnected) { div.remove(); escolherVozes(); } };
   }
 
-  const painel = () => `<div class="ms-chat ms-rp"><div class="ms-rp-topo"><label>Falando como <input type="text" class="ms-rp-quem" maxlength="40"></label><span class="btns"><button type="button" class="btn mini" data-rp-parar hidden>⏹ Parar voz</button><button type="button" class="btn mini sec" data-rp-auto hidden></button><span class="tag" data-rp-auto-tag hidden>🔓 Voz automática</span><button type="button" class="btn mini sec" data-rp-vozes>🎙 Vozes</button></span></div><div class="ms-rp-lista" role="log" aria-live="polite" aria-label="Cenas do roleplay"></div>
+  const painel = () => `<div class="ms-chat ms-rp"><div class="ms-rp-topo"><label>Falando como <input type="text" class="ms-rp-quem" maxlength="40"></label><span class="btns"><button type="button" class="btn mini" data-rp-parar hidden>⏹ Parar voz</button><button type="button" class="btn mini sec" data-rp-auto hidden></button><span class="tag" data-rp-auto-tag hidden>Voz automática</span><button type="button" class="btn mini sec" data-rp-vozes><i data-ic="voz"></i> Vozes</button></span></div><div class="ms-rp-lista" role="log" aria-live="polite" aria-label="Cenas do roleplay"></div>
     <div class="rp-compor"><div class="rp-atalhos" aria-label="Falas rápidas"></div><div class="rp-previa" hidden></div><div class="rp-ferr"><button type="button" data-rp-ins="fala" title="Nova fala">— Fala</button><button type="button" data-rp-ins="acao" title="Nova ação (ou envolve o texto selecionado)">✦ Ação</button><button type="button" data-rp-ins="narra" title="Nova linha de narração">¶ Narração</button></div>
     <form class="ms-rp-form"><textarea rows="2" enterkeyhint="enter" maxlength="1500" placeholder="— Fala começa com travessão ou hífen.&#10;*Ação vai entre asteriscos.*&#10;O resto é narração." aria-label="Roleplay"></textarea><button class="btn">Postar</button></form><div class="ms-dica">Enter pula linha para continuar a cena. Poste no botão (ou Ctrl+Enter). A prévia mostra como vai ficar.</div></div></div>`;
   let primeira = true;

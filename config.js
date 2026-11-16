@@ -5,4 +5,6 @@ window.ADR_CONFIG = {
   chave: 'sb_publishable_2x-xtpusA55R6AHfK8zayQ_NdXopyZu',
   // Administradores por e-mail ou ID da conta (nunca pelo nome). O nome e a foto podem mudar sem perder o acesso.
   admins: ['jhonatan.mestrerpg@gmail.com'],
+  // Dono do site: o único que libera os fundamentos do sistema (classes, perícias, patentes...) para os outros administradores.
+  dono: 'jhonatan.mestrerpg@gmail.com',
 };

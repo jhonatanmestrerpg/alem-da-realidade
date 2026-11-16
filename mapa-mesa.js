@@ -8,7 +8,11 @@
 'use strict';
 (() => {
   const T = {}; const rotulos = () => Object.assign(T, { dir: 'Mestre', ass: 'Ameaça', quem: 'Agentes', a: 'o' });
-  const ICONES = ['📍', '🔪', '🩸', '💀', '👻', '🔦', '🗝️', '🚪', '🚗', '🏚️', '⛪', '🏥', '🎭', '🕯️', '📜', '🔮', '⚰️', '🧿', '🐺', '🦇', '🕷️', '🧟', '⭐', '❤️', '🛡️', '📦', '☠️', '🪓', '🕵️', '🐾', '🧪', '🔥', '💧', '⚡'];
+  const ICONES = ['alfinete', 'pessoas', 'faca', 'gota', 'caveira', 'mascara', 'fantasma', 'lanterna', 'chave', 'porta', 'carro', 'casa', 'vela', 'machado', 'armadilha', 'olho', 'alvo', 'cadeado', 'documento', 'caixa', 'coracao', 'estrela', 'raio', 'dado', 'frasco', 'bomba', 'arma', 'sino'];
+  // pinos antigos guardaram emoji: cada um vira o desenho mais parecido
+  const EMO = { '📍': 'alfinete', '🔪': 'faca', '🩸': 'gota', '💀': 'caveira', '👻': 'fantasma', '🔦': 'lanterna', '🗝️': 'chave', '🗝': 'chave', '🚪': 'porta', '🚗': 'carro', '🏚️': 'casa', '🏚': 'casa', '⛪': 'casa', '🏥': 'casa', '🎭': 'mascara', '🕯️': 'vela', '🕯': 'vela', '📜': 'documento', '🔮': 'olho', '⚰️': 'caixa', '🧿': 'olho', '🐺': 'caveira', '🦇': 'fantasma', '🕷️': 'armadilha', '🧟': 'caveira', '⭐': 'estrela', '❤️': 'coracao', '🛡️': 'cadeado', '📦': 'caixa', '☠️': 'caveira', '🪓': 'machado', '🕵️': 'pessoas', '🐾': 'alvo', '🧪': 'frasco', '🔥': 'raio', '💧': 'gota', '⚡': 'raio' };
+  const nomeIc = ic => EMO[ic] || (ICONES.includes(ic) || (window.ICONES_UI && ICONES_UI[ic]) ? ic : 'alfinete');
+  const icPino = ic => (window.IC ? IC(nomeIc(ic)) : '') || esc(ic || '');
   const COLS = 36; // largura da grade da névoa; a altura segue a proporção da imagem
   const UI = {}; // estado local por mesa: { ver, modo, pincel }
   const novoId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -56,7 +60,7 @@
   function luz(el, m) {
     if (m.fim) { el.style.left = m.x + '%'; el.style.top = m.y + '%'; el.classList.remove('movendo'); el.querySelector('.pino-quem')?.remove(); return; }
     el.style.left = m.x + '%'; el.style.top = m.y + '%'; el.classList.add('movendo'); el.style.setProperty('--mv', m.cor || '#3ddc84');
-    let q = el.querySelector('.pino-quem'); if (!q) { q = document.createElement('span'); q.className = 'pino-quem'; el.prepend(q); } q.textContent = '✋ ' + (m.nome || 'Alguém');
+    let q = el.querySelector('.pino-quem'); if (!q) { q = document.createElement('span'); q.className = 'pino-quem'; el.prepend(q); } q.textContent = (m.nome || 'Alguém');
     clearTimeout(el._luz); el._luz = setTimeout(() => { el.classList.remove('movendo'); q.remove(); }, 4000);
   }
   let ultimoEnvio = 0;
@@ -67,10 +71,10 @@
     Promise.resolve(ch.send({ type: 'broadcast', event: 'mv', payload: m })).catch(() => {}); };
   const SEL = { id: null }; // token selecionado (alças de tamanho e giro, barra do mestre)
   const rotDe = (cena, p) => { const o = OPT.getPos()?.[cena?.id]?.[p.id]; return o && o.rot != null ? +o.rot : +p.rot || 0; };
-  const BARRA = [['vis', '👁', 'Mostrar ou esconder da mesa'], ['trava', '🔒', 'Travar ou destravar'], ['frente', '⬆', 'Trazer para a frente'], ['tras', '⬇', 'Mandar para trás'], ['dup', '⧉', 'Duplicar'], ['nome', 'Aa', 'Mostrar ou esconder o nome'], ['del', '🗑', 'Apagar'], ['mais', '⋯', 'Editar tudo']];
+  const BARRA = [['vis', IC('ver'), 'Mostrar ou esconder da mesa'], ['trava', IC('travar'), 'Travar ou destravar'], ['frente', '⬆', 'Trazer para a frente'], ['tras', '⬇', 'Mandar para trás'], ['dup', '⧉', 'Duplicar'], ['nome', 'Aa', 'Mostrar ou esconder o nome'], ['del', IC('apagar'), 'Apagar'], ['mais', '⋯', 'Editar tudo']];
   const pinoHTML = (p0, mestre, escondido, cena, movel) => { const v = p0.ficha && OPT.vivo ? OPT.vivo(p0) : null, p = v ? { ...p0, nome: v.nome || p0.nome, foto: v.foto || p0.foto, cor: v.cor || p0.cor } : p0; const q = posDe(cena, p), r = REMOTO[p.id] && Date.now() - REMOTO[p.id].t < 4000 ? REMOTO[p.id] : null, sel = SEL.id === p.id && (mestre || movel);
-    return `<div class="pino ${p.oculto ? 'oculto' : ''} ${escondido ? 'na-nevoa' : ''} ${(mestre || movel) && !(p.travado && !mestre) ? 'mov' : ''} ${p.travado ? 'travado' : ''} ${r ? 'movendo' : ''} ${sel ? 'sel' : ''} ${p.semNome ? 'sem-nome' : ''}" data-pino="${esc(p.id)}" style="left:${+q.x || 50}%;top:${+q.y || 50}%;--pc:${esc(p.cor || '#c4000d')};--tam:${+p.tam || 1};--rot:${rotDe(cena, p)}deg${r ? `;--mv:${esc(r.cor)}` : ''}" title="${esc(p.nome)}">${r ? `<span class="pino-quem">✋ ${esc(r.nome)}</span>` : ''}
-    <span class="pino-nome">${esc(p.nome)}${p.oculto ? ' 🙈' : ''}${p.travado ? ' 🔒' : ''}${escondido ? ' 🌫' : ''}</span><span class="pino-alvo"><span class="pino-cab" style="${p.foto ? `background-image:url('${esc(p.foto)}')` : ''}">${p.foto ? '' : esc(p.ic || '📍')}</span>${sel ? `<span class="pino-h girar" data-h="girar" title="Girar (Shift: de 15 em 15°)"></span>${mestre ? ['nw', 'ne', 'sw', 'se'].map(c => `<span class="pino-h canto ${c}" data-h="tam" title="Arraste para aumentar ou diminuir"></span>`).join('') : ''}` : ''}</span>
+    return `<div class="pino ${p.oculto ? 'oculto' : ''} ${escondido ? 'na-nevoa' : ''} ${(mestre || movel) && !(p.travado && !mestre) ? 'mov' : ''} ${p.travado ? 'travado' : ''} ${r ? 'movendo' : ''} ${sel ? 'sel' : ''} ${p.semNome ? 'sem-nome' : ''}" data-pino="${esc(p.id)}" style="left:${+q.x || 50}%;top:${+q.y || 50}%;--pc:${esc(p.cor || '#c4000d')};--tam:${+p.tam || 1};--rot:${rotDe(cena, p)}deg${r ? `;--mv:${esc(r.cor)}` : ''}" title="${esc(p.nome)}">${r ? `<span class="pino-quem">${esc(r.nome)}</span>` : ''}
+    <span class="pino-nome">${esc(p.nome)}${p.oculto ? ' ' + IC('esconder') : ''}${p.travado ? ' ' + IC('travar') : ''}${escondido ? ' ' + IC('nevoa') : ''}</span><span class="pino-alvo"><span class="pino-cab" style="${p.foto ? `background-image:url('${esc(p.foto)}')` : ''}">${p.foto ? '' : icPino(p.ic)}</span>${sel ? `<span class="pino-h girar" data-h="girar" title="Girar (Shift: de 15 em 15°)"></span>${mestre ? ['nw', 'ne', 'sw', 'se'].map(c => `<span class="pino-h canto ${c}" data-h="tam" title="Arraste para aumentar ou diminuir"></span>`).join('') : ''}` : ''}</span>
     ${sel && mestre ? `<div class="pino-barra">${BARRA.map(([k, ic, t]) => `<button type="button" data-pb="${k}" title="${t}" aria-label="${t}" class="${(k === 'vis' && p.oculto) || (k === 'trava' && p.travado) || (k === 'nome' && p.semNome) ? 'on' : ''}">${ic}</button>`).join('')}</div>` : ''}</div>`; };
   // alças: girar e mudar o tamanho arrastando (mostra ao vivo, grava ao soltar)
   function gestoAlca(e, palco, aoFim) {
@@ -109,18 +113,18 @@
     const ehAtivo = cena && ativo && cena.id === ativo.id;
     if (A.offsetHeight) { const h0 = A.offsetHeight; A.style.minHeight = h0 + 'px'; setTimeout(() => { A.style.minHeight = ''; }, 1500); }
     A.innerHTML = `<div class="caixa bloco mapa-caixa">
-      ${mestre ? `<div class="mapa-cenas" data-n="${cenas.length}"><span data-ativo="${esc(ativo?.id || '')}" hidden></span>${cenas.map(c => `<button type="button" class="cena-tab ${c.id === cena?.id ? 'aqui' : ''} ${c.id === ativo?.id ? 'ativa' : ''}" data-cena="${esc(c.id)}" style="${c.img ? `--ci:url('${esc(c.img)}')` : ''}" title="${c.id === ativo?.id ? 'A mesa está vendo esta' : 'Só você está vendo'}"><b>${esc(c.nome)}</b>${c.id === ativo?.id ? '<small>👁 a mesa vê</small>' : ''}</button>`).join('')}<button type="button" class="cena-tab nova" data-m="nova" title="Nova cena">＋ Cena</button></div>` : ''}
-      <div class="btns" style="justify-content:space-between;align-items:center"><h3>🗺 ${cena ? esc(cena.nome) : 'Mapa'}${mestre && cena && !ehAtivo ? ' <span class="tag">só você vê</span>' : ''}</h3>
-        ${mestre && cena ? `<div class="btns">${ehAtivo ? '' : '<button class="btn mini perigo" data-m="mostrar">👁 Mostrar para a mesa</button>'}<button class="btn mini sec" data-m="img">${cena.img ? 'Trocar imagem' : 'Subir imagem'}</button><button class="btn mini sec" data-m="ren">Renomear</button><button class="btn mini sec" data-m="dup">Duplicar</button><button class="btn mini sec" data-m="apagar">Apagar cena</button></div>` : ''}</div>
+      ${mestre ? `<div class="mapa-cenas" data-n="${cenas.length}"><span data-ativo="${esc(ativo?.id || '')}" hidden></span>${cenas.map(c => `<button type="button" class="cena-tab ${c.id === cena?.id ? 'aqui' : ''} ${c.id === ativo?.id ? 'ativa' : ''}" data-cena="${esc(c.id)}" style="${c.img ? `--ci:url('${esc(c.img)}')` : ''}" title="${c.id === ativo?.id ? 'A mesa está vendo esta' : 'Só você está vendo'}"><b>${esc(c.nome)}</b>${c.id === ativo?.id ? '<small>' + IC('ver') + ' a mesa vê</small>' : ''}</button>`).join('')}<button type="button" class="cena-tab nova" data-m="nova" title="Nova cena">＋ Cena</button></div>` : ''}
+      <div class="btns" style="justify-content:space-between;align-items:center"><h3><i data-ic="mapa"></i> ${cena ? esc(cena.nome) : 'Mapa'}${mestre && cena && !ehAtivo ? ' <span class="tag">só você vê</span>' : ''}</h3>
+        ${mestre && cena ? `<div class="btns">${ehAtivo ? '' : '<button class="btn mini perigo" data-m="mostrar"><i data-ic="ver"></i> Mostrar para a mesa</button>'}<button class="btn mini sec" data-m="img">${cena.img ? 'Trocar imagem' : 'Subir imagem'}</button><button class="btn mini sec" data-m="ren">Renomear</button><button class="btn mini sec" data-m="dup">Duplicar</button><button class="btn mini sec" data-m="apagar">Apagar cena</button></div>` : ''}</div>
       ${mestre && cena?.img ? `<div class="mapa-ferr">
-          <span class="seg"><button type="button" data-modo="mover" class="${ui.modo === 'mover' ? 'aqui' : ''}">✋ Pinos</button><button type="button" data-modo="revelar" class="${ui.modo === 'revelar' ? 'aqui' : ''}">🔦 Revelar</button><button type="button" data-modo="cobrir" class="${ui.modo === 'cobrir' ? 'aqui' : ''}">🌫 Cobrir</button></span>
+          <span class="seg"><button type="button" data-modo="mover" class="${ui.modo === 'mover' ? 'aqui' : ''}"><i data-ic="mao"></i> Pinos</button><button type="button" data-modo="revelar" class="${ui.modo === 'revelar' ? 'aqui' : ''}"><i data-ic="lanterna"></i> Revelar</button><button type="button" data-modo="cobrir" class="${ui.modo === 'cobrir' ? 'aqui' : ''}"><i data-ic="nevoa"></i> Cobrir</button></span>
           <label class="pincel" ${ui.modo === 'mover' ? 'hidden' : ''}>Pincel <input type="range" min="0" max="5" step="1" value="${ui.pincel}" data-pincel></label>
-          <span class="btns">${cena.nevoa?.on ? '<button class="btn mini sec" data-m="tudo1">Revelar tudo</button><button class="btn mini sec" data-m="tudo0">Cobrir tudo</button><button class="btn mini sec" data-m="semnevoa">Tirar névoa</button>' : '<button class="btn mini" data-m="comnevoa">🌫 Ligar névoa</button>'}
+          <span class="btns">${cena.nevoa?.on ? '<button class="btn mini sec" data-m="tudo1">Revelar tudo</button><button class="btn mini sec" data-m="tudo0">Cobrir tudo</button><button class="btn mini sec" data-m="semnevoa">Tirar névoa</button>' : '<button class="btn mini" data-m="comnevoa"><i data-ic="nevoa"></i> Ligar névoa</button>'}
           <button class="btn mini sec" data-m="sobs">+ ${T.quem}</button><button class="btn mini sec" data-m="npc">+ NPC</button><button class="btn mini sec" data-m="ass" title="Coloca no mapa as ameaças que estão no combate">+ ${T.ass}</button><button class="btn mini sec" data-m="novo">+ Pino</button></span></div>` : ''}
       ${cena?.img ? `<div class="mapa-vista"><div class="mapa-palco ${mestre ? 'modo-' + ui.modo : ''}" data-cena="${esc(cena.id)}" data-img="${esc(cena.img)}"><img src="${esc(cena.img)}" alt="${esc(cena.nome)}" draggable="false"><canvas class="nevoa ${mestre ? '' : 'jog'}"></canvas><div class="pinos">${pinosVisiveis(cena, mestre)}</div></div>
-        <div class="mapa-zoom" role="toolbar" aria-label="Zoom do mapa"><button type="button" data-z="mais" title="Aproximar" aria-label="Aproximar">＋</button><span data-z-n>1×</span><button type="button" data-z="menos" title="Afastar" aria-label="Afastar">－</button><button type="button" data-z="foco" title="Foco: toque num ponto do mapa para aproximar ali" aria-label="Foco">🎯</button><button type="button" data-z="pinos" title="Focar num pino" aria-label="Focar num pino">📍</button><button type="button" data-z="reset" title="Ver o mapa inteiro" aria-label="Ver o mapa inteiro">⤢</button></div>
+        <div class="mapa-zoom" role="toolbar" aria-label="Zoom do mapa"><button type="button" data-z="mais" title="Aproximar" aria-label="Aproximar">＋</button><span data-z-n>1×</span><button type="button" data-z="menos" title="Afastar" aria-label="Afastar">－</button><button type="button" data-z="foco" title="Foco: toque num ponto do mapa para aproximar ali" aria-label="Foco"><i data-ic="foco"></i></button><button type="button" data-z="pinos" title="Focar num pino" aria-label="Focar num pino"><i data-ic="pino"></i></button><button type="button" data-z="reset" title="Ver o mapa inteiro" aria-label="Ver o mapa inteiro">⤢</button></div>
         <div class="mapa-zoom-lista" hidden></div></div>
-        <p class="tag" style="margin:0">${mestre ? (ui.modo === 'mover' ? 'Arraste os pinos. Clique num pino para editar, esconder ou remover. 🙈 só você vê; 🌫 está na névoa (a mesa não vê).' : `Passe o dedo ou o mouse sobre o mapa para ${ui.modo === 'revelar' ? 'revelar' : 'cobrir'}. A mesa vê na hora em que você solta.`) : 'O que a sua personagem consegue ver agora.'}</p>`
+        <p class="tag" style="margin:0">${mestre ? (ui.modo === 'mover' ? 'Arraste os pinos. Clique num pino para editar, esconder ou remover. <i data-ic="esconder"></i> só você vê; <i data-ic="nevoa"></i> está na névoa (a mesa não vê).' : `Passe o dedo ou o mouse sobre o mapa para ${ui.modo === 'revelar' ? 'revelar' : 'cobrir'}. A mesa vê na hora em que você solta.`) : 'O que a sua personagem consegue ver agora.'}</p>`
       : `<div class="vazio">${mestre ? (cena ? 'Suba a imagem desta cena: planta do local, sala, porão, mapa da cidade…' : 'Crie a primeira cena com ＋ Cena. Dá para ter uma por prédio, sala ou andar e trocar na hora.') : `O Mestre ainda não mostrou nenhum mapa.`}</div>`}</div>`;
     const palco = A.querySelector('.mapa-palco');
     if (palco) {
@@ -158,7 +162,7 @@
       const l = cenasAt().filter(x => x.id !== a.id); ui.ver = l[0]?.id || null; await salvarCenas(l, getC().mapaAtivo === a.id ? { mapaAtivo: l[0]?.id || null } : {}); refazer(); });
     // névoa
     const grade = () => { const im = A.querySelector('.mapa-palco img'), rows = Math.max(6, Math.round(COLS * (im?.naturalHeight || 3) / (im?.naturalWidth || 4))); return [COLS, rows]; };
-    A.querySelector('[data-m="comnevoa"]')?.addEventListener('click', async () => { const [c, r] = grade(); await trocarCena(x => ({ ...x, nevoa: nevoaCheia(c, r) })); ui.modo = 'revelar'; refazer(); toast('Tudo coberto. Use 🔦 Revelar para abrir o que a mesa vê.'); });
+    A.querySelector('[data-m="comnevoa"]')?.addEventListener('click', async () => { const [c, r] = grade(); await trocarCena(x => ({ ...x, nevoa: nevoaCheia(c, r) })); ui.modo = 'revelar'; refazer(); toast('Tudo coberto. Use Revelar para abrir o que a mesa vê.'); });
     A.querySelector('[data-m="semnevoa"]')?.addEventListener('click', async () => { await trocarCena(x => ({ ...x, nevoa: null })); ui.modo = 'mover'; refazer(); });
     A.querySelector('[data-m="tudo1"]')?.addEventListener('click', async () => { await trocarCena(x => ({ ...x, nevoa: { ...x.nevoa, v: '1'.repeat(x.nevoa.cols * x.nevoa.rows) } })); refazer(); });
     A.querySelector('[data-m="tudo0"]')?.addEventListener('click', async () => { await trocarCena(x => ({ ...x, nevoa: { ...x.nevoa, v: '0'.repeat(x.nevoa.cols * x.nevoa.rows) } })); refazer(); });
@@ -169,7 +173,7 @@
     const pinosAt = () => [...(atual()?.pinos || [])];
     A.querySelector('[data-m="sobs"]')?.addEventListener('click', async () => {
       const l = pinosAt(); let n = 0;
-      DETS.filter(f => !f.fora && !l.some(p => p.ficha === f.id)).forEach((f, i) => { n++; l.push({ id: novoId('p'), ficha: f.id, nome: f.nome, foto: f.foto || '', cor: '#5d86c4', ic: '📍', x: 12 + (i % 6) * 8, y: 88, fixo: true, ...(f.oculto ? { oculto: true } : {}) }); });
+      DETS.filter(f => !f.fora && !l.some(p => p.ficha === f.id)).forEach((f, i) => { n++; l.push({ id: novoId('p'), ficha: f.id, nome: f.nome, foto: f.foto || '', cor: '#5d86c4', ic: 'alfinete', x: 12 + (i % 6) * 8, y: 88, fixo: true, ...(f.oculto ? { oculto: true } : {}) }); });
       if (!n) return toast(`Todo mundo já tem pino nesta cena.`); await salvarPinos(l); refazer(); });
     A.querySelector('[data-m="npc"]')?.addEventListener('click', () => {
       const npcs = (getC().npcs || []).slice().sort((a, b) => (b.t || 0) - (a.t || 0)), ja = new Set(pinosAt().filter(p => p.npc).map(p => p.npc));
@@ -183,7 +187,7 @@
         m.querySelector('#npc-ok').onclick = async () => {
           const ids = [...m.querySelectorAll('.npc-escolha input:checked:not(:disabled)')].map(i => i.value); if (!ids.length) { toast('Marque pelo menos um.'); return; }
           const oc = m.querySelector('#npc-oc').checked, l = pinosAt();
-          ids.forEach((id, i) => { const n = npcs.find(x => x.id === id); l.push({ id: novoId('p'), npc: n.id, nome: n.nome, foto: n.foto || '', ic: '🎭', cor: susp(n) ? '#c4000d' : '#9a86f0', oculto: oc, x: 40 + (i % 5) * 5, y: 45 + Math.floor(i / 5) * 6 }); });
+          ids.forEach((id, i) => { const n = npcs.find(x => x.id === id); l.push({ id: novoId('p'), npc: n.id, nome: n.nome, foto: n.foto || '', ic: 'pessoas', cor: susp(n) ? '#c4000d' : '#9a86f0', oculto: oc, x: 40 + (i % 5) * 5, y: 45 + Math.floor(i / 5) * 6 }); });
           fechar(); await salvarPinos(l); refazer(); toast(ids.length > 1 ? `${ids.length} NPCs no mapa. Arraste para o lugar.` : 'NPC no mapa. Arraste para o lugar.'); };
       });
     });
@@ -193,15 +197,15 @@
       if (noCombate.length) {
         const l = pinosAt(), ja = new Set(l.filter(p => p.combate).map(p => p.combate)), novas = noCombate.filter(x => !ja.has(x.nome));
         if (!novas.length) return toast('Todas as ameaças do combate já estão nesta cena.');
-        novas.forEach((x, i) => l.push({ id: novoId('p'), combate: x.nome, nome: x.nome, ic: x.tipo === 'npc' ? '🎭' : '🔪', cor: x.tipo === 'npc' ? '#9a86f0' : '#c4000d', foto: x.imagem || '', x: Math.min(90, 30 + (i % 6) * 8), y: 20 + Math.floor(i / 6) * 10 }));
+        novas.forEach((x, i) => l.push({ id: novoId('p'), combate: x.nome, nome: x.nome, ic: x.tipo === 'npc' ? 'pessoas' : 'faca', cor: x.tipo === 'npc' ? '#9a86f0' : '#c4000d', foto: x.imagem || '', x: Math.min(90, 30 + (i % 6) * 8), y: 20 + Math.floor(i / 6) * 10 }));
         await salvarPinos(l); refazer(); toast(novas.length > 1 ? `${novas.length} ameaças do combate no mapa. Arraste para o lugar.` : `${novas[0].nome} no mapa. Arraste para o lugar.`); return;
       }
       const l = pinosAt(); if (l.some(p => p.assassino)) return toast('Nenhuma ameaça no combate, e o pino genérico de Ameaça já está nesta cena.');
       const nome = E?.nome || T.ass;
-      l.push({ id: novoId('p'), assassino: true, nome, ic: '🔪', cor: '#8e0010', foto: E?.foto || '', oculto: true, x: 50, y: 12 });
+      l.push({ id: novoId('p'), assassino: true, nome, ic: 'faca', cor: '#8e0010', foto: E?.foto || '', oculto: true, x: 50, y: 12 });
       await salvarPinos(l); refazer(); toast('Nenhuma ameaça no combate: criei um pino genérico escondido. Clique nele para mostrar à mesa.'); });
     const editar = (pino, novo) => abrirModal(novo ? 'Novo pino' : 'Editar pino', `<div class="campo"><label class="rotulo" for="pn-n">Nome</label><input type="text" id="pn-n" maxlength="40" value="${esc(pino.nome || '')}"></div>
-        <div class="campo"><span class="rotulo">Ícone</span><div class="pino-ics">${ICONES.map(ic => `<button type="button" class="${ic === (pino.ic || '📍') ? 'aqui' : ''}" data-ic="${ic}">${ic}</button>`).join('')}</div></div>
+        <div class="campo"><span class="rotulo">Ícone</span><div class="pino-ics">${ICONES.map(ic => `<button type="button" class="${ic === nomeIc(pino.ic) ? 'aqui' : ''}" data-ic="${ic}" aria-label="${ic}">${IC(ic)}</button>`).join('')}</div></div>
         <div class="duas"><div class="campo"><label class="rotulo" for="pn-c">Cor</label><input type="color" id="pn-c" value="${esc(pino.cor || '#c4000d')}" style="height:40px;padding:2px"></div>
         <label class="chk" style="align-self:end"><input type="checkbox" id="pn-o" ${pino.oculto ? 'checked' : ''}> Esconder da mesa</label></div>
         <div class="campo"><label class="rotulo" for="pn-t">Tamanho <b id="pn-tv">${Math.round((+pino.tam || 1) * 100)}%</b></label><input type="range" id="pn-t" min="0.5" max="4" step="0.25" value="${+pino.tam || 1}"></div>
@@ -210,9 +214,9 @@
         ${pino.foto ? `<label class="chk"><input type="checkbox" id="pn-f" checked> Usar a foto no lugar do ícone</label>` : ''}
         ${cenas.length > 1 && !novo ? `<div class="campo"><label class="rotulo" for="pn-mv">Levar para outra cena</label><select id="pn-mv"><option value="">Fica aqui</option>${cenas.filter(c => c.id !== ui.ver).map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('')}</select></div>` : ''}
         <div class="btns"><button class="btn" id="pn-ok">${novo ? 'Colocar' : 'Salvar'}</button>${novo ? '' : '<button class="btn perigo" id="pn-x">Remover</button>'}</div>`, (m, fechar) => {
-      let ic = pino.ic || '📍';
+      let ic = nomeIc(pino.ic);
       m.querySelector('#pn-t').oninput = e => { m.querySelector('#pn-tv').textContent = Math.round(e.target.value * 100) + '%'; };
-      m.querySelectorAll('[data-ic]').forEach(b => b.onclick = () => { ic = b.dataset.ic; m.querySelectorAll('[data-ic]').forEach(x => x.classList.toggle('aqui', x === b)); });
+      m.querySelectorAll('.pino-ics [data-ic]').forEach(b => b.onclick = () => { ic = b.dataset.ic; m.querySelectorAll('.pino-ics [data-ic]').forEach(x => x.classList.toggle('aqui', x === b)); });
       m.querySelector('#pn-ok').onclick = async () => {
         const p2 = { ...pino, nome: m.querySelector('#pn-n').value.trim() || 'Pino', ic, cor: m.querySelector('#pn-c').value, oculto: m.querySelector('#pn-o').checked, fixo: m.querySelector('#pn-fx').checked, livre: m.querySelector('#pn-lv').checked, tam: +m.querySelector('#pn-t').value || 1, foto: m.querySelector('#pn-f') && !m.querySelector('#pn-f').checked ? '' : pino.foto || '' };
         const destino = m.querySelector('#pn-mv')?.value; fechar();
@@ -223,7 +227,7 @@
         l[i] = { ...l[i], pinos: ps }; await salvarCenas(l); refazer(); };
       m.querySelector('#pn-x')?.addEventListener('click', async () => { fechar(); await salvarPinos(pinosAt().filter(p => p.id !== pino.id)); refazer(); });
     });
-    A.querySelector('[data-m="novo"]')?.addEventListener('click', () => editar({ id: novoId('p'), nome: '', ic: '📍', cor: '#f2c14e', x: 50, y: 50 }, true));
+    A.querySelector('[data-m="novo"]')?.addEventListener('click', () => editar({ id: novoId('p'), nome: '', ic: 'alfinete', cor: '#f2c14e', x: 50, y: 50 }, true));
     if (!palco) return;
 
     // arrastar pinos ou pintar a névoa
@@ -294,7 +298,7 @@
     vista.querySelector('[data-z="pinos"]').onclick = () => {
       if (!lista.hidden) { lista.hidden = true; return; }
       const c = getCena(), ps = (c.pinos || []).filter(p => mestre || (!p.oculto && (p.fixo || revelado(c.nevoa, +p.x || 50, Math.min(99.9, +p.y || 50)))));
-      lista.innerHTML = ps.length ? ps.map(p => `<button type="button" data-zp="${esc(p.id)}"><span>${esc(p.ic || '📍')}</span>${esc(p.nome || 'Pino')}</button>`).join('') : '<span class="tag">Nenhum pino nesta cena.</span>';
+      lista.innerHTML = ps.length ? ps.map(p => `<button type="button" data-zp="${esc(p.id)}"><span>${icPino(p.ic)}</span>${esc(p.nome || 'Pino')}</button>`).join('') : '<span class="tag">Nenhum pino nesta cena.</span>';
       lista.hidden = false;
       lista.querySelectorAll('[data-zp]').forEach(b => b.onclick = () => { const p = (getCena().pinos || []).find(x => x.id === b.dataset.zp); lista.hidden = true; if (p) focar(+p.x || 50, Math.max(0, (+p.y || 50) - 4), 3); });
     };
@@ -363,7 +367,7 @@
     const el = document.createElement('section'); el.className = 'mapa-pop'; el.setAttribute('aria-label', 'Mapa da mesa');
     const w = Math.min(salvo.w || 460, innerWidth - 16), x = Math.min(Math.max(8, salvo.x ?? innerWidth - w - 16), innerWidth - 120), y = Math.min(Math.max(8, salvo.y ?? 80), innerHeight - 80);
     el.style.cssText = `left:${x}px;top:${y}px;width:${w}px`;
-    el.innerHTML = `<header class="mapa-pop-cab"><b>🗺 <span data-pop-tit>Mapa</span></b><span class="btns"><button type="button" data-pop="menos" title="Diminuir" aria-label="Diminuir">−</button><button type="button" data-pop="mais" title="Aumentar" aria-label="Aumentar">+</button><button type="button" data-pop="x" title="Fechar" aria-label="Fechar">✕</button></span></header><div class="mapa-pop-corpo"><div class="vazio">Abrindo o mapa…</div></div>`;
+    el.innerHTML = `<header class="mapa-pop-cab"><b><i data-ic="mapa"></i> <span data-pop-tit>Mapa</span></b><span class="btns"><button type="button" data-pop="menos" title="Diminuir" aria-label="Diminuir">−</button><button type="button" data-pop="mais" title="Aumentar" aria-label="Aumentar">+</button><button type="button" data-pop="x" title="Fechar" aria-label="Fechar">✕</button></span></header><div class="mapa-pop-corpo"><div class="vazio">Abrindo o mapa…</div></div>`;
     document.body.appendChild(el); POP.el = el;
     const guardar = () => { const r = el.getBoundingClientRect(); try { localStorage.setItem('adr-mapa-pop', JSON.stringify({ x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width) })); } catch (e) {} };
     const tamanho = d => { const r = el.getBoundingClientRect(), nw = Math.min(innerWidth - 16, Math.max(240, r.width * d)); el.style.width = nw + 'px'; if (r.left + nw > innerWidth - 8) el.style.left = Math.max(8, innerWidth - nw - 8) + 'px'; guardar(); };

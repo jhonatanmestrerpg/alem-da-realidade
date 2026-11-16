@@ -5,6 +5,12 @@
 -- Pode rodar de novo sem quebrar nada.
 -- =====================================================================
 
+-- dono do site: o único que libera os fundamentos do sistema para outros administradores
+create or replace function public.eh_dono() returns boolean
+language sql stable security definer set search_path = public, auth as $$
+  select exists (select 1 from auth.users where id = auth.uid() and lower(email) = 'jhonatan.mestrerpg@gmail.com');
+$$;
+
 -- quem pode criar, alterar ou apagar o documento do caminho p (d = dados novos; nulo ao apagar)
 create or replace function public.pode_escrever(p text, d jsonb) returns boolean
 language plpgsql stable security definer set search_path = public as $$
@@ -18,6 +24,17 @@ begin
   -- espaços pessoais
   if p like 'mestre/%' then return s[2] = u; end if;
   if p like 'data/users/%' then return s[3] = u; end if;
+  -- base do sistema: comum = qualquer administrador; fundamentos = o dono, ou administrador com liberação de 24 h ainda valendo
+  if s[1] = 'sistema' then
+    if s[2] = 'base' then return public.eh_admin(); end if;
+    if s[2] = 'fundamental' then
+      return public.eh_dono() or (public.eh_admin() and exists (select 1 from public.docs l where l.path = 'sistema-liberacoes/' || u
+        and coalesce((l.dados->>'ate')::numeric, 0) > extract(epoch from now()) * 1000));
+    end if;
+    return public.eh_dono();
+  end if;
+  if s[1] = 'sistema-liberacoes' then return public.eh_dono(); end if;
+  if s[1] = 'sistema-pedidos' then return public.eh_dono() or (s[2] = u and public.eh_admin()); end if;
   if public.eh_admin() then return true; end if;
 
   select dados into velho from public.docs where path = p;
