@@ -30,6 +30,10 @@ function registrarClasseFicha(f) { if (f?.classeHb?.nome) HB_SNAP[f.classeHb.nom
 // Marca vinda da classe acompanha a classe (números, habilidades) até alguém editar ela na mão
 const marcaEf = (F, c) => { if (!c || c.proprio) return c; const T = (classe(F?.classe)?.chakras || []).find(t => t && t.nome === (c.tpl || c.nome)); return T ? { ...JSON.parse(JSON.stringify(T)), id: c.id, foto: c.foto || T.foto || '', manifesta: c.manifesta, tpl: T.nome } : c; };
 const marcasDe = F => (F?.chakras || []).map(c => marcaEf(F, c));
+// quantas Marcas cabem vestidas juntas: 1 fora do Ashura; no Ashura, o que a subclasse diz (campo ou o texto "veste até N Marcas")
+const limiteVestir = F => { if (!F?.ashura) return 1; const S = subAtual(F) || {}; return Math.max(1, +(S.ashuraMarcas || (S.habilidades || []).map(h => /veste até (\d+)\s+Marcas/i.exec(h.texto || '')).find(Boolean)?.[1] || 1)); };
+const marcasVestidas = F => { const p = typeof chakraVest === 'function' ? chakraVest(F) : null; if (!p) return []; if (!F.ashura) return [p];
+  const L = marcasDe(F); return [p, ...(F.chakrasJuntas || []).map(id => L.find(c => c.id === id)).filter(c => c && c.id !== p.id).slice(0, limiteVestir(F) - 1)]; };
 const temMarcas = f => !!(classe(f?.classe)?.chakras || (f?.chakras || []).length);
 const subAtual = f => classe(f?.classe)?.subclasses?.find(s => s.nome === f?.subclasse) || null;
 const NOMES_ATR = { forca: 'FOR', destreza: 'DES', constituicao: 'CON', inteligencia: 'INT', presenca: 'PRE' };
@@ -40,21 +44,21 @@ const fotoMarca = (c, cls = 'mk-ft') => `<span class="${cls}" style="--mc:${esc(
 
 /* a roda atrás do retrato: aparece quando o Ashura está ativo */
 function rodaMarcas(F) {
-  const L = marcasDe(F).filter(c => c.id !== F.chakraVestido).slice(0, 12); if (!F?.ashura || !L.length) return '';
+  const VS = new Set(marcasVestidas(F).map(c => c.id)), L = marcasDe(F).filter(c => !VS.has(c.id)).slice(0, 12); if (!F?.ashura || !L.length) return '';
   return `<div class="roda-ashura" aria-label="Roda de Marcas ativa" style="--n:${L.length}">${L.map((c, i) => `<span class="roda-m" style="--i:${i};--mc:${esc(c.cor || '#c8a35a')}" title="${esc(c.nome)}">${c.foto ? `<i style="background-image:url('${esc(c.foto)}')"></i>` : `<i>${esc((c.nome || '?')[0])}</i>`}</span>`).join('')}</div>`;
 }
 
 function marcasHTML(F, podeEditar) {
-  const L = marcasDe(F), S = subAtual(F), C = classe(F.classe), vest = F.chakraVestido;
+  const L = marcasDe(F), S = subAtual(F), C = classe(F.classe), vest = F.chakraVestido, VS = marcasVestidas(F), juntas = new Set(VS.slice(1).map(c => c.id)), lim = limiteVestir(F);
   const cap = S?.marcasMax ? Math.max(1, +(atrEf(F)[S.marcasAtr || 'presenca'] || 0)) : 0;
   const regra = S?.regraMarcas || C?.regraMarcas || '';
   return `<div class="marcas"><div class="cab-pagina"><div><h2 style="margin:0">Marcas</h2><p class="dim" style="margin:4px 0 0; max-width:72ch">${regra ? esc(regra) : 'Entidades presas à sua Roda. Vestir uma Marca é vestir a intenção dela: nome, rosto, bônus e habilidades mudam enquanto durar.'}</p></div>
       ${podeEditar ? `<div class="acoes-topo"><button class="btn ${F.ashura ? 'perigo' : 'sec'}" id="mk-ashura" aria-pressed="${!!F.ashura}">${IC('brilho')} ${F.ashura ? 'Encerrar Ashura' : 'Ashura: abrir a Roda'}</button></div>` : ''}</div>
-    <span class="rotulo">${L.length}${cap ? '/' + cap : ''} Marcas${vest ? ` · vestindo ${esc(L.find(c => c.id === vest)?.nome || '')}` : ''}${F.ashura ? ' · Roda aberta' : ''}</span>
-    <div class="grade-mk">${L.map((c, i) => `<article class="mk-card ${c.id === vest ? 'vestida' : ''}" style="--mc:${esc(c.cor || '#b4333b')}">
+    <span class="rotulo">${L.length}${cap ? '/' + cap : ''} Marcas${VS.length ? ` · vestindo ${esc(VS.map(c => c.nome).join(' + '))}` : ''}${F.ashura ? ` · Roda aberta, até ${lim} vestida${lim > 1 ? 's' : ''} (${VS.length}/${lim})` : ' · uma vestida por vez'}</span>
+    <div class="grade-mk">${L.map((c, i) => `<article class="mk-card ${c.id === vest || juntas.has(c.id) ? 'vestida' : ''}" style="--mc:${esc(c.cor || '#b4333b')}">
         ${fotoMarca(c)}<div class="mk-tx"><b>${esc(c.nome)}</b>${c.titulo ? `<span class="mk-tit">${esc(c.titulo)}</span>` : ''}
-          <div class="mk-tags">${resumoMarca(c).map(t => `<span class="tag">${esc(t)}</span>`).join('')}${c.id === vest ? '<span class="tag crit">Vestida</span>' : ''}${c.manifesta ? '<span class="tag">Manifestada</span>' : ''}</div>
-          <div class="btns"><button class="btn mini sec" data-mk-ver="${i}">${IC('ver')} Ficha</button>${podeEditar ? `<button class="btn mini ${c.id === vest ? 'sec' : ''}" data-mk-vest="${i}">${c.id === vest ? 'Tirar' : 'Vestir a intenção'}</button><button class="btn mini sec" data-mk-man="${i}" title="Fora de combate: a entidade aparece como pessoa ou criatura">${c.manifesta ? 'Recolher' : 'Manifestar'}</button><button class="btn mini sec" data-mk-ed="${i}" aria-label="Editar ${esc(c.nome)}">${IC('editar')}</button><button class="btn-x" data-mk-rm="${i}" aria-label="Soltar ${esc(c.nome)}">${IC('apagar')}</button>` : ''}</div></div></article>`).join('') || '<div class="vazio">Nenhuma Marca na Roda.</div>'}</div>
+          <div class="mk-tags">${resumoMarca(c).map(t => `<span class="tag">${esc(t)}</span>`).join('')}${c.id === vest ? '<span class="tag crit">Vestida</span>' : juntas.has(c.id) ? '<span class="tag crit">Vestida junto</span>' : ''}${c.manifesta ? '<span class="tag">Manifestada</span>' : ''}</div>
+          <div class="btns"><button class="btn mini sec" data-mk-ver="${i}">${IC('ver')} Ficha</button>${podeEditar ? `<button class="btn mini ${c.id === vest ? 'sec' : ''}" data-mk-vest="${i}">${c.id === vest ? 'Tirar' : vest ? 'Trocar por esta' : 'Vestir a intenção'}</button>${vest && c.id !== vest && lim > 1 ? (juntas.has(c.id) ? `<button class="btn mini sec" data-mk-junto="${i}">Tirar do Ashura</button>` : `<button class="btn mini" data-mk-junto="${i}" ${VS.length >= lim ? 'disabled title="Já está no limite do Ashura"' : ''}>Vestir junto (${VS.length}/${lim})</button>`) : ''}<button class="btn mini sec" data-mk-man="${i}" title="Fora de combate: a entidade aparece como pessoa ou criatura">${c.manifesta ? 'Recolher' : 'Manifestar'}</button><button class="btn mini sec" data-mk-ed="${i}" aria-label="Editar ${esc(c.nome)}">${IC('editar')}</button><button class="btn-x" data-mk-rm="${i}" aria-label="Soltar ${esc(c.nome)}">${IC('apagar')}</button>` : ''}</div></div></article>`).join('') || '<div class="vazio">Nenhuma Marca na Roda.</div>'}</div>
     ${podeEditar ? `<div class="btns"><button class="btn" id="mk-cap">${IC('caveira')} Selar ameaça</button>${(C?.chakras || []).length ? `<button class="btn sec" id="mk-cls">Marcas da classe (${C.chakras.length})</button>` : ''}<button class="btn sec" id="mk-novo">+ Marca em branco</button></div>` : ''}</div>`;
 }
 
@@ -99,22 +103,33 @@ function formMarca(c0, aoSalvar) {
   });
 }
 
-/* veste (ou tira, com id vazio) uma Marca: ajusta os vitais pelo novo máximo */
-async function vestirMarca(F, id, { salvar, render }) {
-  const L = F.chakras || [], antes = { ...F }, depois = { ...F, chakraVestido: id || '', vetorVestido: id ? false : F.vetorVestido };
-  const a0 = calc(antes).max, a1 = calc(depois).max, atual = { ...(antes.atual || a0) };
+/* muda o que está vestido e ajusta os vitais pelo novo máximo */
+async function mudarVestes(F, patch, { salvar, render }, cor, sair) {
+  const antes = { ...F }, depois = { ...F, ...patch }, a0 = calc(antes).max, a1 = calc(depois).max, atual = { ...(antes.atual || a0) };
   for (const k of ['pv', 'ps', 'pst']) atual[k] = Math.max(1, Math.min(a1[k], (atual[k] ?? a0[k]) + (a1[k] - a0[k])));
-  const c = L.find(x => x.id === (id || F.chakraVestido));
-  const fx = document.createElement('div'); fx.className = 'fx-vetor' + (id ? '' : ' sair'); fx.style.setProperty('--cv', c?.cor || '#b4333b'); document.body.appendChild(fx); setTimeout(() => fx.remove(), 1100);
-  Object.assign(F, { chakraVestido: id || '', vetorVestido: depois.vetorVestido, atual }); setTimeout(render, 380);
-  await salvar({ chakraVestido: id || '', vetorVestido: depois.vetorVestido, atual });
+  if (cor) { const fx = document.createElement('div'); fx.className = 'fx-vetor' + (sair ? ' sair' : ''); fx.style.setProperty('--cv', cor); document.body.appendChild(fx); setTimeout(() => fx.remove(), 1100); }
+  Object.assign(F, patch, { atual }); setTimeout(render, cor ? 380 : 0);
+  await salvar({ ...patch, atual });
+}
+/* veste (ou tira, com id vazio) a Marca principal. Fora do Ashura só cabe uma: vestir outra troca */
+function vestirMarca(F, id, ops) {
+  const c = (F.chakras || []).find(x => x.id === (id || F.chakraVestido));
+  return mudarVestes(F, { chakraVestido: id || '', vetorVestido: id ? false : F.vetorVestido, chakrasJuntas: id ? (F.chakrasJuntas || []).filter(x => x !== id) : [] }, ops, c?.cor || '#b4333b', !id);
+}
+/* no Ashura: veste outra Marca junto da principal, até o limite da subclasse */
+function vestirJunto(F, id, ops) {
+  const J = (F.chakrasJuntas || []).filter(x => x !== F.chakraVestido), tem = J.includes(id), lim = limiteVestir(F);
+  if (!tem && 1 + J.length >= lim) return toast(`No Ashura você veste no máximo ${lim} Marca${lim > 1 ? 's' : ''} ao mesmo tempo.`);
+  const c = (F.chakras || []).find(x => x.id === id);
+  return mudarVestes(F, { chakrasJuntas: tem ? J.filter(x => x !== id) : [...J, id] }, ops, c?.cor || '#b4333b', tem);
 }
 /* liga os botões da aba Marcas */
 function ligarMarcas(F, { salvar, render }) {
   const L = () => [...(F.chakras || [])];
   const gravar = async (lista, extra = {}) => { F.chakras = lista; Object.assign(F, extra); render(); await salvar({ chakras: lista, ...extra }); };
   const vestir = id => vestirMarca(F, id, { salvar, render });
-  $('#mk-ashura')?.addEventListener('click', async () => { const on = !F.ashura; F.ashura = on; render(); await salvar({ ashura: on }); toast(on ? 'A Roda se abriu atrás de você.' : 'A Roda se fechou.'); });
+  $('#mk-ashura')?.addEventListener('click', async () => { const on = !F.ashura; await mudarVestes(F, { ashura: on, chakrasJuntas: on ? F.chakrasJuntas || [] : [] }, { salvar, render }); toast(on ? `A Roda se abriu atrás de você: até ${limiteVestir(F)} Marcas vestidas.` : 'A Roda se fechou: fica só a Marca principal.'); });
+  $$('[data-mk-junto]').forEach(b => b.onclick = () => vestirJunto(F, marcasDe(F)[+b.dataset.mkJunto].id, { salvar, render }));
   $$('[data-mk-ver]').forEach(b => b.onclick = () => verMarca(marcasDe(F)[+b.dataset.mkVer]));
   $$('[data-mk-vest]').forEach(b => b.onclick = () => { const c = L()[+b.dataset.mkVest]; vestir(c.id === F.chakraVestido ? '' : c.id); });
   $$('[data-mk-man]').forEach(b => b.onclick = () => { const l = L(), i = +b.dataset.mkMan; l[i] = { ...l[i], manifesta: !l[i].manifesta }; gravar(l); });

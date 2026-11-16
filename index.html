@@ -896,7 +896,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261116223028';
+const BUILD = '20261116230053';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1186,7 +1186,7 @@ function calc(f) {
   };
   if (VB) for (const k in form) form[k] += ` + ${VB} ${CK ? 'Marca' : 'Vetor'}`;
   // subclasse homebrew com bônus por nível e Marca vestida com bônus próprio
-  for (const k of ['pv', 'ps', 'pst']) { const x = (+SB.bonusNivel?.[k] || 0) * N; if (x && N) { max[k] += x; form[k] += ` + ${x} ${SB.nome}`; } const y = +CK?.[k] || 0; if (y) { max[k] += y; form[k] += ` + ${y} ${CK.nome}`; } }
+  for (const k of ['pv', 'ps', 'pst']) { const x = (+SB.bonusNivel?.[k] || 0) * N; if (x && N) { max[k] += x; form[k] += ` + ${x} ${SB.nome}`; } for (const m of (typeof marcasVestidas === 'function' ? marcasVestidas(f) : [])) { const y = +m[k] || 0; if (y) { max[k] += y; form[k] += ` + ${y} ${m.nome}`; } } }
   // complemento de vampiro: bônus do tipo e da forma de morcego (Carniçal)
   const VP = vampDe(f), VF = vampForma(f) ? VAMP_TIPOS.carnical.forma : null;
   if (VP) for (const k of ['pv', 'ps', 'pst']) { const x = (+VP[k] || 0) + (VF ? +VF[k] || 0 : 0); if (x) { max[k] = Math.max(1, max[k] + x); form[k] += ` ${x > 0 ? '+' : '−'} ${Math.abs(x)} ${VF && VF[k] ? 'Morcego' : 'Vampiro'}`; } }
@@ -1202,7 +1202,7 @@ function calc(f) {
   const cc = ((A.forca || 0) + (A.constituicao || 0)) * 2;
   const rdItens = eq.reduce((s, i) => s + (+i.rd || 0) * 1, 0);
   const temPas = n => (f.passivas || []).some(p => p.nome === n);
-  const rd = Math.max(0, rdItens + (+f.rdExtra || 0) + (BM?.rd || 0) + (VF ? VF.rd : 0) + (+CK?.rd || 0));
+  const rd = Math.max(0, rdItens + (+f.rdExtra || 0) + (BM?.rd || 0) + (VF ? VF.rd : 0) + (typeof marcasVestidas === 'function' ? marcasVestidas(f) : []).reduce((t, m) => t + (+m.rd || 0), 0));
   const rdPar = Math.max(0, (temPas('Resistência Arcana') ? 15 : 0) + (+f.rdParExtra || 0));
   const rdForm = [rdItens ? `${rdItens} itens` : '', +f.rdExtra ? `${+f.rdExtra > 0 ? '+' : ''}${+f.rdExtra} ajuste` : ''].filter(Boolean).join(' ') || '0';
   const rdParForm = [temPas('Resistência Arcana') ? '15 Resistência Arcana' : '', +f.rdParExtra ? `${+f.rdParExtra > 0 ? '+' : ''}${+f.rdParExtra} ajuste` : ''].filter(Boolean).join(' ') || '0';
@@ -1237,7 +1237,7 @@ function dadosPericia(f, nome) {
   const vb = vetorAtivo(f) ? 1 : 0;
   const alem = vb && pontos + 1 > patente(nivelDe(f)).limite ? 1 : 0;
   const bm = typeof bonusMec === 'function' ? bonusMec(f).pericias : 0;
-  const vd = vampDados(f, nome), vtx = vampTeste(f, nome), mk = +chakraVest(f)?.pericias?.[nome] || 0;
+  const vd = vampDados(f, nome), vtx = vampTeste(f, nome), mk = (typeof marcasVestidas === 'function' ? marcasVestidas(f) : []).reduce((t, m) => t + (+m.pericias?.[nome] || 0), 0);
   return { pontos, vt, vb, alem, atr, vd, mk, dados: Math.max(1, pontos + vt + vb + alem + bm + vd + mk), mod: (atrEf(f)[atr] || 0) + vtx, extraVamp: vtx };
 }
 
@@ -1282,7 +1282,7 @@ const vampDe = f => VAMP_TIPOS[f?.vampiro?.tipo] || null;
 // os bônus do Carniçal (asas, garras, mordida, RD e Resiliência) valem sempre; virar morcego é a cena
 const vampForma = f => f?.vampiro?.tipo === 'carnical';
 // atributos com o bônus do tipo de vampiro (Centenário, Aristocrata)
-const atrEf = f => { const A = { ...(f?.atributos || {}) }, V = vampDe(f); if (V?.atr) for (const k in V.atr) A[k] = (A[k] || 0) + V.atr[k]; const CK = chakraVest(f); if (CK?.atributos) for (const k in CK.atributos) A[k] = (A[k] || 0) + (+CK.atributos[k] || 0); return A; };
+const atrEf = f => { const A = { ...(f?.atributos || {}) }, V = vampDe(f); if (V?.atr) for (const k in V.atr) A[k] = (A[k] || 0) + V.atr[k]; for (const m of (typeof marcasVestidas === 'function' ? marcasVestidas(f) : [])) for (const k in m.atributos || {}) A[k] = (A[k] || 0) + (+m.atributos[k] || 0); return A; };
 // dados extras e bônus fixos de teste vindos do vampiro
 const vampDados = (f, nome) => vampDe(f)?.dados?.[nome] || 0;
 // perícias que o tipo de vampiro mexe (aparecem na lista mesmo sem treino)
@@ -1294,7 +1294,7 @@ function armasVamp(f) {
   const For = atrEf(f).forca || 0, out = [];
   if (vampForma(f)) out.push({ nome: 'Garras', dano: `1d12+${For}`, mult: 3, pericia: 'Lutar', tipoDano: 'Corte', alcance: 'Corpo a corpo', natural: true, obs: 'Vampiro Carniçal.' },
     { nome: 'Mordida', dano: `2d8+${For}`, mult: 2, pericia: 'Lutar', tipoDano: 'Perfuração', alcance: 'Corpo a corpo', natural: true, obs: 'Vampiro Carniçal.' });
-  const CK = chakraVest(f); for (const a of CK?.ataques || []) out.push({ alcance: 'Corpo a corpo', ...a, natural: true, origemNat: CK.nome });
+  for (const m of (typeof marcasVestidas === 'function' ? marcasVestidas(f) : [])) for (const a of m.ataques || []) out.push({ alcance: 'Corpo a corpo', ...a, natural: true, origemNat: m.nome });
   return out;
 }
 function htmlVampiro(F, podeEditar) {
@@ -2232,9 +2232,8 @@ ROTAS.agente = async id => {
       ${F.vetor.descricao ? `<p class="dim" style="max-width:70ch; font-style:italic">${nl(F.vetor.descricao)}</p>` : ''}
       <div class="grade-hab">${hs.map(h => `<article class="hab hab-vetor ${F.vetorVestido && !chakraVest(F) ? '' : 'bloq'}"><span class="nm">${esc(h.nome)}</span><p>${nl(h.texto)}</p></article>`).join('') || '<div class="vazio">O mestre ainda não escreveu habilidades para este vetor.</div>'}</div>`;
   };
-  const MK_HAB = () => { const CK = chakraVest(F); if (!CK) return '';
-    return `<div class="caixa mk-vest-hab" style="--mc:${esc(CK.cor || '#b4333b')}"><div class="cab-pagina"><h2 class="titulo-vetor" style="margin:0">Intenção vestida · ${esc(CK.nome)}</h2><span class="tag tag-vetor">Vestida</span></div>
-      <div class="grade-hab">${(CK.habilidades || []).map(h => `<article class="hab hab-vetor"><span class="nm">${esc(h.nome)}</span><p>${nl(h.texto)}</p>${botoesUso(h.nome)}</article>`).join('') || '<div class="vazio">Esta Marca não tem habilidades escritas.</div>'}</div></div>`; };
+  const MK_HAB = () => marcasVestidas(F).map((CK, i) => `<div class="caixa mk-vest-hab" style="--mc:${esc(CK.cor || '#b4333b')}"><div class="cab-pagina"><h2 class="titulo-vetor" style="margin:0">${i ? 'Vestida junto' : 'Intenção vestida'} · ${esc(CK.nome)}</h2><span class="tag tag-vetor">${i ? 'Ashura' : 'Vestida'}</span></div>
+      <div class="grade-hab">${(CK.habilidades || []).map(h => `<article class="hab hab-vetor"><span class="nm">${esc(h.nome)}</span><p>${nl(h.texto)}</p>${botoesUso(h.nome)}</article>`).join('') || '<div class="vazio">Esta Marca não tem habilidades escritas.</div>'}</div></div>`).join('');
   const RES_HAB = window._resHab = window._resHab || {};
   const autoDe = nome => (F.autos || {})[nome];
   const resumoAuto = a => [a.custo?.pv ? `${a.custo.pv} PV` : '', a.custo?.ps ? `${a.custo.ps} PS` : '', a.custo?.pst ? `${a.custo.pst} PST` : '', a.pericia ? `teste de ${a.pericia}${a.dt ? ' DT ' + a.dt : ''}` : '', a.ataques ? `${a.ataques} ataque${a.ataques > 1 ? 's' : ''}${a.ataques > 1 ? { metade: ', seguintes com metade do dano do primeiro', igual: ', seguintes com o dano do primeiro', cada: '' }[a.modo || 'cada'] : ''}` : '', a.expr ? `${a.rotuloExpr || 'rola'} ${a.expr}` : ''].filter(Boolean).join(' · ');
