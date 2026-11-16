@@ -46,7 +46,8 @@
   }
 
   /* ---------- posições: quem move (mestre ou jogador) grava em quadro/estado.pinos[cena][pino]; a luz de quem está arrastando vai por broadcast ---------- */
-  const OPT = { getPos: () => ({}), podeMover: () => false, salvarPos: null, eu: null, sala: '', vivo: null };
+  // opções de cada mapa aberto (o da página e o flutuante podem estar abertos juntos): cada palco guarda as suas
+  let OPT = { getPos: () => ({}), podeMover: () => false, salvarPos: null, eu: null, sala: '', vivo: null };
   const REMOTO = {}; // pino -> { x, y, nome, cor, t }
   const posDe = (cena, p) => { const o = OPT.getPos()?.[cena?.id]?.[p.id], r = REMOTO[p.id]; if (r && Date.now() - r.t < 4000) return { x: r.x, y: r.y }; return o && (o.t || 0) >= (p.t || 0) ? o : p; };
   const CANAIS = {};
@@ -177,13 +178,13 @@
   const MEUS = { ids: new Set(), quem: null, carregando: false };
   const euAgora = () => (typeof ME !== 'undefined' ? ME : null);
   const corUid = u => { let h = 0; for (const c of String(u || 'x')) h = (h * 31 + c.charCodeAt(0)) >>> 0; return `hsl(${h % 360} 75% 60%)`; };
-  function autoOpts(mesaId, mestre, refazer) {
+  function autoOpts(mesaId, mestre, refazer, chave) {
     const me = euAgora(); if (!me || typeof db === 'undefined' || !db || !mesaId) return {};
     if (MEUS.quem !== me && !MEUS.carregando) { MEUS.carregando = true; MEUS.quem = me; db.collection(SITE[1]).where('dono', '==', me).get().then(sn => { MEUS.ids = new Set(sn.docs.map(d => d.id)); MEUS.carregando = false; refazer(); }).catch(() => { MEUS.carregando = false; }); }
     let P = POS[mesaId];
-    if (!P) { P = POS[mesaId] = { dados: {}, refazer: null };
-      P.un = db.doc(`${SITE[0]}/${mesaId}/mapa/pos`).onSnapshot(sn => { P.dados = sn.exists ? sn.data() : {}; const f = P.refazer; if (f) setTimeout(() => { try { f(); } catch (e) {} }, 0); }, () => {}); }
-    P.refazer = refazer;
+    if (!P) { P = POS[mesaId] = { dados: {}, refs: new Map() };
+      P.un = db.doc(`${SITE[0]}/${mesaId}/mapa/pos`).onSnapshot(sn => { P.dados = sn.exists ? sn.data() : {}; setTimeout(() => P.refs.forEach((f, el) => { if (el.isConnected === false) { P.refs.delete(el); return; } try { f(); } catch (e) {} }), 0); }, () => {}); }
+    P.refs.set(chave || refazer, refazer);
     return {
       getPos: () => P.dados.pinos || {},
       podeMover: p => mestre || !!p.livre || (!!p.ficha && MEUS.ids.has(p.ficha)),
@@ -198,7 +199,7 @@
   }
 
   /* ---------- quem é: tocar num pino mostra quem ele é ---------- */
-  const ID = { opts: null, getC: null, mestre: false };
+  let ID = { opts: null, getC: null, mestre: false };
   const linhaVida = x => [['est', 'lim', 'Estresse'], ['dano', 'fer', 'Ferimentos'], ['fer', 'ferMax', 'Ferimentos'], ['pv', 'pvMax', 'PV'], ['vida', 'vidaMax', 'Vida'], ['estresse', 'estresseMax', 'Estresse']]
     .filter(([a, b]) => x && x[a] != null && x[b] != null && typeof x[a] !== 'object').map(([a, b, n]) => `${n} ${x[a]}/${x[b]}`)[0] || '';
   function idDe(p) {
@@ -222,12 +223,19 @@
     box.querySelector('[data-mi-medir]').onclick = () => { const v = box.closest('.mapa-caixa')?.querySelector('.mapa-vista'); box.hidden = true; box.dataset.pino = ''; v?._medir?.(pid); };
     box.querySelector('.mi-x').onclick = () => { box.hidden = true; box.dataset.pino = ''; };
   }
+  function usarOpt(palco) {
+    if (palco._usaOpt) return; palco._usaOpt = true;
+    const f = () => { if (palco._opt) OPT = palco._opt; if (palco._idm) ID = palco._idm; };
+    ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'click', 'wheel'].forEach(t => palco.addEventListener(t, f, { capture: true, passive: true }));
+    palco.closest('.mapa-vista')?.addEventListener('pointerdown', f, true);
+  }
   function desenharMapa(A, getC, opts) {
-    if (!opts.getPos) { const C0 = getC() || {}, mid = C0.id || (location.hash.match(/(?:escudo|caso|mesa)-([^/?#]+)/) || [])[1]; opts = { ...opts, ...autoOpts(mid, !!opts.mestre, () => { if (A.isConnected) desenharMapa(A, getC, opts.__orig || opts); }), __orig: opts }; }
+    if (!opts.getPos) { const C0 = getC() || {}, mid = C0.id || (location.hash.match(/(?:escudo|caso|mesa)-([^/?#]+)/) || [])[1]; opts = { ...opts, ...autoOpts(mid, !!opts.mestre, () => { if (A.isConnected) desenharMapa(A, getC, opts.__orig || opts); }, A), __orig: opts }; }
     const { mestre, salvarC, DETS = [], E = null, getPos, podeMover, salvarPos, eu, sala } = opts;
-    rotulos(); Object.assign(ID, { opts, getC, mestre: !!mestre }); Object.assign(OPT, { getPos: getPos || (() => ({})), podeMover: podeMover || (() => false), salvarPos: salvarPos || null, eu: eu || null, sala: sala || '', vivo: opts.vivo || OPT.vivo || null }); canal(OPT.sala);
+    rotulos(); ID = Object.assign(A._idm || (A._idm = {}), { opts, getC, mestre: !!mestre }); OPT = Object.assign(A._opt || (A._opt = {}), { getPos: getPos || (() => ({})), podeMover: podeMover || (() => false), salvarPos: salvarPos || null, eu: eu || null, sala: sala || '', vivo: opts.vivo || null }); canal(OPT.sala);
     const C = getC(), cenas = cenasDe(C), ativo = ativoDe(C), mesaId = C.id || C.nome || 'm';
-    const ui = UI[mesaId] = UI[mesaId] || { ver: null, modo: 'mover', pincel: 2 };
+    // cada mapa aberto tem o próprio estado (o flutuante não pode mexer na cena que o mestre está vendo)
+    const kUI = mesaId + (mestre ? '' : '|jog') + (A.closest?.('.mapa-pop') ? '|pop' : ''), ui = UI[kUI] = UI[kUI] || { ver: null, modo: 'mover', pincel: 2 };
     if (!mestre) ui.ver = null;
     const cena = (mestre && cenas.find(x => x.id === ui.ver)) || ativo;
     if (mestre && cena) ui.ver = cena.id;
@@ -236,7 +244,7 @@
     // atualização leve: mesma cena e mesma imagem, só pinos e névoa
     // jogador não tem a fileira de cenas: para ele basta ser a mesma cena e a mesma imagem
     if (palco0 && palco0.dataset.cena === (cena?.id || '') && palco0.dataset.img === (cena?.img || '') && (!mestre || (A.querySelector('.mapa-cenas')?.dataset.n === assinaCenas(cenas) && A.querySelector('[data-ativo]')?.dataset.ativo === (ativo?.id || '')))) {
-      palco0._cena = cena; const gl = gradeDe(cena), gk = JSON.stringify(gl || 0); if (palco0.dataset.gk !== gk) { palco0.dataset.gk = gk; palco0.classList.toggle('com-grade', !!gl); palco0.querySelector('.mapa-grade-w').innerHTML = gradeSVG(gl); cel(palco0, gl); const es = A.querySelector('.mapa-escala'); if (es) es.textContent = '▢ ' + fmtM(metrosDe(cena)); }
+      palco0._cena = cena; palco0._opt = OPT; palco0._idm = ID; const gl = gradeDe(cena), gk = JSON.stringify(gl || 0); if (palco0.dataset.gk !== gk) { palco0.dataset.gk = gk; palco0.classList.toggle('com-grade', !!gl); palco0.querySelector('.mapa-grade-w').innerHTML = gradeSVG(gl); cel(palco0, gl); const es = A.querySelector('.mapa-escala'); if (es) es.textContent = '▢ ' + fmtM(metrosDe(cena)); }
       palco0.querySelector('.pinos').innerHTML = pinosVisiveis(cena, mestre);
       pintarNevoa(palco0.querySelector('.nevoa'), cena.nevoa, mestre); return;
     }
@@ -277,7 +285,7 @@
       : `<div class="vazio">${mestre ? (cena ? 'Suba a imagem desta cena: planta da casa, sala, porão, mapa da cidade…' : 'Crie a primeira cena com ＋ Cena. Dá para ter uma por prédio, sala ou andar e trocar na hora.') : `${T.a === 'a' ? 'A' : 'O'} ${T.dir} ainda não mostrou nenhum mapa.`}</div>`}</div>`;
     const palco = A.querySelector('.mapa-palco');
     if (palco) {
-      palco._cena = cena; const cv = palco.querySelector('.nevoa'), img = palco.querySelector('img');
+      palco._cena = cena; palco._opt = OPT; palco._idm = ID; usarOpt(palco); const cv = palco.querySelector('.nevoa'), img = palco.querySelector('img');
       palco.dataset.gk = JSON.stringify(gradeDe(cena) || 0);
       const pintar = () => { pintarNevoa(cv, cena.nevoa, mestre); cel(palco, gradeDe(palco._cena || cena)); };
       if (img.complete) pintar(); else img.onload = pintar;
@@ -296,7 +304,7 @@
     const subir = (aoTerminar) => { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
       inp.onchange = async () => { if (!inp.files[0]) return; toast('Enviando a imagem…'); const u = await enviarImagem(inp.files[0], 4096); if (u) aoTerminar(u); }; inp.click(); };
     const comGrade = async u => { const g = await detectarGrade(u); await trocarCena(x => ({ ...x, img: u, grade: g || null })); refazer(); if (g?.auto) toast('O mapa já tinha grade: a nossa encaixou nela.'); };
-    A.querySelectorAll('[data-cena]').forEach(b => b.onclick = () => { ui.ver = b.dataset.cena; refazer(); });
+    A.querySelectorAll('.cena-tab[data-cena]').forEach(b => b.onclick = () => { ui.ver = b.dataset.cena; refazer(); });
     const perguntarNome = (tit, val) => new Promise(res => abrirModal(tit, `<div class="campo"><label class="rotulo" for="cn-n">Nome da cena</label><input type="text" id="cn-n" maxlength="50" value="${esc(val || '')}" placeholder="Ex.: Porão da casa, 2º andar, Ginásio"></div><button class="btn" id="cn-ok">OK</button>`, (m, fechar) => {
       const ok = () => { const v = m.querySelector('#cn-n').value.trim(); fechar(); res(v || null); };
       m.querySelector('#cn-ok').onclick = ok; m.querySelector('#cn-n').onkeydown = e => { if (e.key === 'Enter') ok(); }; setTimeout(() => m.querySelector('#cn-n').focus(), 50); }));
