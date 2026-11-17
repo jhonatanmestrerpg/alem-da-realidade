@@ -495,3 +495,13 @@ body.pag-ashura .topo { background: linear-gradient(180deg, #120206, #070103) !i
 .tag-buff svg { width: 12px; height: 12px; }
 .buff-nota { margin: 4px 0 0; font-size: 12.5px; color: #ff9aa6; font-style: italic; }
 .bonus-chip.auto { border-style: dashed; cursor: default; }
+
+/* filtros e origem do homebrew */
+.filtro-hb { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin: 4px 0 8px; font-size: 13px; color: var(--lua-dim); }
+.filtro-hb .filtros { margin: 0; }
+.filtro-hb label { display: inline-flex; gap: 6px; align-items: center; }
+.filtro-hb select, .hb-camp select { padding: 4px 8px; font-size: 13px; max-width: 200px; }
+.hb-orig { font-size: 12px; color: var(--lua-faint); margin-top: 3px; }
+.hb-wrap { display: grid; gap: 4px; }
+.hb-meta { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-size: 12.5px; padding: 0 4px 6px; }
+.hb-camp { display: inline-flex; gap: 6px; align-items: center; color: var(--lua-dim); }

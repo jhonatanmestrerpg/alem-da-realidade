@@ -898,7 +898,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261117134256';
+const BUILD = '20261117152252';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1564,15 +1564,24 @@ function seletor(titulo, itens, render, aoEscolher, extra = '', grupo = null) {
   grupo = grupo || grupoAuto;
   const grupos = grupo ? [...new Set(itens.map(grupo).filter(Boolean))] : [];
   let gSel = 'Todos';
-  abrirModal(titulo, `${extra}${grupos.length > 1 ? `<div class="filtros" id="sel-grupos">${['Todos', ...grupos].map(g => `<button class="chip ${g === 'Todos' ? 'aqui' : ''}" data-g="${esc(g)}">${esc(g)}</button>`).join('')}</div>` : ''}<div class="busca">${ICON_BUSCA}<input type="search" id="sel-busca" placeholder="Buscar"></div><div id="sel-lista"></div>`, (m, fechar) => {
+  const temHb = itens.some(x => x && x.hb), aut = [...new Set(itens.filter(x => x?.hb).map(x => x._autorNome).filter(Boolean))].sort(), cps = [...new Set(itens.filter(x => x?.hb).map(x => x._campNome).filter(Boolean))].sort();
+  let fOrig = 'tudo', fAut = '', fCamp = '';
+  const filtroHb = temHb ? `<div class="filtro-hb" id="sel-hb"><div class="filtros">${[['tudo', 'Tudo'], ['livro', 'Livro'], ['hb', 'Homebrew']].map(([k, n]) => `<button class="chip ${k === 'tudo' ? 'aqui' : ''}" data-or="${k}">${n}</button>`).join('')}</div>
+    ${aut.length ? `<label>Criado por <select id="sel-aut"><option value="">Qualquer um</option>${aut.map(a => `<option>${esc(a)}</option>`).join('')}</select></label>` : ''}
+    ${cps.length ? `<label>Campanha <select id="sel-camp"><option value="">Qualquer</option><option value="-">Sem campanha</option>${cps.map(c => `<option>${esc(c)}</option>`).join('')}</select></label>` : ''}</div>` : '';
+  abrirModal(titulo, `${extra}${filtroHb}${grupos.length > 1 ? `<div class="filtros" id="sel-grupos">${['Todos', ...grupos].map(g => `<button class="chip ${g === 'Todos' ? 'aqui' : ''}" data-g="${esc(g)}">${esc(g)}</button>`).join('')}</div>` : ''}<div class="busca">${ICON_BUSCA}<input type="search" id="sel-busca" placeholder="Buscar"></div><div id="sel-lista"></div>`, (m, fechar) => {
     const lista = m.querySelector('#sel-lista');
     const desenhar = q => {
       const ql = normBusca(q);
-      const fil = itens.map((x, i) => [x, i]).filter(([x]) => (gSel === 'Todos' || grupo(x) === gSel) && (!q || normBusca(JSON.stringify(x)).includes(ql))).slice(0, 400);
-      lista.innerHTML = fil.length ? fil.map(([x, i]) => `<div class="opcao"><div>${render(x)}</div><button class="btn mini" data-i="${i}">Adicionar</button></div>`).join('') : '<div class="vazio">Nada encontrado.</div>';
+      const okHb = x => (fOrig === 'tudo' || (fOrig === 'hb') === !!x.hb) && (!fAut || x._autorNome === fAut) && (!fCamp || (fCamp === '-' ? x.hb && !x._campNome : x._campNome === fCamp));
+      const fil = itens.map((x, i) => [x, i]).filter(([x]) => (gSel === 'Todos' || grupo(x) === gSel) && okHb(x) && (!q || normBusca(JSON.stringify(x)).includes(ql))).slice(0, 400);
+      lista.innerHTML = fil.length ? fil.map(([x, i]) => `<div class="opcao"><div>${render(x)}${x.hb ? `<div class="hb-orig">${[x._autorNome ? 'por ' + esc(x._autorNome) : '', x._campNome ? esc(x._campNome) : '', x._acesso && x._acesso !== 'Seu' ? esc(x._acesso) : ''].filter(Boolean).join(' · ')}</div>` : ''}</div><button class="btn mini" data-i="${i}">Adicionar</button></div>`).join('') : '<div class="vazio">Nada encontrado.</div>';
     };
     desenhar('');
     m.querySelector('#sel-busca').addEventListener('input', e => desenhar(e.target.value));
+    m.querySelector('#sel-hb')?.addEventListener('click', e => { const b = e.target.closest('[data-or]'); if (!b) return; fOrig = b.dataset.or; m.querySelectorAll('[data-or]').forEach(c => c.classList.toggle('aqui', c === b)); desenhar(m.querySelector('#sel-busca').value); });
+    m.querySelector('#sel-aut')?.addEventListener('change', e => { fAut = e.target.value; desenhar(m.querySelector('#sel-busca').value); });
+    m.querySelector('#sel-camp')?.addEventListener('change', e => { fCamp = e.target.value; desenhar(m.querySelector('#sel-busca').value); });
     m.querySelector('#sel-grupos')?.addEventListener('click', e => { const b = e.target.closest('[data-g]'); if (!b) return; gSel = b.dataset.g; m.querySelectorAll('#sel-grupos .chip').forEach(c => c.classList.toggle('aqui', c === b)); desenhar(m.querySelector('#sel-busca').value); });
     lista.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (!b) return; aoEscolher(itens[+b.dataset.i]); b.textContent = 'Adicionado'; b.disabled = true; });
   });
@@ -1874,7 +1883,7 @@ ROTAS.novo = async (campId = '') => {
     $$('[data-cl]').forEach(b => b.onclick = () => { if (R.classe !== b.dataset.cl) { R.classe = b.dataset.cl; R.subclasse = ''; } render(); });
     $$('[data-sc]').forEach(b => b.onclick = () => { R.subclasse = b.dataset.sc; render(); });
     $$('[data-rp]').forEach(b => b.onclick = () => { R.passivas.splice(+b.dataset.rp, 1); render(); });
-    $('#add-pas')?.addEventListener('click', async () => { const hb = (await homebrewVisivel('passiva')).map(p => ({ nome: p.nome, texto: p.texto, hb: true })); seletor('Habilidades passivas', [...SIS.passivas, ...hb].filter(p => !R.passivas.some(x => x.nome === p.nome)),
+    $('#add-pas')?.addEventListener('click', async () => { const hb = (await homebrewVisivel('passiva')).map(p => ({ nome: p.nome, texto: p.texto, hb: true, _autorNome: p._autorNome, _campNome: p._campNome, _acesso: p._acesso })); seletor('Habilidades passivas', [...SIS.passivas, ...hb].filter(p => !R.passivas.some(x => x.nome === p.nome)),
       p => `<b>${esc(p.nome)}</b>${p.hb ? ' <span class="tag crit">Homebrew</span>' : ''}<p>${esc(p.texto)}</p>`, p => { if (R.passivas.length < (R.nivel === 0 ? 1 : qtdPassivas(R.nivel))) { R.passivas.push(R.nivel === 0 ? { ...p, origem: 'Nível 0' } : p); render(); $('#camada').innerHTML = ''; } }); });
     $$('[data-pr]').forEach(b => b.onclick = () => { const tot = pontosPericiaTotal(R.classe, R.atributos.inteligencia, R.nivel);
       const gastos = Object.values(R.pericias).reduce((a, x) => a + x, 0); const n = b.dataset.pr, v = (R.pericias[n] || 0) + +b.dataset.d;
@@ -2598,7 +2607,7 @@ ROTAS.agente = async id => {
     $$('[data-vp-atk]').forEach(b => b.onclick = () => { const g = b.dataset.vpAtk === 'garras', P = dadosPericia(F, 'Lutar'), ac = teste(P.dados, P.mod + bnv()), crit = ac.nat >= 20, mult = g ? 3 : 2;
       const dn = rolar(exprMec(g ? '1d12+FOR' : '2d8+FOR', F, null)), tot = crit ? Math.floor(dn.total * mult) : dn.total, nome = g ? 'Garras' : 'Mordida';
       vpRes(`${nome} (morcego)`, { total: tot, detalhe: `acerto ${ac.total} · dano ${dn.detalhe}${crit ? ` ×${mult}` : ''}`, nat20: crit }, `Acerto ${ac.detalhe} = <b>${ac.total}</b>${veredito(ac.total, dtv())}${crit ? ' <span class="critico">Crítico</span>' : ''}<br>Dano ${dn.detalhe}${crit ? ` ×${mult}` : ''} = <b>${tot}</b>`); });
-    $('#add-passiva')?.addEventListener('click', async () => { const hb = (await homebrewVisivel('passiva')).map(p => ({ nome: p.nome, texto: p.texto, hb: true })); seletor('Habilidades passivas', [...SIS.passivas, ...hb], p => `<b>${esc(p.nome)}</b>${p.hb ? ' <span class="tag crit">Homebrew</span>' : ''}<p>${esc(p.texto)}</p>`, p => { const { hb: _, ...q } = p; add('passivas', q); }); });
+    $('#add-passiva')?.addEventListener('click', async () => { const hb = (await homebrewVisivel('passiva')).map(p => ({ nome: p.nome, texto: p.texto, hb: true, _autorNome: p._autorNome, _campNome: p._campNome, _acesso: p._acesso })); seletor('Habilidades passivas', [...SIS.passivas, ...hb], p => `<b>${esc(p.nome)}</b>${p.hb ? ' <span class="tag crit">Homebrew</span>' : ''}<p>${esc(p.texto)}</p>`, p => add('passivas', { nome: p.nome, texto: p.texto })); });
     $('#add-hab')?.addEventListener('click', async () => { const hb = await homebrewVisivel('habilidade'); if (!hb.length) return toast('Nenhuma habilidade no homebrew ainda.');
       seletor('Habilidades do homebrew', hb, h => `<b>${esc(h.nome)}</b><p>${esc(h.texto)}</p>`, h => add('habilidades', { nome: h.nome, texto: h.texto, origem: 'Homebrew' })); });
     $('#nova-hab')?.addEventListener('click', () => formHabilidade(h => add('habilidades', h)));
@@ -2859,28 +2868,56 @@ async function canonizar(x, sim) {
   try { await db.doc('homebrew/' + x.id).update({ canonico: !!sim, canonizadoEm: sim ? Date.now() : null, canonizadoPor: sim ? ME : null }); x.canonico = !!sim; await carregarCanon();
     toast(sim ? `${x.nome} agora é conteúdo original.` : `${x.nome} voltou a ser homebrew.`); } catch (e) { toast('Não deu: ' + (e.message || e.code)); }
 }
+// campanhas de que você participa (jogador ou mestre), com nome: serve para o homebrew marcado numa campanha
+let _minhasCamps = null;
+async function minhasCampanhas() {
+  if (_minhasCamps) return _minhasCamps; if (!db || !ME) return [];
+  try { const [p, m] = await Promise.all([refPart().get(), db.collection('campanhas').where('mestre', '==', ME).get()]);
+    const ids = new Set([...(p.exists ? p.data().campanhas || [] : []), ...m.docs.map(d => d.id)]), nomes = Object.fromEntries(m.docs.map(d => [d.id, d.data().nome]));
+    const falta = [...ids].filter(i => !nomes[i]); await Promise.all(falta.map(async i => { try { const d = await db.doc('campanhas/' + i).get(); if (d.exists) nomes[i] = d.data().nome; } catch (e) {} }));
+    _minhasCamps = [...ids].filter(i => nomes[i]).map(i => ({ id: i, nome: nomes[i] })); setTimeout(() => { _minhasCamps = null; }, 60000); return _minhasCamps; } catch (e) { return []; }
+}
+/* homebrew que você pode puxar: o seu, o compartilhado com todos, o mostrado a você e o marcado numa campanha sua
+   (classe marcada em campanha continua escondida: só entra se for revelada ou mostrada). Cada um vem com quem criou e a campanha. */
 async function homebrewVisivel(tipo, comCanon = false) {
   if (!db) return [];
   try {
-    const [meus, comp, vis] = await Promise.all([db.collection('homebrew').where('autor', '==', ME).get(), db.collection('homebrew').where('compartilhado', '==', true).get(), db.collection('homebrew').where('ver_' + ME, '==', true).get().catch(() => ({ docs: [] }))]);
-    const m = new Map(); [...meus.docs, ...comp.docs, ...vis.docs].forEach(x => m.set(x.id, { id: x.id, ...x.data() }));
-    return [...m.values()].filter(x => (!tipo || x.tipo === tipo) && (comCanon || !x.canonico));
+    const camps = await minhasCampanhas(), cid = camps.map(c => c.id);
+    const [meus, comp, vis, porCamp] = await Promise.all([db.collection('homebrew').where('autor', '==', ME).get(), db.collection('homebrew').where('compartilhado', '==', true).get(),
+      db.collection('homebrew').where('ver_' + ME, '==', true).get().catch(() => ({ docs: [] })), cid.length ? db.collection('homebrew').where('campanha', 'in', cid.slice(0, 30)).get().catch(() => ({ docs: [] })) : { docs: [] }]);
+    const m = new Map(), pôr = (ds, ac) => ds.forEach(x => { if (!m.has(x.id)) m.set(x.id, { id: x.id, ...x.data(), _acesso: ac }); });
+    pôr(meus.docs, 'Seu'); pôr(vis.docs, 'Mostrado a você'); pôr(comp.docs, 'Compartilhado'); pôr(porCamp.docs.filter(x => x.data().tipo !== 'classe'), 'Da campanha');
+    const out = [...m.values()].filter(x => (!tipo || x.tipo === tipo) && (comCanon || !x.canonico));
+    const nomes = await nomeDe([...new Set(out.map(x => x.autor).filter(Boolean))]), cn = Object.fromEntries(camps.map(c => [c.id, c.nome]));
+    return out.map(x => ({ ...x, hb: true, _autorNome: x.autor === ME ? 'Você' : nomes[x.autor] || 'Alguém', _campNome: x.campanha ? cn[x.campanha] || 'Outra campanha' : '' }));
   } catch (e) { return []; }
 }
 const TIPOS_HB = [['ameaca', 'Ameaças'], ['npc', 'NPCs'], ['classe', 'Classes'], ['habilidade', 'Habilidades'], ['passiva', 'Passivas'], ['ritual', 'Rituais'], ['feitico', 'Feitiços'], ['maldicao', 'Maldições'], ['item', 'Itens']];
 ROTAS.homebrew = async () => {
-  let aba = abaSalva('ameaca'), docs = [];
+  let aba = abaSalva('ameaca'), docs = [], fAut = '', fCamp = '', NOMES = {};
+  const CAMPS = await minhasCampanhas(), CN = Object.fromEntries(CAMPS.map(c => [c.id, c.nome]));
+  const nomeAut = x => x.autor === ME ? 'Você' : NOMES[x.autor] || 'Alguém', nomeCamp = x => x.campanha ? CN[x.campanha] || 'Outra campanha' : '';
+  const metaHB = x => { const meu = x.autor === ME;
+    return `<div class="hb-meta"><span class="faint">por ${esc(nomeAut(x))}</span>${meu && x.tipo !== 'classe' ? `<label class="hb-camp">Campanha <select data-hb-camp="${esc(x.id)}"><option value="">Nenhuma</option>${CAMPS.map(c => `<option value="${esc(c.id)}" ${x.campanha === c.id ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')}</select></label>` : nomeCamp(x) ? `<span class="tag">${esc(nomeCamp(x))}</span>` : ''}</div>`; };
   app.className = 'pagina estreita';
   function render() {
-    const lista = docs.filter(x => x.tipo === aba).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+    const faltaN = [...new Set(docs.map(d => d.autor).filter(a => a && a !== ME && !(a in NOMES)))]; if (faltaN.length) { faltaN.forEach(a => { NOMES[a] = ''; }); nomeDe(faltaN).then(n => { Object.assign(NOMES, n); render(); }); }
+    const doTipo = docs.filter(x => x.tipo === aba), auts = [...new Set(doTipo.map(nomeAut))].sort(), cps = [...new Set(doTipo.map(nomeCamp).filter(Boolean))].sort();
+    if (fAut && !auts.includes(fAut)) fAut = ''; if (fCamp && fCamp !== '-' && !cps.includes(fCamp)) fCamp = '';
+    const lista = doTipo.filter(x => (!fAut || nomeAut(x) === fAut) && (!fCamp || (fCamp === '-' ? !x.campanha : nomeCamp(x) === fCamp))).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
     const meus = docs.filter(x => x.autor === ME).length;
     app.innerHTML = `<div><span class="rotulo">Criações da mesa</span><h1>Homebrew</h1></div>${db ? '' : semBanco()}
       <div class="abas">${TIPOS_HB.map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
       <div class="cab-pagina"><span class="dim">${aba === 'classe' ? 'Classes são só suas. "Mostrar ao mestre" libera para o mestre; os outros jogadores só veem quando você ou o mestre revelar.' : `Você criou <b class="mono">${meus}</b>. Compartilhados aparecem para toda a mesa.`}</span>${db ? `<span class="btns"><button class="btn sec" id="importar-hb">Importar arquivo</button><button class="btn" id="novo">Adicionar</button></span>` : ''}</div>
+      <div class="filtro-hb"><label>Criado por <select id="hb-aut"><option value="">Qualquer um</option>${auts.map(a => `<option ${a === fAut ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></label>
+        <label>Campanha <select id="hb-cp"><option value="">Qualquer</option><option value="-" ${fCamp === '-' ? 'selected' : ''}>Sem campanha</option>${cps.map(c => `<option ${c === fCamp ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label></div>
       <div class="busca">${ICON_BUSCA}<input type="search" id="busca" placeholder="Buscar"></div>
       <div class="lista" id="lista-hb">${lista.length ? '' : `<div class="vazio">Ainda não há ${TIPOS_HB.find(t => t[0] === aba)[1].toLowerCase()} no homebrew.</div>`}</div>`;
-    const desenhar = () => { const q = $('#busca').value.toLowerCase(); $('#lista-hb').innerHTML = lista.filter(x => !q || JSON.stringify(x).toLowerCase().includes(q)).map(cardHB).join('') || (lista.length ? '<div class="vazio">Nada encontrado.</div>' : $('#lista-hb').innerHTML); ligarLista(); };
+    const desenhar = () => { const q = $('#busca').value.toLowerCase(); $('#lista-hb').innerHTML = lista.filter(x => !q || JSON.stringify(x).toLowerCase().includes(q)).map(x => `<div class="hb-wrap">${cardHB(x)}${metaHB(x)}</div>`).join('') || (lista.length ? '<div class="vazio">Nada encontrado.</div>' : $('#lista-hb').innerHTML); ligarLista(); };
     $('#busca').oninput = desenhar; desenhar();
+    $('#hb-aut').onchange = e => { fAut = e.target.value; render(); }; $('#hb-cp').onchange = e => { fCamp = e.target.value; render(); };
+    $('#lista-hb').addEventListener('change', async e => { const sel = e.target.closest('[data-hb-camp]'); if (!sel) return; const x = docs.find(d => d.id === sel.dataset.hbCamp); if (!x) return;
+      try { await db.doc('homebrew/' + x.id).update({ campanha: sel.value || null }); x.campanha = sel.value || null; toast(sel.value ? `Agora quem joga em ${CN[sel.value]} pode puxar ${x.nome}.` : 'Tirado da campanha.'); } catch (er) { toast('Não deu: ' + (er.message || er.code)); } });
     $$('[data-aba]').forEach(b => b.onclick = () => { aba = b.dataset.aba; lembrarAba(aba); render(); });
     $('#novo')?.addEventListener('click', () => editarHB({ tipo: aba }));
     $('#importar-hb')?.addEventListener('click', importarHomebrew);
@@ -2921,7 +2958,7 @@ ROTAS.homebrew = async () => {
         m.querySelector('[data-fechar]:not(.btn-x)').onclick = fechar; }); });
   }
   async function gravar(base, dados) {
-    const vis = Object.fromEntries(Object.entries(base).filter(([k]) => k.startsWith('ver_'))), obj = { ...dados, ...vis, tipo: base.tipo, autor: base.autor || ME, compartilhado: !!base.compartilhado, criado: base.criado || Date.now() };
+    const vis = Object.fromEntries(Object.entries(base).filter(([k]) => k.startsWith('ver_'))), obj = { ...dados, ...vis, tipo: base.tipo, autor: base.autor || ME, compartilhado: !!base.compartilhado, criado: base.criado || Date.now(), ...(base.campanha ? { campanha: base.campanha } : {}) };
     try { if (base.id) await db.doc('homebrew/' + base.id).set(obj); else await db.collection('homebrew').add(obj); toast('Salvo no homebrew.'); }
     catch (e) { toast('Não deu para salvar: ' + (e.message || e.code)); }
   }
@@ -2934,8 +2971,11 @@ ROTAS.homebrew = async () => {
     formAmeaca(x, a => gravar(x, a));
   }
   if (db) assinar(db.collection('homebrew').where('autor', '==', ME).onSnapshot(s => { const outros = docs.filter(d => d.autor !== ME); docs = [...outros, ...s.docs.map(d => ({ id: d.id, ...d.data() }))]; render(); }));
+  const juntar = (lista, filtro = () => true) => { const m = new Map(docs.map(d => [d.id, d])); lista.filter(filtro).forEach(d => { if (!m.has(d.id) || m.get(d.id).autor !== ME) m.set(d.id, d); }); docs = [...m.values()];
+    const falta = [...new Set(docs.map(d => d.autor).filter(a => a && a !== ME && !(a in NOMES)))]; if (falta.length) nomeDe(falta).then(n => { Object.assign(NOMES, n); render(); }); };
+  if (db && CAMPS.length) assinar(db.collection('homebrew').where('campanha', 'in', CAMPS.map(c => c.id).slice(0, 30)).onSnapshot(s => { docs = docs.filter(d => !d._camp); juntar(s.docs.map(d => ({ id: d.id, ...d.data(), _camp: true })), d => d.tipo !== 'classe'); render(); }));
   if (db) assinar(db.collection('homebrew').where('ver_' + ME, '==', true).onSnapshot(s => { const m = new Map(docs.map(d => [d.id, d])); s.docs.forEach(d => m.set(d.id, { id: d.id, ...d.data() })); docs = [...m.values()]; render(); }));
-  if (db) assinar(db.collection('homebrew').where('compartilhado', '==', true).onSnapshot(s => { const meus = docs.filter(d => d.autor === ME || d['ver_' + ME]); const m = new Map(meus.map(d => [d.id, d])); s.docs.forEach(d => { if (!m.has(d.id)) m.set(d.id, { id: d.id, ...d.data() }); }); docs = [...m.values()]; render(); }));
+  if (db) assinar(db.collection('homebrew').where('compartilhado', '==', true).onSnapshot(s => { const meus = docs.filter(d => d.autor === ME || d['ver_' + ME] || d._camp); const m = new Map(meus.map(d => [d.id, d])); s.docs.forEach(d => { if (!m.has(d.id)) m.set(d.id, { id: d.id, ...d.data() }); }); docs = [...m.values()]; render(); }));
   render();
 };
 /* ---------- ficha de ameaça / NPC: tipos, formulário completo, ações e poderes ---------- */
