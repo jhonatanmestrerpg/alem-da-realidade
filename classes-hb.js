@@ -29,7 +29,7 @@ function registrarClasseFicha(f) { if (f?.classeHb?.nome) HB_SNAP[f.classeHb.nom
 /* ---------- Marcas na ficha ---------- */
 // Marca vinda da classe acompanha a classe (números, habilidades) até alguém editar ela na mão
 // Evoluir Entidade: a Marca evoluída conta em dobro na ficha (vitais, RD, atributos e perícias que ela dá)
-const palacio = (F, m) => { if (!F?.palacio || !m) return m; return { ...m, atributos: Object.fromEntries(Object.entries(m.atributos || {}).map(([k, v]) => [k, (+v || 0) * 2])) }; };
+const palacio = (F, m) => { if (!F?.palacio || !m || m.evoluida || /Evoluíd/.test(m.nome || '')) return m; return { ...m, atributos: Object.fromEntries(Object.entries(m.atributos || {}).map(([k, v]) => [k, (+v || 0) * 2])) }; };
 const evoluir = m => { if (!m?.evoluida) return m; const d = o => Object.fromEntries(Object.entries(o || {}).map(([k, v]) => [k, (+v || 0) * 2]));
   return { ...m, pv: (+m.pv || 0) * 2, ps: (+m.ps || 0) * 2, pst: (+m.pst || 0) * 2, rd: (+m.rd || 0) * 2, atributos: d(m.atributos), pericias: d(m.pericias), titulo: [m.titulo, 'Evoluída'].filter(Boolean).join(' · ') }; };
 // o modelo da classe acha a Marca pelo nome atual ou por um nome antigo (campo "antes"), assim renomear não quebra a Roda de ninguém
@@ -192,8 +192,8 @@ function ligarMarcas(F, { salvar, render }) {
   $$('[data-mk-junto]').forEach(b => b.onclick = () => vestirJunto(F, marcasDe(F)[+b.dataset.mkJunto].id, { salvar, render }));
   $$('[data-mk-ver]').forEach(b => b.onclick = () => verMarca(marcasDe(F)[+b.dataset.mkVer]));
   $$('[data-mk-vest]').forEach(b => b.onclick = () => { const c = L()[+b.dataset.mkVest]; vestir(c.id === F.chakraVestido ? '' : c.id); });
-  $('#mk-palacio')?.addEventListener('click', async () => { const on = !F.palacio, pct = on ? 30 + 1 + Math.floor(Math.random() * 100) : 0;
-    await mudarVestes(F, { palacio: on, palacioPct: pct }, { salvar, render }); toast(on ? `O palácio se ergue: 1d100 + 30 deu +${pct}% em todo dano, bônus e penalidade lá dentro. As Marcas dão o dobro dos atributos.` : 'O palácio caiu.'); });
+  $('#mk-palacio')?.addEventListener('click', async () => { const on = !F.palacio, pct = on ? Math.min(100, 30 + 1 + Math.floor(Math.random() * 100)) : 0;
+    await mudarVestes(F, { palacio: on, palacioPct: pct }, { salvar, render }); toast(on ? `O palácio se ergue: 1d100 + 30 deu +${pct}% (máximo 100) em todo dano, bônus e penalidade lá dentro. As Marcas dão o dobro dos atributos.` : 'O palácio caiu.'); });
   $$('[data-mk-fus]').forEach(b => b.onclick = async () => { const id = marcasDe(F)[+b.dataset.mkFus].id; let f = [...(F.fusao || [])]; f = f.includes(id) ? f.filter(x => x !== id) : [...f, id].slice(-2);
     await mudarVestes(F, { fusao: f }, { salvar, render }); toast(f.length === 2 ? 'Fundidas: vestir uma veste as duas, ocupando uma vaga só.' : f.length ? 'Escolha a segunda Marca da fusão.' : 'Fusão desfeita.'); });
   $$('[data-mk-evo]').forEach(b => b.onclick = async () => { const l = L(), i = +b.dataset.mkEvo, on = !l[i].evoluida, a0 = calc(F).max; l[i] = { ...l[i], evoluida: on }; const nF = { ...F, chakras: l }, a1 = calc(nF).max, at = { ...(F.atual || a0) }; for (const k of ['pv', 'ps', 'pst']) at[k] = Math.max(1, Math.min(a1[k], (at[k] ?? a0[k]) + (a1[k] - a0[k]))); F.chakras = l; F.atual = at; render(); await salvar({ chakras: l, atual: at }); });
