@@ -523,3 +523,17 @@ body.pag-ashura .topo { background: linear-gradient(180deg, #120206, #070103) !i
 .mk-ft .runa.sobre { position: absolute; right: -3px; bottom: -3px; width: 42%; height: 42%; padding: 3px; border-radius: 50%; background: #0b0709; color: var(--mc); box-shadow: 0 0 0 1.5px var(--mc); }
 .mk-ft { position: relative; }
 @media (prefers-reduced-motion: reduce) { .runa { animation: none; } }
+
+/* registro em painel: cada texto mostra os primeiros parágrafos; a seta abre o resto */
+.reg-painel { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); align-items: start; }
+.reg-card { display: grid; gap: 8px; position: relative; }
+.reg-card h3 { margin: 0; font: 400 20px/1.1 var(--f-disp); letter-spacing: .03em; color: var(--ouro); }
+.reg-txt { max-height: 9.6em; overflow: hidden; line-height: 1.6; color: var(--lua); overflow-wrap: anywhere; }
+.reg-txt p { margin: 0 0 .7em; } .reg-txt p:last-child { margin-bottom: 0; }
+.reg-card.corta:not(.aberto) .reg-txt { -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent); mask-image: linear-gradient(180deg, #000 55%, transparent); }
+.reg-card.aberto .reg-txt { max-height: none; }
+.reg-seta { justify-self: center; display: inline-flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--linha-2); color: var(--lua-dim); border-radius: 99px; padding: 4px 14px 4px 10px; font-size: 12.5px; cursor: pointer; }
+.reg-seta:hover { color: var(--lua); border-color: var(--ouro); }
+.reg-seta svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; transition: transform .25s; }
+.reg-card.aberto .reg-seta svg { transform: rotate(180deg); }
+.reg-seta[hidden] { display: none !important; }

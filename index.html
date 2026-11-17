@@ -902,7 +902,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261117154011';
+const BUILD = '20261117162023';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -2242,8 +2242,13 @@ ROTAS.agente = async id => {
             ${it.descricao ? `<p class="inv-desc">${nl(it.descricao)}</p>` : ''}
             ${!det.length && !it.obs && !it.descricao && !tagsMods(it) ? '<span class="faint" style="font-size:13px">Sem detalhes.</span>' : ''}</div></details>`; }).join('') || '<div class="vazio">Inventário vazio.</div>'}</div></div>`;
     }
-    return `<div style="display:grid; gap:14px">${[['aparencia', 'Aparência'], ['personalidade', 'Personalidade'], ['historico', 'Histórico'], ['objetivo', 'Objetivo'], ['anotacoes', 'Anotações do jogador']].map(([k, l]) => `<div class="campo"><label class="rotulo" for="d-${k}">${l}</label>
-      ${podeEditar ? `<textarea id="d-${k}" data-texto="${k}">${esc(F[k])}</textarea>` : `<p class="dim">${nl(F[k]) || '—'}</p>`}</div>`).join('')}</div>`;
+    const REG = [['aparencia', 'Aparência'], ['personalidade', 'Personalidade'], ['historico', 'Histórico'], ['objetivo', 'Objetivo'], ['anotacoes', 'Anotações do jogador']];
+    // editar só no modo Editar ficha; fora dele, um painel só com o que está escrito, cada texto fechado nos primeiros parágrafos
+    if (podeEditar && editando) return `<div style="display:grid; gap:14px">${REG.map(([k, l]) => `<div class="campo"><label class="rotulo" for="d-${k}">${l}</label><textarea id="d-${k}" data-texto="${k}">${esc(F[k])}</textarea></div>`).join('')}</div>`;
+    const cheios = REG.filter(([k]) => String(F[k] || '').trim());
+    if (!cheios.length) return `<div class="vazio">Nada escrito ainda.${podeEditar ? ' Use <b>Editar ficha</b> para contar quem é esse agente.' : ''}</div>`;
+    return `<div class="reg-painel">${cheios.map(([k, l]) => `<article class="caixa reg-card" data-reg="${k}"><h3>${l}</h3><div class="reg-txt">${String(F[k]).trim().split(/\n\s*\n+/).map(p => `<p>${nl(p.trim())}</p>`).join('')}</div>
+      <button type="button" class="reg-seta" hidden aria-expanded="false" aria-label="Ler ${l.toLowerCase()} inteiro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg><span>Ler tudo</span></button></article>`).join('')}</div>`;
   }
   const VL_HAB = () => {
     if (!F.vetor?.liberado) return '';
@@ -2285,6 +2290,9 @@ ROTAS.agente = async id => {
       const txt = `${esc(F.nome)} lançou <b>${esc(m.nome)}</b>${alvo ? ` em ${esc(alvo)}` : ''}${cM ? ` · −${cM} PS` : ' · sem custo'}. <span class="faint">${esc(m.texto)}</span>`;
       (window._resHab ||= {})[id + '|mal|' + m.nome] = txt; render();
       publicarRolagem(F, `Maldição · ${m.nome}`, { total: '', detalhe: `${esc(F.nome)} lançou ${esc(m.nome)}${alvo ? ' em ' + esc(alvo) : ''}${cM ? ` (−${cM} PS)` : ''}: ${esc(m.texto)}` }); });
+    // registro: a setinha só aparece quando o texto passa dos primeiros parágrafos
+    $$('.reg-card').forEach(c => { const t = c.querySelector('.reg-txt'), b = c.querySelector('.reg-seta'); if (t.scrollHeight > t.clientHeight + 4) { b.hidden = false; c.classList.add('corta'); }
+      b.onclick = () => { const ab = c.classList.toggle('aberto'); b.setAttribute('aria-expanded', ab); b.querySelector('span').textContent = ab ? 'Fechar' : 'Ler tudo'; if (!ab) c.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }; });
     if (aba === 'campanha') ligarMecanicas($('#sec'), F, { salvarMec: async (mec, atual) => { F.mec = mec; if (atual) { F.atual = atual; ajustarQueda(F); } render();
       try { await ref.update({ mec, ...(atual ? { atual, queda: F.queda || {} } : {}) }); } catch (e) { toast('Não deu para salvar.'); } },
       publicar: (tit, txt, rr) => publicarRolagem(F, tit, { total: rr?.total ?? '', detalhe: esc(txt) }) });
