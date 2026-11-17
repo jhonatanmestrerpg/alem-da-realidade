@@ -898,7 +898,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261117132515';
+const BUILD = '20261117134256';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1874,8 +1874,8 @@ ROTAS.novo = async (campId = '') => {
     $$('[data-cl]').forEach(b => b.onclick = () => { if (R.classe !== b.dataset.cl) { R.classe = b.dataset.cl; R.subclasse = ''; } render(); });
     $$('[data-sc]').forEach(b => b.onclick = () => { R.subclasse = b.dataset.sc; render(); });
     $$('[data-rp]').forEach(b => b.onclick = () => { R.passivas.splice(+b.dataset.rp, 1); render(); });
-    $('#add-pas')?.addEventListener('click', () => seletor('Habilidades passivas', SIS.passivas.filter(p => !R.passivas.some(x => x.nome === p.nome)),
-      p => `<b>${esc(p.nome)}</b><p>${esc(p.texto)}</p>`, p => { if (R.passivas.length < (R.nivel === 0 ? 1 : qtdPassivas(R.nivel))) { R.passivas.push(R.nivel === 0 ? { ...p, origem: 'Nível 0' } : p); render(); $('#camada').innerHTML = ''; } }));
+    $('#add-pas')?.addEventListener('click', async () => { const hb = (await homebrewVisivel('passiva')).map(p => ({ nome: p.nome, texto: p.texto, hb: true })); seletor('Habilidades passivas', [...SIS.passivas, ...hb].filter(p => !R.passivas.some(x => x.nome === p.nome)),
+      p => `<b>${esc(p.nome)}</b>${p.hb ? ' <span class="tag crit">Homebrew</span>' : ''}<p>${esc(p.texto)}</p>`, p => { if (R.passivas.length < (R.nivel === 0 ? 1 : qtdPassivas(R.nivel))) { R.passivas.push(R.nivel === 0 ? { ...p, origem: 'Nível 0' } : p); render(); $('#camada').innerHTML = ''; } }); });
     $$('[data-pr]').forEach(b => b.onclick = () => { const tot = pontosPericiaTotal(R.classe, R.atributos.inteligencia, R.nivel);
       const gastos = Object.values(R.pericias).reduce((a, x) => a + x, 0); const n = b.dataset.pr, v = (R.pericias[n] || 0) + +b.dataset.d;
       if (v < 0 || v > patente(R.nivel).limite) return; if (+b.dataset.d > 0 && gastos >= tot) return; R.pericias[n] = v; if (!v) delete R.pericias[n]; render(); });
@@ -2260,8 +2260,8 @@ ROTAS.agente = async id => {
     $('#dt')?.addEventListener('input', e => window._dt = e.target.value);
     $('#bonus')?.addEventListener('input', e => window._bonus = e.target.value);
     $('#editar')?.addEventListener('click', () => { editando = !editando; render(); });
-    $('#add-mal')?.addEventListener('click', () => { const ja = new Set((F.maldicoes || []).map(m => m.nome));
-      seletor('Aprender maldição', SIS.maldicoes.filter(m => !ja.has(m.nome)), m => `<b>${esc(m.nome)}</b><p>${esc(m.texto)}</p>`, m => { F.maldicoes = [...(F.maldicoes || []), { nome: m.nome, texto: m.texto }]; salvar({ maldicoes: F.maldicoes }); render(); }); });
+    $('#add-mal')?.addEventListener('click', async () => { const ja = new Set((F.maldicoes || []).map(m => m.nome)), hb = (await homebrewVisivel('maldicao')).map(m => ({ ...m, hb: true }));
+      seletor('Aprender maldição', [...SIS.maldicoes, ...hb].filter(m => !ja.has(m.nome)), m => `<b>${esc(m.nome)}</b>${m.hb ? ' <span class="tag crit">Homebrew</span>' : ''}<p>${esc(m.texto)}</p>`, m => { F.maldicoes = [...(F.maldicoes || []), { nome: m.nome, texto: m.texto }]; salvar({ maldicoes: F.maldicoes }); render(); }); });
     $$('[data-mal-rm]').forEach(b => b.onclick = () => { F.maldicoes = (F.maldicoes || []).filter((_, i) => i !== +b.dataset.malRm); salvar({ maldicoes: F.maldicoes }); render(); });
     $$('[data-mal]').forEach(b => b.onclick = () => { const i = +b.dataset.mal, m = F.maldicoes[i], cM = custoMaldicao(F), K = calc(F), a = { ...K.max, ...(F.atual || {}) };
       if (a.ps < cM) return toast(`Sem PS para lançar (precisa de ${cM}).`);
@@ -2494,9 +2494,9 @@ ROTAS.agente = async id => {
       const chaveF = id + '|feit|' + fe.nome; RES_HAB[chaveF] = txt; const out = $('#res-feit-' + i); if (out) out.innerHTML = txt; ligarCobrar();
       publicarRolagem(F, `Feitiço · ${fe.nome}${falhou ? ' (falhou)' : ''}`, r); });
     $$('[data-feit]').forEach(b => b.onclick = () => { const r = rolar(b.dataset.expr); if (!r) return; $('#res-feit-' + b.dataset.feit).innerHTML = `${esc(b.dataset.expr)} → ${r.detalhe} = <b>${r.total}</b>`; publicarRolagem(F, `${F.feiticos[+b.dataset.feit].nome}`, r); });
-    $('#add-feit')?.addEventListener('click', async () => { const hb = (await homebrewVisivel('feitico')).map(r => ({ ...r, divindade: r.divindade || 'Homebrew' }));
+    $('#add-feit')?.addEventListener('click', async () => { const hb = (await homebrewVisivel('feitico')).map(r => ({ ...r, divindade: r.divindade || 'Homebrew', hb: true }));
       const mx = nivelFeitMax(F), ja = new Set((F.feiticos || []).map(x => x.nome));
-      seletor(`Aprender feitiço (até nível ${mx})`, [...FEIT, ...hb].filter(r => (+r.nivel || 1) <= mx && !ja.has(r.nome)), r => `<b>${esc(r.nome)}</b> <span class="tag">${esc(r.divindade || '')}</span> ${tagNivelF(r)} <span class="tag">DT ${esc(r.dt || '?')}</span><p>${esc(r.preparo ? 'Preparo: ' + r.preparo + '. ' : '')}${esc(r.efeito)}</p>${reqFeitico(r).length ? `<p class="faint" style="font-size:12.5px">Requer: ${reqFeitico(r).map(esc).join(' + ')}${r.sacrificio ? ' + sacrifício' : ''}</p>` : ''}`,
+      seletor(`Aprender feitiço (até nível ${mx})`, [...FEIT, ...hb].filter(r => (+r.nivel || 1) <= mx && !ja.has(r.nome)), r => `<b>${esc(r.nome)}</b>${r.hb ? ' <span class="tag crit">Homebrew</span>' : ''} <span class="tag">${esc(r.divindade || '')}</span> ${tagNivelF(r)} <span class="tag">DT ${esc(r.dt || '?')}</span><p>${esc(r.preparo ? 'Preparo: ' + r.preparo + '. ' : '')}${esc(r.efeito)}</p>${reqFeitico(r).length ? `<p class="faint" style="font-size:12.5px">Requer: ${reqFeitico(r).map(esc).join(' + ')}${r.sacrificio ? ' + sacrifício' : ''}</p>` : ''}`,
         r => add('feiticos', { nome: r.nome, divindade: r.divindade, nivel: r.nivel || '', ingrediente: r.ingrediente || '', item: r.item || '', sacrificio: r.sacrificio || '', preparo: r.preparo || '', alvo: r.alvo, alcance: r.alcance, duracao: r.duracao, falha: r.falha || '', custo: r.custo || '', dt: r.dt, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] }), '', r => r.divindade || 'Sem divindade'); });
     $('#novo-feit')?.addEventListener('click', () => formFeitico(r => add('feiticos', r)));
     $$('[data-rit]').forEach(b => b.onclick = () => { const r = rolar(b.dataset.expr); if (!r) return; $('#res-rit-' + b.dataset.rit).innerHTML = `${esc(b.dataset.expr)} → ${r.detalhe} = <b>${r.total}</b>`; publicarRolagem(F, `${F.rituais[+b.dataset.rit].nome}`, r); });
@@ -2598,7 +2598,7 @@ ROTAS.agente = async id => {
     $$('[data-vp-atk]').forEach(b => b.onclick = () => { const g = b.dataset.vpAtk === 'garras', P = dadosPericia(F, 'Lutar'), ac = teste(P.dados, P.mod + bnv()), crit = ac.nat >= 20, mult = g ? 3 : 2;
       const dn = rolar(exprMec(g ? '1d12+FOR' : '2d8+FOR', F, null)), tot = crit ? Math.floor(dn.total * mult) : dn.total, nome = g ? 'Garras' : 'Mordida';
       vpRes(`${nome} (morcego)`, { total: tot, detalhe: `acerto ${ac.total} · dano ${dn.detalhe}${crit ? ` ×${mult}` : ''}`, nat20: crit }, `Acerto ${ac.detalhe} = <b>${ac.total}</b>${veredito(ac.total, dtv())}${crit ? ' <span class="critico">Crítico</span>' : ''}<br>Dano ${dn.detalhe}${crit ? ` ×${mult}` : ''} = <b>${tot}</b>`); });
-    $('#add-passiva')?.addEventListener('click', () => seletor('Habilidades passivas', SIS.passivas, p => `<b>${esc(p.nome)}</b><p>${esc(p.texto)}</p>`, p => add('passivas', p)));
+    $('#add-passiva')?.addEventListener('click', async () => { const hb = (await homebrewVisivel('passiva')).map(p => ({ nome: p.nome, texto: p.texto, hb: true })); seletor('Habilidades passivas', [...SIS.passivas, ...hb], p => `<b>${esc(p.nome)}</b>${p.hb ? ' <span class="tag crit">Homebrew</span>' : ''}<p>${esc(p.texto)}</p>`, p => { const { hb: _, ...q } = p; add('passivas', q); }); });
     $('#add-hab')?.addEventListener('click', async () => { const hb = await homebrewVisivel('habilidade'); if (!hb.length) return toast('Nenhuma habilidade no homebrew ainda.');
       seletor('Habilidades do homebrew', hb, h => `<b>${esc(h.nome)}</b><p>${esc(h.texto)}</p>`, h => add('habilidades', { nome: h.nome, texto: h.texto, origem: 'Homebrew' })); });
     $('#nova-hab')?.addEventListener('click', () => formHabilidade(h => add('habilidades', h)));
@@ -2612,8 +2612,8 @@ ROTAS.agente = async id => {
       }); });
     $$('[data-al-nv]').forEach(b => b.onclick = () => { const nv = Math.max(1, Math.min(4, (+F.alinhamento?.nivel || 1) + +b.dataset.alNv)); salvar({ alinhamento: { ...F.alinhamento, nivel: nv } }); if (+b.dataset.alNv > 0) toast(`${F.nome} despertou o nível ${nv} de ${F.alinhamento.nome}.`); });
     $('#al-trocar')?.addEventListener('click', () => abrirModal('Retirar alinhamento', `<p>O alinhamento some quando a vontade do personagem muda ou outra entidade se interessa por ele. Retirar <b>${esc(F.alinhamento.nome)}</b> de ${esc(F.nome)}?</p><button class="btn" id="rt-ok">Retirar</button>`, (m, fechar) => { m.querySelector('#rt-ok').onclick = async () => { await salvar({ alinhamento: null }); fechar(); }; }));
-    $('#al-rit')?.addEventListener('click', () => { const el = elDe(F.alinhamento.nome);
-      seletor(`Rituais de ${el}`, RIT.filter(r => r.elemento === el), r => `<b>${esc(r.nome)}</b>${r.antigo ? ' <span class="tag">Antigo</span>' : ''} <span class="tag">${esc(r.custo || '')}</span><p>${esc(r.efeito)}</p>`, r => add('rituais', { nome: r.nome, elemento: r.elemento, alvo: r.alvo, custo: r.custo, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] })); });
+    $('#al-rit')?.addEventListener('click', async () => { const el = elDe(F.alinhamento.nome), hb = (await homebrewVisivel('ritual')).filter(r => r.elemento === el).map(r => ({ ...r, hb: true }));
+      seletor(`Rituais de ${el}`, [...RIT.filter(r => r.elemento === el), ...hb], r => `<b>${esc(r.nome)}</b>${r.hb ? ' <span class="tag crit">Homebrew</span>' : ''}${r.antigo ? ' <span class="tag">Antigo</span>' : ''} <span class="tag">${esc(r.custo || '')}</span><p>${esc(r.efeito)}</p>`, r => add('rituais', { nome: r.nome, elemento: r.elemento, alvo: r.alvo, custo: r.custo, descricao: r.descricao, efeito: r.efeito, limitacoes: r.limitacoes || [] })); });
     const doHb = it => ({ nome: it.nome, dano: it.dano, mult: +it.mult || 1, margem: +it.margem || 20, peso: +it.peso || 0, pericia: it.pericia, tipoDano: it.tipoDano, alcance: it.alcance, rd: +it.rd || 0, alivio: +it.alivio || 0, obs: it.obs, descricao: it.descricao, imagem: it.imagem, categoria: it.categoria, qtd: 1 });
     $('#add-item')?.addEventListener('click', () => escolherItem('livro', it => add('equipamentos', { ...it, base: it.canon ? undefined : it.nome, qtd: 1 }), it => add('equipamentos', doHb(it))));
     $('#add-item-hb')?.addEventListener('click', () => escolherItem('hb', it => add('equipamentos', { ...it, qtd: 1 }), it => add('equipamentos', doHb(it))));
@@ -2862,12 +2862,12 @@ async function canonizar(x, sim) {
 async function homebrewVisivel(tipo, comCanon = false) {
   if (!db) return [];
   try {
-    const [meus, comp] = await Promise.all([db.collection('homebrew').where('autor', '==', ME).get(), db.collection('homebrew').where('compartilhado', '==', true).get()]);
-    const m = new Map(); [...meus.docs, ...comp.docs].forEach(x => m.set(x.id, { id: x.id, ...x.data() }));
+    const [meus, comp, vis] = await Promise.all([db.collection('homebrew').where('autor', '==', ME).get(), db.collection('homebrew').where('compartilhado', '==', true).get(), db.collection('homebrew').where('ver_' + ME, '==', true).get().catch(() => ({ docs: [] }))]);
+    const m = new Map(); [...meus.docs, ...comp.docs, ...vis.docs].forEach(x => m.set(x.id, { id: x.id, ...x.data() }));
     return [...m.values()].filter(x => (!tipo || x.tipo === tipo) && (comCanon || !x.canonico));
   } catch (e) { return []; }
 }
-const TIPOS_HB = [['ameaca', 'Ameaças'], ['npc', 'NPCs'], ['classe', 'Classes'], ['habilidade', 'Habilidades'], ['ritual', 'Rituais'], ['feitico', 'Feitiços'], ['item', 'Itens']];
+const TIPOS_HB = [['ameaca', 'Ameaças'], ['npc', 'NPCs'], ['classe', 'Classes'], ['habilidade', 'Habilidades'], ['passiva', 'Passivas'], ['ritual', 'Rituais'], ['feitico', 'Feitiços'], ['maldicao', 'Maldições'], ['item', 'Itens']];
 ROTAS.homebrew = async () => {
   let aba = abaSalva('ameaca'), docs = [];
   app.className = 'pagina estreita';
@@ -2876,7 +2876,7 @@ ROTAS.homebrew = async () => {
     const meus = docs.filter(x => x.autor === ME).length;
     app.innerHTML = `<div><span class="rotulo">Criações da mesa</span><h1>Homebrew</h1></div>${db ? '' : semBanco()}
       <div class="abas">${TIPOS_HB.map(([k, n]) => `<button class="${aba === k ? 'aqui' : ''}" data-aba="${k}">${n}</button>`).join('')}</div>
-      <div class="cab-pagina"><span class="dim">${aba === 'classe' ? 'Classes são só suas. Use "Mostrar ao mestre" para o mestre da campanha ver; os outros jogadores nunca veem.' : `Você criou <b class="mono">${meus}</b>. Compartilhados aparecem para toda a mesa.`}</span>${db ? `<span class="btns"><button class="btn sec" id="importar-hb">Importar arquivo</button><button class="btn" id="novo">Adicionar</button></span>` : ''}</div>
+      <div class="cab-pagina"><span class="dim">${aba === 'classe' ? 'Classes são só suas. "Mostrar ao mestre" libera para o mestre; os outros jogadores só veem quando você ou o mestre revelar.' : `Você criou <b class="mono">${meus}</b>. Compartilhados aparecem para toda a mesa.`}</span>${db ? `<span class="btns"><button class="btn sec" id="importar-hb">Importar arquivo</button><button class="btn" id="novo">Adicionar</button></span>` : ''}</div>
       <div class="busca">${ICON_BUSCA}<input type="search" id="busca" placeholder="Buscar"></div>
       <div class="lista" id="lista-hb">${lista.length ? '' : `<div class="vazio">Ainda não há ${TIPOS_HB.find(t => t[0] === aba)[1].toLowerCase()} no homebrew.</div>`}</div>`;
     const desenhar = () => { const q = $('#busca').value.toLowerCase(); $('#lista-hb').innerHTML = lista.filter(x => !q || JSON.stringify(x).toLowerCase().includes(q)).map(cardHB).join('') || (lista.length ? '<div class="vazio">Nada encontrado.</div>' : $('#lista-hb').innerHTML); ligarLista(); };
@@ -2892,7 +2892,7 @@ ROTAS.homebrew = async () => {
         <span style="display:flex; gap:6px; align-items:center">${x.canonico ? '<span class="tag canon">Original</span>' : x.compartilhado ? '<span class="tag crit">Compartilhado</span>' : ''}<button class="btn mini" data-ver-am="${esc(x.id)}">Ficha</button></span></div>`)}</div>`; }
     let corpo = '';
     if (x.tipo === 'ameaca' || x.tipo === 'npc') corpo = `<div style="display:flex; gap:8px; flex-wrap:wrap">${x.tipo === 'npc' ? `<span class="tag">NPC${x.papel ? ' · ' + esc(x.papel) : ''}</span>${x.elemento ? elTag(x.elemento) : ''}` : elTag(x.elemento)}<span class="tag">Nv ${esc(x.nivel)}${x.tipo === 'npc' ? '' : ' · ' + esc(nivelAm(x.nivel)[1])}</span><span class="tag">PV ${esc(x.ficha?.pv)}</span></div><p class="dim" style="font-size:13.5px">${esc((x.descricao || '').slice(0, 220))}</p>`;
-    if (x.tipo === 'habilidade') corpo = `<p class="dim" style="font-size:13.5px">${nl(x.texto)}</p>`;
+    if (['habilidade', 'passiva', 'maldicao'].includes(x.tipo)) corpo = `<p class="dim" style="font-size:13.5px">${nl(x.texto)}</p>`;
     if (x.tipo === 'feitico') corpo = `<div style="display:flex; gap:6px; flex-wrap:wrap">${x.custo ? `<span class="tag">${esc(x.custo)}</span>` : ''}${x.dt ? `<span class="tag">DT ${esc(x.dt)}</span>` : ''}${x.alcance ? `<span class="tag">${esc(x.alcance)}</span>` : ''}</div><p class="dim" style="font-size:13.5px">${nl(x.efeito)}</p>`;
     if (x.tipo === 'ritual') corpo = `<div style="display:flex; gap:8px">${elTag(x.elemento)}${x.custo ? `<span class="tag">${esc(x.custo)}</span>` : ''}</div><p class="dim" style="font-size:13.5px">${nl(x.efeito)}</p>`;
     if (x.tipo === 'item') corpo = `<div style="display:flex; gap:6px">${x.dano ? `<span class="tag">${esc(x.dano)} ×${esc(x.mult || 1)}</span>` : ''}${x.peso ? `<span class="tag">${fmtKg(x.peso)}</span>` : ''}</div><p class="dim" style="font-size:13.5px">${esc(x.obs)}</p>`;
@@ -2927,7 +2927,7 @@ ROTAS.homebrew = async () => {
   }
   function editarHB(x) {
     if (x.tipo === 'classe') return editarClasseHb(x, gravar);
-    if (x.tipo === 'habilidade') return formHabilidade(h => gravar(x, h), x);
+    if (['habilidade', 'passiva', 'maldicao'].includes(x.tipo)) return formHabilidade(h => gravar(x, h), x);
     if (x.tipo === 'ritual') return formRitual(r => gravar(x, r), x);
     if (x.tipo === 'feitico') return formFeitico(r => gravar(x, r), x);
     if (x.tipo === 'item') return formItem(it => gravar(x, it), x);
