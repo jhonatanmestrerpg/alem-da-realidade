@@ -510,3 +510,16 @@ body.pag-ashura .topo { background: linear-gradient(180deg, #120206, #070103) !i
 #ficha.tema-ashura .pf-ret { clip-path: none !important; border-radius: 50% !important; }
 #ficha.tema-ashura .pf-ret-w { filter: none !important; }
 .mk-atr { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+
+/* runas das Marcas: pedra escura com a runa entalhada brilhando na cor da Marca */
+.roda-m i.pedra { background: radial-gradient(circle at 35% 30%, #2a2226, #0b0709 70%) !important; border: 2px solid #050304; box-shadow: 0 0 0 1.5px var(--mc), inset 0 0 10px rgba(0,0,0,.9), 0 0 16px -2px var(--mc); color: var(--mc); }
+.roda-m i.pedra.com-foto { background-size: cover !important; background-position: center !important; }
+.roda-m i.pedra.com-foto .runa { opacity: .85; filter: drop-shadow(0 0 2px #000) drop-shadow(0 0 4px var(--mc)); }
+.runa { width: 64%; height: 64%; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: square; stroke-linejoin: miter;
+  filter: drop-shadow(0 0 2px color-mix(in srgb, currentColor 80%, transparent)) drop-shadow(0 0 6px color-mix(in srgb, currentColor 55%, transparent)); animation: runa-brilho 3.6s ease-in-out infinite; }
+@keyframes runa-brilho { 0%, 100% { opacity: .82; } 50% { opacity: 1; } }
+.roda-m:nth-child(2n) .runa { animation-delay: -1.2s; } .roda-m:nth-child(3n) .runa { animation-delay: -2.4s; }
+.mk-ft:not([style*="background-image"]) { background: radial-gradient(circle at 35% 30%, #2a2226, #0b0709 70%) !important; color: var(--mc); display: grid; place-items: center; box-shadow: inset 0 0 12px rgba(0,0,0,.9), 0 0 0 1.5px var(--mc); }
+.mk-ft .runa.sobre { position: absolute; right: -3px; bottom: -3px; width: 42%; height: 42%; padding: 3px; border-radius: 50%; background: #0b0709; color: var(--mc); box-shadow: 0 0 0 1.5px var(--mc); }
+.mk-ft { position: relative; }
+@media (prefers-reduced-motion: reduce) { .runa { animation: none; } }

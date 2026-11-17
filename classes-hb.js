@@ -59,12 +59,30 @@ const NOMES_ATR = { forca: 'FOR', destreza: 'DES', constituicao: 'CON', intelige
 const resumoMarca = c => [c.pv && `+${c.pv} PV`, c.ps && `+${c.ps} PS`, c.pst && `+${c.pst} PST`, c.rd && `RD +${c.rd}`,
   ...Object.entries(c.atributos || {}).filter(([, v]) => +v).map(([k, v]) => `${NOMES_ATR[k] || k} +${v}`),
   ...Object.entries(c.pericias || {}).filter(([, v]) => +v).map(([k, v]) => `${k} +${v}`)].filter(Boolean);
-const fotoMarca = (c, cls = 'mk-ft') => `<span class="${cls}" style="--mc:${esc(c.cor || '#b4333b')};${c.foto ? `background-image:url('${esc(c.foto)}')` : ''}">${c.foto ? '' : esc((c.nome || '?').trim()[0] || '?')}</span>`;
+/* runas das Marcas: traço reto, entalhado, no tema de cada entidade. Marca sem runa própria ganha uma gerada pelo nome */
+const RUNAS = {
+  'governante do vazio': 'M12 2v20M12 7l-4 4 4 4 4-4zM12 15l-5 6M12 15l5 6M6 3.5a3.2 3.2 0 1 0 3.6 3.6',
+  'senhora das vielas': 'M9 22V7a3 3 0 0 1 6 0v2M9 13l6-3M15 14v8M12.5 17h5M5 20l2-2 2 2',
+  'boitatá divino': 'M12 22l-5-4 9-4-9-4 5-4M12 6V2M12 6L9 2.5M12 6l3-3.5',
+  'rei dos zumbis': 'M5 3l3.5 4L12 3l3.5 4L19 3M12 7v15M7 11l5 2.5 5-2.5M7 16l5 2.5 5-2.5',
+  'tartaruga rei': 'M12 3l7 4v9l-7 4-7-4V7zM12 3v17M5 11.5h14M8.5 5L12 9l3.5-4',
+  'criatura dos itens': 'M12 2v6M7 4l5 4 5-4M7 10h10l-2 8H9zM12 18v4M10 13h4',
+  'senhor das estações': 'M12 2v20M4 6.5l16 11M20 6.5l-16 11M12 9l3 3-3 3-3-3z',
+  'fênix': 'M12 9v13M12 13L4 5M12 13l8-8M12 17l-5-5M12 17l5-5M12 9l-2-3 2-4 2 4z',
+  'o dueto': 'M7 2v20M17 2v20M7 7l10 10M17 7L7 17M4 22h6M14 2h6',
+  'mulher da boca rasgada': 'M2 12h20M4 12l3 3h10l3-3M7 9.5v5M12 9.5v5.5M17 9.5v5M9 3l6 5M15 3L9 8'
+};
+const runaGerada = nome => { let h = 0; for (const ch of String(nome || '?')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const R = ['M12 7l5-4', 'M12 7L7 3', 'M12 12l5-4', 'M12 12L7 8', 'M12 17l5 4', 'M12 17l-5 4', 'M12 12l5 4', 'M12 12l-5 4', 'M9 2h6', 'M8 22h8'];
+  const out = ['M12 2v20']; for (let i = 0; i < 4; i++) { out.push(R[h % R.length]); h = Math.floor(h / R.length) + i * 7; } return [...new Set(out)].join(''); };
+const runaMarca = c => RUNAS[(c?.tpl || c?.nome || '').trim().toLowerCase()] || runaGerada(c?.nome);
+const svgRuna = c => `<svg class="runa" viewBox="0 0 24 24" aria-hidden="true"><path d="${runaMarca(c)}"/></svg>`;
+const fotoMarca = (c, cls = 'mk-ft') => `<span class="${cls}" style="--mc:${esc(c.cor || '#b4333b')};${c.foto ? `background-image:url('${esc(c.foto)}')` : ''}">${c.foto ? svgRuna(c).replace('class="runa"', 'class="runa sobre"') : svgRuna(c)}</span>`;
 
 /* a roda atrás do retrato: aparece quando o Ashura está ativo */
 function rodaMarcas(F) {
   const VS = new Set(marcasVestidas(F).map(c => c.id)), L = marcasDe(F).filter(c => !VS.has(c.id)).slice(0, 12); if (!F?.ashura || !L.length) return '';
-  return `<div class="roda-ashura" aria-label="Roda de Marcas ativa" style="--n:${L.length}">${L.map((c, i) => `<span class="roda-m" style="--i:${i};--mc:${esc(c.cor || '#c8a35a')}" title="${esc(c.nome)}">${c.foto ? `<i style="background-image:url('${esc(c.foto)}')"></i>` : `<i>${esc((c.nome || '?')[0])}</i>`}</span>`).join('')}</div>`;
+  return `<div class="roda-ashura" aria-label="Roda de Marcas ativa" style="--n:${L.length}">${L.map((c, i) => `<span class="roda-m" style="--i:${i};--mc:${esc(c.cor || '#c8a35a')}" title="${esc(c.nome)}"><i class="pedra ${c.foto ? 'com-foto' : ''}" ${c.foto ? `style="background-image:url('${esc(c.foto)}')"` : ''}>${svgRuna(c)}</i></span>`).join('')}</div>`;
 }
 
 function marcasHTML(F, podeEditar) {
