@@ -437,3 +437,54 @@ h2 .ic, h3 .ic, .rotulo .ic, .hoje .ic { opacity: .85; color: var(--ouro); }
 .v-chip { white-space: nowrap; padding: 1px 7px; border: 1px solid var(--linha); border-radius: 99px; background: rgba(255,255,255,.03); }
 .v-chip.neg { color: #e3666d; border-color: #e3666d55; }
 .mk-vest-hab { border-color: color-mix(in srgb, var(--mc) 55%, transparent); box-shadow: 0 0 30px -12px var(--mc); display: grid; gap: 10px; }
+
+/* ============ Ashura aberto: a página inteira entra em pânico ============ */
+body.pag-ashura {
+  --noite: #050203; --painel: #12060a; --painel-2: #1a080d; --painel-3: #260b12;
+  --linha: rgba(255, 46, 74, .16); --linha-2: rgba(255, 46, 74, .32);
+  --lua: #f4e1e4; --lua-dim: #b98d94; --lua-faint: #7d555c;
+  --sangue: #e3142f; --sangue-hi: #ff4d61; --ouro: #ff2a45; --violeta: #6d0f22;
+  background: #040102 !important;
+}
+body.pag-ashura::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(120% 70% at 50% -10%, rgba(140, 6, 28, .55), transparent 60%),
+    radial-gradient(90% 60% at 50% 115%, rgba(90, 0, 18, .7), transparent 65%),
+    radial-gradient(60% 40% at 0% 50%, rgba(120, 0, 20, .35), transparent 70%),
+    radial-gradient(60% 40% at 100% 50%, rgba(120, 0, 20, .35), transparent 70%);
+  animation: ash-pulso 2.4s ease-in-out infinite; }
+body.pag-ashura::after { content: ""; position: fixed; inset: 0; z-index: 15; pointer-events: none;
+  box-shadow: inset 0 0 90px 10px rgba(0, 0, 0, .8), inset 0 0 50px 4px rgba(200, 10, 40, .4);
+  animation: ash-borda 1.2s ease-in-out infinite; }
+body.pag-ashura .topo { background: linear-gradient(180deg, #120206, #070103) !important; border-bottom-color: rgba(255, 30, 60, .45) !important; box-shadow: 0 6px 30px -10px rgba(255, 20, 50, .55); }
+@keyframes ash-pulso { 0%, 100% { opacity: .75; } 12% { opacity: 1; } 24% { opacity: .8; } 36% { opacity: .95; } }
+@keyframes ash-borda { 0%, 100% { box-shadow: inset 0 0 90px 10px rgba(0,0,0,.8), inset 0 0 40px 2px rgba(200,10,40,.3); } 50% { box-shadow: inset 0 0 90px 10px rgba(0,0,0,.8), inset 0 0 70px 8px rgba(230,15,50,.55); } }
+
+#ficha.tema-ashura .caixa, #ficha.tema-ashura .item, #ficha.tema-ashura .hab, #ficha.tema-ashura .mk-card {
+  background: linear-gradient(160deg, rgba(60, 4, 16, .55), rgba(14, 3, 6, .92)) !important;
+  border-color: rgba(255, 40, 70, .22) !important; box-shadow: inset 0 0 0 1px rgba(0,0,0,.6), 0 10px 30px -18px rgba(255, 20, 50, .6); }
+#ficha.tema-ashura h1, #ficha.tema-ashura h2 { color: #ffd9de; text-shadow: 0 0 14px rgba(255, 30, 60, .75), 0 0 2px #ff2a45; }
+#ficha.tema-ashura h1 { animation: ash-trem 3.2s steps(1) infinite; }
+@keyframes ash-trem { 0%, 92%, 100% { transform: none; text-shadow: 0 0 14px rgba(255,30,60,.75), 0 0 2px #ff2a45; } 93% { transform: translate(2px, -1px); text-shadow: -3px 0 #ff0033, 3px 0 #5a0012; } 95% { transform: translate(-2px, 1px); text-shadow: 3px 0 #ff0033, -3px 0 #5a0012; } 97% { transform: translate(1px, 0); } }
+#ficha.tema-ashura .retrato { box-shadow: 0 0 0 2px #ff1f3d, 0 0 0 6px rgba(0,0,0,.9), 0 0 50px 6px rgba(255, 20, 50, .6) !important; animation: ash-retrato 1.2s ease-in-out infinite; filter: saturate(1.15) contrast(1.08); }
+@keyframes ash-retrato { 0%, 100% { box-shadow: 0 0 0 2px #ff1f3d, 0 0 0 6px rgba(0,0,0,.9), 0 0 40px 4px rgba(255,20,50,.45); } 14% { box-shadow: 0 0 0 2px #ff5266, 0 0 0 6px rgba(0,0,0,.9), 0 0 70px 12px rgba(255,20,50,.8); } 28% { box-shadow: 0 0 0 2px #ff1f3d, 0 0 0 6px rgba(0,0,0,.9), 0 0 45px 5px rgba(255,20,50,.5); } 42% { box-shadow: 0 0 0 2px #ff3d52, 0 0 0 6px rgba(0,0,0,.9), 0 0 60px 9px rgba(255,20,50,.7); } }
+#ficha.tema-ashura .roda-m { box-shadow: 0 0 16px rgba(255, 20, 50, .8); }
+#ficha.tema-ashura .abas-grupo button[aria-selected="true"], #ficha.tema-ashura .abas-grupo .ativa { background: linear-gradient(180deg, #8e0c22, #3d0410) !important; border-color: #ff2a45 !important; }
+#ficha.tema-ashura .vital .barra, #ficha.tema-ashura .vital [class*="barra"] { box-shadow: 0 0 18px -4px rgba(255, 20, 50, .7); }
+.mk-foto-ash { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.mk-foto-ash .mk-ft.p { width: 22px; height: 22px; }
+
+/* entrada do Ashura: clarão vermelho, tremida e escuro */
+.fx-ashura { position: fixed; inset: 0; z-index: 80; pointer-events: none; background: radial-gradient(circle at 50% 42%, #ff1f3d 0, #7a0618 22%, #120105 55%, #000 80%); animation: ash-entra 1.9s ease-out forwards; }
+.fx-ashura::after { content: "ASHURA"; position: absolute; inset: 0; display: grid; place-items: center; font: 400 clamp(54px, 14vw, 150px)/1 var(--f-disp); letter-spacing: .25em; color: #ffe3e7; text-shadow: 0 0 30px #ff1f3d, 0 0 80px #ff1f3d; animation: ash-txt 1.9s ease-out forwards; }
+@keyframes ash-entra { 0% { opacity: 0; transform: scale(1.2); } 12% { opacity: 1; transform: scale(1) translate(6px, -4px); } 18% { transform: translate(-6px, 5px); } 24% { transform: translate(4px, 2px); } 30% { transform: none; } 70% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes ash-txt { 0% { opacity: 0; letter-spacing: 1em; filter: blur(8px); } 25% { opacity: 1; letter-spacing: .25em; filter: none; } 75% { opacity: 1; } 100% { opacity: 0; letter-spacing: .5em; } }
+@media (prefers-reduced-motion: reduce) {
+  body.pag-ashura::before, body.pag-ashura::after, #ficha.tema-ashura h1, #ficha.tema-ashura .retrato { animation: none !important; }
+  .fx-ashura, .fx-ashura::after { animation-duration: .01s; }
+}
+#ficha.tema-ashura .ficha-topo { grid-template-columns: auto 1fr; }
+/* retrato redondo no Ashura, sem moldura quadrada */
+#ficha.tema-ashura .retrato { border-radius: 50% !important; border: 0 !important; outline: 0 !important; background-size: cover !important; background-position: center !important; overflow: hidden; }
+#ficha.tema-ashura .retrato::before, #ficha.tema-ashura .retrato::after { border-radius: 50% !important; border: 0 !important; }
+@media (max-width: 640px) { #ficha.tema-ashura .ficha-topo { grid-template-columns: 1fr; } }

@@ -53,7 +53,7 @@ function marcasHTML(F, podeEditar) {
   const cap = S?.marcasMax ? Math.max(1, +(atrEf(F)[S.marcasAtr || 'presenca'] || 0)) : 0;
   const regra = S?.regraMarcas || C?.regraMarcas || '';
   return `<div class="marcas"><div class="cab-pagina"><div><h2 style="margin:0">Marcas</h2><p class="dim" style="margin:4px 0 0; max-width:72ch">${regra ? esc(regra) : 'Entidades presas à sua Roda. Vestir uma Marca é vestir a intenção dela: nome, rosto, bônus e habilidades mudam enquanto durar.'}</p></div>
-      ${podeEditar ? `<div class="acoes-topo"><button class="btn ${F.ashura ? 'perigo' : 'sec'}" id="mk-ashura" aria-pressed="${!!F.ashura}">${IC('brilho')} ${F.ashura ? 'Encerrar Ashura' : 'Ashura: abrir a Roda'}</button></div>` : ''}</div>
+      ${podeEditar ? `<div class="acoes-topo"><label class="btn sec mk-foto-ash" title="Retrato que aparece no lugar do seu enquanto o Ashura estiver aberto">${F.fotoAshura ? `<span class="mk-ft p" style="background-image:url('${esc(F.fotoAshura)}')"></span>` : IC('imagem')} Foto do Ashura<input type="file" accept="image/*" id="mk-foto-ash" hidden></label>${F.fotoAshura ? '<button class="btn-x" id="mk-foto-ash-x" aria-label="Tirar a foto do Ashura" title="Tirar a foto do Ashura">×</button>' : ''}<button class="btn ${F.ashura ? 'perigo' : 'sec'}" id="mk-ashura" aria-pressed="${!!F.ashura}">${IC('brilho')} ${F.ashura ? 'Encerrar Ashura' : 'Ashura: abrir a Roda'}</button></div>` : ''}</div>
     <span class="rotulo">${L.length}${cap ? '/' + cap : ''} Marcas${VS.length ? ` · vestindo ${esc(VS.map(c => c.nome).join(' + '))}` : ''}${F.ashura ? ` · Roda aberta, até ${lim} vestida${lim > 1 ? 's' : ''} (${VS.length}/${lim})` : ' · uma vestida por vez'}</span>
     <div class="grade-mk">${L.map((c, i) => `<article class="mk-card ${c.id === vest || juntas.has(c.id) ? 'vestida' : ''}" style="--mc:${esc(c.cor || '#b4333b')}">
         ${fotoMarca(c)}<div class="mk-tx"><b>${esc(c.nome)}</b>${c.titulo ? `<span class="mk-tit">${esc(c.titulo)}</span>` : ''}
@@ -128,7 +128,9 @@ function ligarMarcas(F, { salvar, render }) {
   const L = () => [...(F.chakras || [])];
   const gravar = async (lista, extra = {}) => { F.chakras = lista; Object.assign(F, extra); render(); await salvar({ chakras: lista, ...extra }); };
   const vestir = id => vestirMarca(F, id, { salvar, render });
-  $('#mk-ashura')?.addEventListener('click', async () => { const on = !F.ashura; await mudarVestes(F, { ashura: on, chakrasJuntas: on ? F.chakrasJuntas || [] : [] }, { salvar, render }); toast(on ? `A Roda se abriu atrás de você: até ${limiteVestir(F)} Marcas vestidas.` : 'A Roda se fechou: fica só a Marca principal.'); });
+  $('#mk-ashura')?.addEventListener('click', async () => { const on = !F.ashura; await mudarVestes(F, { ashura: on, chakrasJuntas: on ? F.chakrasJuntas || [] : [] }, { salvar, render }); if (on) { const fx = document.createElement('div'); fx.className = 'fx-ashura'; document.body.appendChild(fx); setTimeout(() => fx.remove(), 1900); } toast(on ? `A Roda se abriu atrás de você: até ${limiteVestir(F)} Marcas vestidas.` : 'A Roda se fechou: fica só a Marca principal.'); });
+  $('#mk-foto-ash')?.addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; const u = await enviarImagem(f, 'circulo'); e.target.value = ''; if (u) { F.fotoAshura = u; render(); await salvar({ fotoAshura: u }); toast('Foto do Ashura guardada: aparece quando a Roda abrir.'); } });
+  $('#mk-foto-ash-x')?.addEventListener('click', async () => { F.fotoAshura = ''; render(); await salvar({ fotoAshura: '' }); });
   $$('[data-mk-junto]').forEach(b => b.onclick = () => vestirJunto(F, marcasDe(F)[+b.dataset.mkJunto].id, { salvar, render }));
   $$('[data-mk-ver]').forEach(b => b.onclick = () => verMarca(marcasDe(F)[+b.dataset.mkVer]));
   $$('[data-mk-vest]').forEach(b => b.onclick = () => { const c = L()[+b.dataset.mkVest]; vestir(c.id === F.chakraVestido ? '' : c.id); });
