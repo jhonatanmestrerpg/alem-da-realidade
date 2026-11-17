@@ -898,7 +898,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261117131658';
+const BUILD = '20261117132219';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1153,6 +1153,8 @@ const efeitoOposto = t => String(t || '').replace(/contra a DT/gi, 'contra o seu
 const nivelFeitMax = f => Math.max(0, ...(SIS.feiticoNivel || []).filter(x => (+f?.nivel || 1) >= x.desde).map(x => x.nivel));
 const desdeFeit = n => (SIS.feiticoNivel || []).find(x => x.nivel === +n)?.desde || 1;
 const reqFeitico = r => [r.ingrediente, r.item].filter(Boolean);
+// item que vale por todos os componentes (ex.: Relicário da Roda): com ele no inventário nada é exigido nem consumido
+const ehRelicario = it => !!(it && (it.valeComponentes || /vale por todo ingrediente/i.test(it.obs || '')));
 const USOS_SACO = 3, ehSaco = it => /^Saco de Ingredientes/i.test(it?.nome || '');
 const usosSaco = it => it.usos ?? USOS_SACO;
 const tagUsos = it => ehSaco(it) ? `<span class="tag">${usosSaco(it)}/${USOS_SACO} usos</span>` : '';
@@ -2472,10 +2474,10 @@ ROTAS.agente = async id => {
     $('#rolar-livre')?.addEventListener('click', () => { const ex = $('#livre').value; const r = rolar(ex); $('#res-livre').innerHTML = r ? `${r.detalhe} = <b>${r.total}</b>` : '<span class="falha">Formato inválido. Ex.: 2d6+3, 3d20m+4, 3#2d10+6</span>'; if (r) publicarRolagem(F, ex, r); });
     $$('[data-lancar]').forEach(b => b.onclick = () => { const i = b.dataset.lancar, fe = F.feiticos[+i];
       const inv = F.equipamentos || [], acha = n => inv.findIndex(it => (it.nome || '').trim().toLowerCase() === n.toLowerCase());
-      const faltam = reqFeitico(fe).filter(n => acha(n) < 0);
+      const reli = inv.find(ehRelicario), faltam = reli ? [] : reqFeitico(fe).filter(n => acha(n) < 0);
       if (faltam.length) { $('#res-feit-' + i).innerHTML = `<span class="falha">Sem componentes. Falta no inventário: ${faltam.map(esc).join(', ')}.</span>`; return; }
-      const gastos = [];
-      if (reqFeitico(fe).length && podeEditar) { for (const n of reqFeitico(fe)) { const k = acha(n), it = inv[k];
+      const gastos = reli && reqFeitico(fe).length ? [`${reli.nome} no lugar dos componentes`] : [];
+      if (!reli && reqFeitico(fe).length && podeEditar) { for (const n of reqFeitico(fe)) { const k = acha(n), it = inv[k];
           if (ehSaco(it)) { const u = usosSaco(it) - 1; if (u > 0) { it.usos = u; gastos.push(`${n}: ${u}/${USOS_SACO} usos restantes`); } else if ((+it.qtd || 1) > 1) { it.qtd = +it.qtd - 1; it.usos = USOS_SACO; gastos.push(`${n} esvaziou: abriu o próximo (${it.qtd} restante${it.qtd > 1 ? 's' : ''})`); } else { inv.splice(k, 1); gastos.push(`${n} esvaziou e acabou`); } }
           else { if ((+it.qtd || 1) > 1) it.qtd = +it.qtd - 1; else inv.splice(k, 1); gastos.push(`${n} consumido`); } }
         salvar({ equipamentos: inv }); }
