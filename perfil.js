@@ -269,7 +269,8 @@
       return;
     }
     const root = raiz(); if (!root || !EST.dados) return;
-    const P = EST.aberto ? lerP() : (EST.dados.perfil || {});
+    // a página pode trocar o perfil por um estado (ex.: Ashura aberto no ADR) sem mexer no perfil salvo
+    const P = EST.aberto ? lerP() : ((EST.cfg.perfilEf ? EST.cfg.perfilEf(EST.dados) : null) || EST.dados.perfil || {});
     const sig = EST.aberto ? 'rasc' : JSON.stringify(P);
     const perdeu = root.classList.contains('pf-on') && ((root.classList.contains('pf-fundo') && !root.querySelector(':scope > .pf-cam')) || (root.classList.contains('pf-capa-on') && !root.querySelector(':scope > .pf-capa')) || (!root.querySelector('.pf-nome') && root.querySelector('h1, h2')));
     if (root._pfSig !== sig || perdeu) { aplicar(root, P, EST.cfg); root._pfSig = sig; }

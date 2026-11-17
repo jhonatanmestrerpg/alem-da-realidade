@@ -25,7 +25,11 @@
 <script>window.MAPA_TEMA = 'adr'; window.MAPA_ROTULOS = { dir: 'Mestre', ass: 'Ameaça', quem: 'Agentes', a: 'o' };</script>
 <script src="mapa-mesa.js?v=20261116171603"></script>
 <script src="perfil.js?v=20261116222449"></script>
-<script>PerfilPersonagem.ligar({ rota: 'agente', col: 'fichas', raiz: '#ficha', nome: 'h1', retrato: '.retrato' });</script>
+<script>
+// com o Ashura aberto o perfil do personagem vira o do Ashura: vermelho, preto e vinho, retrato redondo e brasas
+const PERFIL_ASHURA = { cor: { acento: '#ff1f3d', acento2: '#8e0c22', texto: '#f6e3e6', suave: '#c39098', painel: '#14050a', borda: '#5c0d1c' }, fundo: { tipo: 'gradiente', c1: '#3a0510', c2: '#030001', ang: 175 }, caixa: { opac: 92, brilho: 14 }, nome: { estilo: 'glitch' }, retrato: { forma: 'circulo', moldura: '#ff1f3d', esp: 2, brilho: 30 }, efeito: { tipo: 'brasas', cor: '#ff2a45' } };
+PerfilPersonagem.ligar({ rota: 'agente', col: 'fichas', raiz: '#ficha', nome: 'h1', retrato: '.retrato', perfilEf: d => d && d.ashura ? (d.perfilAshura || PERFIL_ASHURA) : null });
+</script>
 <script src="mesa-extra.js"></script>
 <script src="aparicao.js"></script>
 <script src="base-sistema.js?v=20261116171603"></script>
@@ -898,7 +902,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261117152252';
+const BUILD = '20261117153419';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1241,8 +1245,9 @@ function dadosPericia(f, nome) {
   const vb = vetorAtivo(f) ? 1 : 0;
   const alem = vb && pontos + 1 > patente(nivelDe(f)).limite ? 1 : 0;
   const bm = typeof bonusMec === 'function' ? bonusMec(f).pericias : 0;
-  const vd = vampDados(f, nome), vtx = vampTeste(f, nome), mk = (typeof marcasVestidas === 'function' ? marcasVestidas(f) : []).reduce((t, m) => t + (+m.pericias?.[nome] || 0), 0);
-  return { pontos, vt, vb, alem, atr, vd, mk, dados: Math.max(1, pontos + vt + vb + alem + bm + vd + mk), mod: (atrEf(f)[atr] || 0) + vtx, extraVamp: vtx };
+  const vd = vampDados(f, nome), vtx = vampTeste(f, nome), MV = typeof marcasVestidas === 'function' ? marcasVestidas(f) : [], mkL = MV.map(m => [m.nome, +m.pericias?.[nome] || 0]).filter(x => x[1]), mk = mkL.reduce((t, x) => t + x[1], 0);
+  const atrMk = MV.map(m => [m.nome, +m.atributos?.[atr] || 0]).filter(x => x[1]);
+  return { pontos, vt, vb, alem, atr, vd, mk, mkL, atrMk, dados: Math.max(1, pontos + vt + vb + alem + bm + vd + mk), mod: (atrEf(f)[atr] || 0) + vtx, extraVamp: vtx };
 }
 
 /* =================================================================
@@ -2076,6 +2081,7 @@ ROTAS.agente = async id => {
       <div class="caixa penta" style="display:grid; gap:10px">
         <svg viewBox="0 0 300 280" role="img" aria-label="Atributos">${pentagono(A)}</svg>
         <div class="attr-lista">${ATR.map(([k, n, s]) => `<div><button class="v atr-rolar" data-rolar-atr="${k}" title="Rolar teste de ${n}" aria-label="Rolar teste de ${n}">${A[k] || 0}</button><div class="rotulo">${s}</div><div class="edit-only" style="display:flex; justify-content:center; gap:3px; margin-top:4px"><button class="vbtn" style="width:24px;height:24px" data-at="${k}" data-d="-1" aria-label="Menos ${n}">−</button><button class="vbtn" style="width:24px;height:24px" data-at="${k}" data-d="1" aria-label="Mais ${n}">+</button></div></div>`).join('')}</div>
+        ${!editando && typeof marcasVestidas === 'function' && marcasVestidas(F).some(m => Object.values(m.atributos || {}).some(Number)) ? `<div class="mk-atr">${marcasVestidas(F).flatMap(m => Object.entries(m.atributos || {}).filter(([, v]) => +v).map(([k, v]) => `<span class="tag tag-marca">${esc(m.nome)} +${v} ${SIGLA[k] || k}</span>`)).join('')}</div>` : ''}
         <div class="mini-stats">
           <div><div class="rotulo">Movimento</div><div class="n">${K.mov}m</div></div>
           <div><div class="rotulo">Carga</div><div class="n">${fmtKg(K.carga)}/${fmtKg(K.cc)}</div></div>
@@ -2140,7 +2146,7 @@ ROTAS.agente = async id => {
           return ` <div class="per ${P.pontos + P.vt + P.vd + P.extraVamp ? '' : 'zero'}" data-pnome="${esc(n)}" ${vis(n) ? '' : 'hidden'}><div class="topo-p"><b>${esc(n)}</b><div class="pips">${Array.from({ length: Math.max(K.pat.limite, P.pontos) }, (_, k) => `<span class="pip ${k < P.pontos ? 'on' : ''}"></span>`).join('')}${P.vt ? '<span class="pip vt" title="+1 da Vontade"></span>' : ''}${P.vd ? Array.from({ length: P.vd }, () => '<span class="pip vp" title="+1 do Vampiro"></span>').join('') : ''}</div></div>
           <div class="mono dim" style="font-size:12px" data-pline="${esc(id + '|p|' + n)}">${(G => `${G.dados}d20 + ${G.mod} (${SIGLA[G.atr]}${G.extraVamp ? ` +${G.extraVamp} vampiro` : ''})`)(comAtributo(F, P, UI_ARMA['giro|' + id + '|p|' + n]))}</div>
           ${P.vd || P.extraVamp ? `<div style="display:flex; gap:4px; flex-wrap:wrap">${P.vd ? `<span class="tag tag-vamp">Vampiro +${P.vd}</span>` : ''}${P.extraVamp ? `<span class="tag tag-vamp">+${P.extraVamp} no teste</span>` : ''}</div>` : ''}
-          ${P.vb ? `<div style="display:flex; gap:4px; flex-wrap:wrap"><span class="tag tag-vetor">Vetor +1</span>${P.alem ? '<span class="tag tag-vetor">Além do limite +1 dado</span>' : ''}</div>` : ''}
+          ${P.vb || P.mkL.length || P.atrMk.length ? `<div style="display:flex; gap:4px; flex-wrap:wrap">${P.vb ? `<span class="tag tag-vetor" title="Vestir a intenção: +1 dado em toda perícia">${chakraVest(F) ? 'Intenção' : 'Vetor'} +1 dado</span>` : ''}${P.alem ? '<span class="tag tag-vetor">Além do limite +1 dado</span>' : ''}${P.mkL.map(([n, v]) => `<span class="tag tag-marca" title="Perícia da Marca vestida">${esc(n)} +${v} dado${v > 1 ? 's' : ''}</span>`).join('')}${P.atrMk.map(([n, v]) => `<span class="tag tag-marca" title="Atributo da Marca vestida">${esc(n)} +${v} ${SIGLA[P.atr]}</span>`).join('')}</div>` : ''}
           <div class="edit-only" style="display:flex; gap:6px; align-items:center"><button class="vbtn" data-pp="${esc(n)}" data-d="-1">−</button><button class="vbtn" data-pp="${esc(n)}" data-d="1">+</button>
             <select data-patr="${esc(n)}" style="width:auto; padding:4px">${ATR.map(([k, , s]) => `<option value="${k}" ${P.atr === k ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
           <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap"><button class="btn ouro mini" data-teste="${esc(n)}">Rolar teste</button>${seletorGiro(id + '|p|' + n, P.atr)}</div><div class="res" data-res="${esc(n)}">${UI_ARMA['pres|' + id + '|' + n] || ''}</div></div>`; }).join('')}</div>

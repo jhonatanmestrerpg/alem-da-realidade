@@ -505,3 +505,8 @@ body.pag-ashura .topo { background: linear-gradient(180deg, #120206, #070103) !i
 .hb-wrap { display: grid; gap: 4px; }
 .hb-meta { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-size: 12.5px; padding: 0 4px 6px; }
 .hb-camp { display: inline-flex; gap: 6px; align-items: center; color: var(--lua-dim); }
+
+.tag-marca { color: #ff9aa6 !important; border-color: #ff2a4566 !important; }
+#ficha.tema-ashura .pf-ret { clip-path: none !important; border-radius: 50% !important; }
+#ficha.tema-ashura .pf-ret-w { filter: none !important; }
+.mk-atr { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
