@@ -902,7 +902,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261117162023';
+const BUILD = '20261117200829';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -2184,7 +2184,7 @@ ROTAS.agente = async id => {
       return `<div style="display:grid; gap:14px">
         ${MK_HAB()}
         <div class="cab-pagina"><h2>Classe · ${esc(F.subclasse)}</h2></div>
-        <div class="grade-hab">${habCl.map(h => `<article class="hab ${h.nivel > F.nivel ? 'bloq' : ''}"><div class="cab"><span class="nm">${esc(h.nome)}</span><span class="tag">Nv ${h.nivel}</span></div><p>${esc(h.texto)}</p>${h.nivel > F.nivel ? '' : botoesUso(h.nome)}</article>`).join('') || '<div class="vazio">Sem subclasse.</div>'}</div>
+        <div class="grade-hab">${habCl.map(h => `<article class="hab ${h.nivel > F.nivel ? 'bloq' : ''}"><div class="cab"><span class="nm">${esc(h.nome)}</span><span class="tag">Nv ${h.nivel}</span></div><p>${nl(h.texto)}</p>${h.nivel > F.nivel ? '' : botoesUso(h.nome)}</article>`).join('') || '<div class="vazio">Sem subclasse.</div>'}</div>
         ${VL_HAB()}
         ${podeEditar || vampDe(F) ? `<div class="caixa vp-compl"><div><span class="rotulo">Complementos opcionais</span><p class="dim" style="margin:2px 0 0; font-size:13.5px">${vampDe(F) ? `Esta ficha é um <b>${esc(vampDe(F).nome)}</b>. Os detalhes estão na aba Vampiro.` : 'Quando o personagem vira vampiro (Presas Além da Realidade), ligue aqui.'}</p></div>${vampDe(F) ? '<button class="btn sec mini" data-aba="vampiro">Abrir aba Vampiro</button>' : '<button class="btn mini" id="vp-ligar">Tornar vampiro</button>'}</div>` : ''}
         <div class="cab-pagina"><h2>Passivas</h2>${podeEditar ? '<button class="btn mini" id="add-passiva">Adicionar passiva</button>' : ''}</div>
