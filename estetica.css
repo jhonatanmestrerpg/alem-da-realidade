@@ -537,3 +537,8 @@ body.pag-ashura .topo { background: linear-gradient(180deg, #120206, #070103) !i
 .reg-seta svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; transition: transform .25s; }
 .reg-card.aberto .reg-seta svg { transform: rotate(180deg); }
 .reg-seta[hidden] { display: none !important; }
+
+/* Palácio das Entidades: dourado fantasmagórico por cima de tudo */
+#ficha.tema-palacio .retrato { box-shadow: 0 0 0 2px #f2c94c, 0 0 40px 6px rgba(242, 201, 76, .45) !important; }
+body.pag-palacio::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(90% 60% at 50% 0%, rgba(242, 201, 76, .22), transparent 60%), radial-gradient(70% 50% at 50% 100%, rgba(160, 120, 30, .25), transparent 70%); }
+body.pag-ashura.pag-palacio::before { background: radial-gradient(90% 60% at 50% 0%, rgba(242, 201, 76, .28), transparent 60%), radial-gradient(120% 70% at 50% -10%, rgba(140, 6, 28, .45), transparent 60%), radial-gradient(90% 60% at 50% 115%, rgba(90, 0, 18, .7), transparent 65%); }

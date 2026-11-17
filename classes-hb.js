@@ -28,12 +28,22 @@ function registrarClasseFicha(f) { if (f?.classeHb?.nome) HB_SNAP[f.classeHb.nom
 
 /* ---------- Marcas na ficha ---------- */
 // Marca vinda da classe acompanha a classe (números, habilidades) até alguém editar ela na mão
-const marcaEf = (F, c) => { if (!c || c.proprio) return c; const T = (classe(F?.classe)?.chakras || []).find(t => t && t.nome === (c.tpl || c.nome)); return T ? { ...JSON.parse(JSON.stringify(T)), id: c.id, foto: c.foto || T.foto || '', manifesta: c.manifesta, tpl: T.nome } : c; };
+// Evoluir Entidade: a Marca evoluída conta em dobro na ficha (vitais, RD, atributos e perícias que ela dá)
+const palacio = (F, m) => { if (!F?.palacio || !m) return m; return { ...m, atributos: Object.fromEntries(Object.entries(m.atributos || {}).map(([k, v]) => [k, (+v || 0) * 2])) }; };
+const evoluir = m => { if (!m?.evoluida) return m; const d = o => Object.fromEntries(Object.entries(o || {}).map(([k, v]) => [k, (+v || 0) * 2]));
+  return { ...m, pv: (+m.pv || 0) * 2, ps: (+m.ps || 0) * 2, pst: (+m.pst || 0) * 2, rd: (+m.rd || 0) * 2, atributos: d(m.atributos), pericias: d(m.pericias), titulo: [m.titulo, 'Evoluída'].filter(Boolean).join(' · ') }; };
+// o modelo da classe acha a Marca pelo nome atual ou por um nome antigo (campo "antes"), assim renomear não quebra a Roda de ninguém
+const marcaEf = (F, c) => palacio(F, marcaEf0(F, c));
+const marcaEf0 = (F, c) => { if (!c) return c; if (c.proprio) return evoluir(c); const k = c.tpl || c.nome, T = (classe(F?.classe)?.chakras || []).find(t => t && (t.nome === k || (t.antes || []).includes(k) || (t.antes || []).includes(c.nome)));
+  return evoluir(T ? { ...JSON.parse(JSON.stringify(T)), id: c.id, foto: c.foto || T.foto || '', manifesta: c.manifesta, evoluida: c.evoluida, tpl: T.nome } : c); };
 const marcasDe = F => (F?.chakras || []).map(c => marcaEf(F, c));
 // quantas Marcas cabem vestidas juntas: 1 fora do Ashura; no Ashura, o que a subclasse diz (campo ou o texto "veste até N Marcas")
 const limiteVestir = F => { if (!F?.ashura) return 1; const S = subAtual(F) || {}; return Math.max(1, +(S.ashuraMarcas || (S.habilidades || []).map(h => /veste até (\d+)\s+Marcas/i.exec(h.texto || '')).find(Boolean)?.[1] || 1)); };
-const marcasVestidas = F => { const p = typeof chakraVest === 'function' ? chakraVest(F) : null; if (!p) return []; if (!F.ashura) return [p];
-  const L = marcasDe(F); return [p, ...(F.chakrasJuntas || []).map(id => L.find(c => c.id === id)).filter(c => c && c.id !== p.id).slice(0, limiteVestir(F) - 1)]; };
+// Modelagem e Fusão: duas Marcas fundidas viram uma só; vestir uma veste a outra junto, sem gastar vaga
+const parFusao = (F, id) => { const f = F?.fusao || []; return f.length === 2 && f.includes(id) ? f.find(x => x !== id) : null; };
+const marcasVestidas = F => { const p = typeof chakraVest === 'function' ? chakraVest(F) : null; if (!p) return []; const L = marcasDe(F), comPar = m => { const o = parFusao(F, m.id), q = o && L.find(c => c.id === o); return q ? [m, q] : [m]; };
+  const base = F.ashura ? [p, ...(F.chakrasJuntas || []).map(id => L.find(c => c.id === id)).filter(c => c && c.id !== p.id).slice(0, limiteVestir(F) - 1)] : [p];
+  const out = []; for (const m of base) for (const x of comPar(m)) if (!out.some(o => o.id === x.id)) out.push(x); return out; };
 /* ===== efeitos das Marcas vestidas sobre a ficha =====
    efeitos: { feiticos|maldicoes: { preparo, alcance: ×, duracao: ×, dano: +dados }, bonus: [bônus de ataque sempre ligados], carga: × } */
 const efeitosMarcas = F => (typeof marcasVestidas === 'function' ? marcasVestidas(F) : []).filter(m => m.efeitos).map(m => ({ ...m.efeitos, _de: m.nome }));
@@ -70,12 +80,23 @@ const RUNAS = {
   'senhor das estações': 'M12 2v20M4 6.5l16 11M20 6.5l-16 11M12 9l3 3-3 3-3-3z',
   'fênix': 'M12 9v13M12 13L4 5M12 13l8-8M12 17l-5-5M12 17l5-5M12 9l-2-3 2-4 2 4z',
   'o dueto': 'M7 2v20M17 2v20M7 7l10 10M17 7L7 17M4 22h6M14 2h6',
+  'sadako': 'M6 2v20M18 2v20M6 6h12M6 11h12M6 16h12M10 6l4 5M14 11l-4 5',
+  'aranha': 'M12 7v10M12 9L5 4M12 9l7-5M12 12H3M12 12h9M12 15l-7 5M12 15l7 5M10 7l2-3 2 3',
+  'dmitry': 'M12 9v13M12 9L8 2M12 9l4-7M8 5L5 3M16 5l3-2M9 15l3 3 3-3M12 22l-3-2M12 22l3-2',
+  'quetzal': 'M12 22V9M12 9L5 3M12 9l7-6M12 14l-6-4M12 14l6-4M9 22h6',
+  'gaia': 'M3 9l3 3 3-3 3 3 3-3 3 3 3-3M3 15l3 3 3-3 3 3 3-3 3 3 3-3M12 2v4M12 18v4',
+  'jasper': 'M12 2v20M5 4h5v16H5M19 4h-5v16h5M7 9l3 3-3 3M17 9l-3 3 3 3',
+  'chaco': 'M12 2l2 4-2 3-2-3zM9 10h6v12H9zM9 14h6M15 13l3 2v4',
+  'frost': 'M12 2v20M3.5 7l17 10M20.5 7l-17 10M12 6l-2-2M12 6l2-2M12 18l-2 2M12 18l2 2',
+  'shiny': 'M12 4v16M8 8h8M7 12h10M8 16h8M4 4l4 4M20 4l-4 4M4 9l3 3',
+  'zila': 'M12 2l-3 4h6zM12 6v16M12 10l-6 2M12 10l6 2M12 16l-6 3M12 16l6 3',
+  'fotograma': 'M4 3h16v18H4zM4 9h16M4 15h16M8 3v18M16 3v18',
   'mulher da boca rasgada': 'M2 12h20M4 12l3 3h10l3-3M7 9.5v5M12 9.5v5.5M17 9.5v5M9 3l6 5M15 3L9 8'
 };
 const runaGerada = nome => { let h = 0; for (const ch of String(nome || '?')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const R = ['M12 7l5-4', 'M12 7L7 3', 'M12 12l5-4', 'M12 12L7 8', 'M12 17l5 4', 'M12 17l-5 4', 'M12 12l5 4', 'M12 12l-5 4', 'M9 2h6', 'M8 22h8'];
   const out = ['M12 2v20']; for (let i = 0; i < 4; i++) { out.push(R[h % R.length]); h = Math.floor(h / R.length) + i * 7; } return [...new Set(out)].join(''); };
-const runaMarca = c => RUNAS[(c?.tpl || c?.nome || '').trim().toLowerCase()] || runaGerada(c?.nome);
+const runaMarca = c => RUNAS[(c?.runa || '').toLowerCase()] || RUNAS[(c?.tpl || c?.nome || '').trim().toLowerCase()] || runaGerada(c?.nome);
 const svgRuna = c => `<svg class="runa" viewBox="0 0 24 24" aria-hidden="true"><path d="${runaMarca(c)}"/></svg>`;
 const fotoMarca = (c, cls = 'mk-ft') => `<span class="${cls}" style="--mc:${esc(c.cor || '#b4333b')};${c.foto ? `background-image:url('${esc(c.foto)}')` : ''}">${c.foto ? svgRuna(c).replace('class="runa"', 'class="runa sobre"') : svgRuna(c)}</span>`;
 
@@ -86,16 +107,16 @@ function rodaMarcas(F) {
 }
 
 function marcasHTML(F, podeEditar) {
-  const L = marcasDe(F), S = subAtual(F), C = classe(F.classe), vest = F.chakraVestido, VS = marcasVestidas(F), juntas = new Set(VS.slice(1).map(c => c.id)), lim = limiteVestir(F);
+  const L = marcasDe(F), S = subAtual(F), C = classe(F.classe), vest = F.chakraVestido, VS = marcasVestidas(F), juntas = new Set(VS.slice(1).map(c => c.id)), lim = limiteVestir(F), usadas = VS.length - ((F.fusao || []).length === 2 && (F.fusao || []).every(id => VS.some(m => m.id === id)) ? 1 : 0);
   const cap = S?.marcasMax ? Math.max(1, +(atrEf(F)[S.marcasAtr || 'presenca'] || 0)) : 0;
   const regra = S?.regraMarcas || C?.regraMarcas || '';
   return `<div class="marcas"><div class="cab-pagina"><div><h2 style="margin:0">Marcas</h2><p class="dim" style="margin:4px 0 0; max-width:72ch">${regra ? esc(regra) : 'Entidades presas à sua Roda. Vestir uma Marca é vestir a intenção dela: nome, rosto, bônus e habilidades mudam enquanto durar.'}</p></div>
-      ${podeEditar ? `<div class="acoes-topo"><label class="btn sec mk-foto-ash" title="Retrato que aparece no lugar do seu enquanto o Ashura estiver aberto">${F.fotoAshura ? `<span class="mk-ft p" style="background-image:url('${esc(F.fotoAshura)}')"></span>` : IC('imagem')} Foto do Ashura<input type="file" accept="image/*" id="mk-foto-ash" hidden></label>${F.fotoAshura ? '<button class="btn-x" id="mk-foto-ash-x" aria-label="Tirar a foto do Ashura" title="Tirar a foto do Ashura">×</button>' : ''}<button class="btn ${F.ashura ? 'perigo' : 'sec'}" id="mk-ashura" aria-pressed="${!!F.ashura}">${IC('brilho')} ${F.ashura ? 'Encerrar Ashura' : 'Ashura: abrir a Roda'}</button></div>` : ''}</div>
-    <span class="rotulo">${L.length}${cap ? '/' + cap : ''} Marcas${VS.length ? ` · vestindo ${esc(VS.map(c => c.nome).join(' + '))}` : ''}${F.ashura ? ` · Roda aberta, até ${lim} vestida${lim > 1 ? 's' : ''} (${VS.length}/${lim})` : ' · uma vestida por vez'}</span>
+      ${podeEditar ? `<div class="acoes-topo"><label class="btn sec mk-foto-ash" title="Retrato que aparece no lugar do seu enquanto o Ashura estiver aberto">${F.fotoAshura ? `<span class="mk-ft p" style="background-image:url('${esc(F.fotoAshura)}')"></span>` : IC('imagem')} Foto do Ashura<input type="file" accept="image/*" id="mk-foto-ash" hidden></label>${F.fotoAshura ? '<button class="btn-x" id="mk-foto-ash-x" aria-label="Tirar a foto do Ashura" title="Tirar a foto do Ashura">×</button>' : ''}${(C?.subclasses || []).some(x => /Anomalia/.test(x.nome)) || F.palacio ? `<button class="btn ${F.palacio ? 'ouro' : 'sec'}" id="mk-palacio" aria-pressed="${!!F.palacio}" title="Palácio das Entidades: faça o teste da habilidade; passando, abra aqui">${F.palacio ? `Palácio aberto · +${F.palacioPct}%` : 'Palácio das Entidades'}</button>` : ''}<button class="btn ${F.ashura ? 'perigo' : 'sec'}" id="mk-ashura" aria-pressed="${!!F.ashura}">${IC('brilho')} ${F.ashura ? 'Encerrar Ashura' : 'Ashura: abrir a Roda'}</button></div>` : ''}</div>
+    <span class="rotulo">${L.length}${cap ? '/' + cap : ''} Marcas${VS.length ? ` · vestindo ${esc(VS.map(c => c.nome).join(' + '))}` : ''}${F.ashura ? ` · Roda aberta, até ${lim} vestida${lim > 1 ? 's' : ''} (${usadas}/${lim})` : ' · uma vestida por vez'}</span>
     <div class="grade-mk">${L.map((c, i) => `<article class="mk-card ${c.id === vest || juntas.has(c.id) ? 'vestida' : ''}" style="--mc:${esc(c.cor || '#b4333b')}">
         ${fotoMarca(c)}<div class="mk-tx"><b>${esc(c.nome)}</b>${c.titulo ? `<span class="mk-tit">${esc(c.titulo)}</span>` : ''}
           <div class="mk-tags">${resumoMarca(c).map(t => `<span class="tag">${esc(t)}</span>`).join('')}${c.id === vest ? '<span class="tag crit">Vestida</span>' : juntas.has(c.id) ? '<span class="tag crit">Vestida junto</span>' : ''}${c.manifesta ? '<span class="tag">Manifestada</span>' : ''}</div>
-          <div class="btns"><button class="btn mini sec" data-mk-ver="${i}">${IC('ver')} Ficha</button>${podeEditar ? `<button class="btn mini ${c.id === vest ? 'sec' : ''}" data-mk-vest="${i}">${c.id === vest ? 'Tirar' : vest ? 'Trocar por esta' : 'Vestir a intenção'}</button>${vest && c.id !== vest && lim > 1 ? (juntas.has(c.id) ? `<button class="btn mini sec" data-mk-junto="${i}">Tirar do Ashura</button>` : `<button class="btn mini" data-mk-junto="${i}" ${VS.length >= lim ? 'disabled title="Já está no limite do Ashura"' : ''}>Vestir junto (${VS.length}/${lim})</button>`) : ''}<button class="btn mini sec" data-mk-man="${i}" title="Fora de combate: a entidade aparece como pessoa ou criatura">${c.manifesta ? 'Recolher' : 'Manifestar'}</button><button class="btn mini sec" data-mk-ed="${i}" aria-label="Editar ${esc(c.nome)}">${IC('editar')}</button><button class="btn-x" data-mk-rm="${i}" aria-label="Soltar ${esc(c.nome)}">${IC('apagar')}</button>` : ''}</div></div></article>`).join('') || '<div class="vazio">Nenhuma Marca na Roda.</div>'}</div>
+          <div class="btns"><button class="btn mini sec" data-mk-ver="${i}">${IC('ver')} Ficha</button>${podeEditar ? `<button class="btn mini ${c.id === vest ? 'sec' : ''}" data-mk-vest="${i}" ${c.adormecida && c.id !== vest ? 'disabled title="Adormecida: não pode ser vestida até despertar"' : ''}>${c.id === vest ? 'Tirar' : c.adormecida ? 'Adormecida' : vest ? 'Trocar por esta' : 'Vestir a intenção'}</button>${vest && c.id !== vest && lim > 1 ? (juntas.has(c.id) ? `<button class="btn mini sec" data-mk-junto="${i}">Tirar do Ashura</button>` : `<button class="btn mini" data-mk-junto="${i}" ${usadas >= lim ? 'disabled title="Já está no limite do Ashura"' : ''}>Vestir junto (${usadas}/${lim})</button>`) : ''}<button class="btn mini ${(F.fusao || []).includes(c.id) ? 'ouro' : 'sec'}" data-mk-fus="${i}" title="Modelagem e Fusão: lance o feitiço; se passar, marque duas Marcas e elas viram uma só até o fim da cena">${(F.fusao || []).includes(c.id) ? 'Fundida' : 'Fundir'}</button><button class="btn mini ${c.evoluida ? 'ouro' : 'sec'}" data-mk-evo="${i}" title="Evoluir Entidade: lance o feitiço; se passar, marque aqui e os bônus dela contam em dobro até o fim da cena">${c.evoluida ? 'Evoluída' : 'Evoluir'}</button><button class="btn mini sec" data-mk-man="${i}" title="Fora de combate: a entidade aparece como pessoa ou criatura">${c.manifesta ? 'Recolher' : 'Manifestar'}</button><button class="btn mini sec" data-mk-ed="${i}" aria-label="Editar ${esc(c.nome)}">${IC('editar')}</button><button class="btn-x" data-mk-rm="${i}" aria-label="Soltar ${esc(c.nome)}">${IC('apagar')}</button>` : ''}</div></div></article>`).join('') || '<div class="vazio">Nenhuma Marca na Roda.</div>'}</div>
     ${podeEditar ? `<div class="btns"><button class="btn" id="mk-cap">${IC('caveira')} Selar ameaça</button>${(C?.chakras || []).length ? `<button class="btn sec" id="mk-cls">Marcas da classe (${C.chakras.length})</button>` : ''}<button class="btn sec" id="mk-novo">+ Marca em branco</button></div>` : ''}</div>`;
 }
 
@@ -171,6 +192,11 @@ function ligarMarcas(F, { salvar, render }) {
   $$('[data-mk-junto]').forEach(b => b.onclick = () => vestirJunto(F, marcasDe(F)[+b.dataset.mkJunto].id, { salvar, render }));
   $$('[data-mk-ver]').forEach(b => b.onclick = () => verMarca(marcasDe(F)[+b.dataset.mkVer]));
   $$('[data-mk-vest]').forEach(b => b.onclick = () => { const c = L()[+b.dataset.mkVest]; vestir(c.id === F.chakraVestido ? '' : c.id); });
+  $('#mk-palacio')?.addEventListener('click', async () => { const on = !F.palacio, pct = on ? 30 + 1 + Math.floor(Math.random() * 100) : 0;
+    await mudarVestes(F, { palacio: on, palacioPct: pct }, { salvar, render }); toast(on ? `O palácio se ergue: 1d100 + 30 deu +${pct}% em todo dano, bônus e penalidade lá dentro. As Marcas dão o dobro dos atributos.` : 'O palácio caiu.'); });
+  $$('[data-mk-fus]').forEach(b => b.onclick = async () => { const id = marcasDe(F)[+b.dataset.mkFus].id; let f = [...(F.fusao || [])]; f = f.includes(id) ? f.filter(x => x !== id) : [...f, id].slice(-2);
+    await mudarVestes(F, { fusao: f }, { salvar, render }); toast(f.length === 2 ? 'Fundidas: vestir uma veste as duas, ocupando uma vaga só.' : f.length ? 'Escolha a segunda Marca da fusão.' : 'Fusão desfeita.'); });
+  $$('[data-mk-evo]').forEach(b => b.onclick = async () => { const l = L(), i = +b.dataset.mkEvo, on = !l[i].evoluida, a0 = calc(F).max; l[i] = { ...l[i], evoluida: on }; const nF = { ...F, chakras: l }, a1 = calc(nF).max, at = { ...(F.atual || a0) }; for (const k of ['pv', 'ps', 'pst']) at[k] = Math.max(1, Math.min(a1[k], (at[k] ?? a0[k]) + (a1[k] - a0[k]))); F.chakras = l; F.atual = at; render(); await salvar({ chakras: l, atual: at }); });
   $$('[data-mk-man]').forEach(b => b.onclick = () => { const l = L(), i = +b.dataset.mkMan; l[i] = { ...l[i], manifesta: !l[i].manifesta }; gravar(l); });
   $$('[data-mk-ed]').forEach(b => b.onclick = () => { const i = +b.dataset.mkEd; formMarca(marcasDe(F)[i], c => { const l = L(); l[i] = { ...c, proprio: true }; gravar(l); }); });
   $$('[data-mk-rm]').forEach(b => b.onclick = async () => { const i = +b.dataset.mkRm, c = L()[i]; if (!await confirmar(`Soltar ${esc(c.nome)} da Roda?`, { titulo: 'Soltar Marca', ok: 'Soltar' })) return;

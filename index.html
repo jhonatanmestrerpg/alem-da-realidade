@@ -902,7 +902,7 @@ function toast(msg) { const t = document.createElement('div'); t.className = 'to
 /* aviso de versão nova: o site é uma página só, então quem deixa a aba aberta fica com a versão antiga */
 // cada publicação grava o mesmo número aqui e em versao.txt; se o arquivo mudar, há versão nova
 // (antes comparava o ETag do servidor, que muda sozinho entre servidores da hospedagem e acusava versão nova o tempo todo)
-const BUILD = '20261117200829';
+const BUILD = '20261117215327';
 async function versaoAtual() { try { const r = await fetch('versao.txt?t=' + Date.now(), { cache: 'no-store' }); return r.ok ? (await r.text()).trim() : null; } catch (e) { return null; } }
 async function checarVersao() {
   if (BUILD === 'dev') return;
@@ -1637,7 +1637,7 @@ addEventListener('pagehide', () => temVoz() && speechSynthesis.cancel());
 let _altT = null;
 function segurarAltura(el = app) { if (!el) return; const h = el.offsetHeight, y = scrollY; if (h) el.style.minHeight = h + 'px'; clearTimeout(_altT); _altT = setTimeout(() => { el.style.minHeight = ''; }, 1500); requestAnimationFrame(() => { if (Math.abs(scrollY - y) > 2 && y <= document.documentElement.scrollHeight - innerHeight + 2) scrollTo(0, y); }); }
 async function rotear() {
-  clearTimeout(_altT); app.style.minHeight = ''; document.body.classList.remove('pag-ashura');
+  clearTimeout(_altT); app.style.minHeight = ''; document.body.classList.remove('pag-ashura', 'pag-palacio');
   pararLeitura();
   limparSubs(); $('#camada').innerHTML = '';
   if (typeof fecharSala === 'function' && !CH.dentro) { fecharSala(); CH.ctxLig = null; }
@@ -2054,8 +2054,8 @@ ROTAS.agente = async id => {
     if (!pendente && ajustarQueda(F) && (F.dono === ME || ehMestre)) salvar({ queda: F.queda });
     const C = classe(F.classe), S = subclasse(F.classe, F.subclasse);
     const VA = vetorAtivo(F), CKV = chakraVest(F), VL = !!F.vetor?.liberado, VGM = VL && !!F.vetorVestido && !CKV, cv = vetorEf(F)?.cor || '#b4333b';
-    document.body.classList.toggle('pag-ashura', !!F.ashura && !editando);
-    app.innerHTML = `${true ? `<button class="btn-hist" id="abrir-hist" aria-label="Histórico de rolagens" title="Histórico de rolagens"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></button>` : ''}<div id="ficha" class="${editando ? 'editando' : ''} ${VA ? 'vestido' : ''} ${F.ashura && !editando ? 'tema-ashura' : ''}" style="display:grid; gap:22px; --cv:${esc(cv)}">
+    document.body.classList.toggle('pag-ashura', !!F.ashura && !editando); document.body.classList.toggle('pag-palacio', !!F.palacio && !editando);
+    app.innerHTML = `${true ? `<button class="btn-hist" id="abrir-hist" aria-label="Histórico de rolagens" title="Histórico de rolagens"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></button>` : ''}<div id="ficha" class="${editando ? 'editando' : ''} ${VA ? 'vestido' : ''} ${F.ashura && !editando ? 'tema-ashura' : ''} ${F.palacio && !editando ? 'tema-palacio' : ''}" style="display:grid; gap:22px; --cv:${esc(cv)}">
     <div class="ficha-topo">
       <div class="retrato-w ${F.ashura ? 'ashura' : ''}">${rodaMarcas(F)}<div class="retrato ${VA ? 'vetor' : ''}" style="${fotoEf(F) ? `background-image:url('${esc(fotoEf(F))}')` : ''}">${fotoEf(F) ? '' : esc(iniciais(F.nome))}</div></div>
       <div style="display:grid; gap:8px; min-width:0">
