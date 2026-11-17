@@ -34,6 +34,25 @@ const marcasDe = F => (F?.chakras || []).map(c => marcaEf(F, c));
 const limiteVestir = F => { if (!F?.ashura) return 1; const S = subAtual(F) || {}; return Math.max(1, +(S.ashuraMarcas || (S.habilidades || []).map(h => /veste até (\d+)\s+Marcas/i.exec(h.texto || '')).find(Boolean)?.[1] || 1)); };
 const marcasVestidas = F => { const p = typeof chakraVest === 'function' ? chakraVest(F) : null; if (!p) return []; if (!F.ashura) return [p];
   const L = marcasDe(F); return [p, ...(F.chakrasJuntas || []).map(id => L.find(c => c.id === id)).filter(c => c && c.id !== p.id).slice(0, limiteVestir(F) - 1)]; };
+/* ===== efeitos das Marcas vestidas sobre a ficha =====
+   efeitos: { feiticos|maldicoes: { preparo, alcance: ×, duracao: ×, dano: +dados }, bonus: [bônus de ataque sempre ligados], carga: × } */
+const efeitosMarcas = F => (typeof marcasVestidas === 'function' ? marcasVestidas(F) : []).filter(m => m.efeitos).map(m => ({ ...m.efeitos, _de: m.nome }));
+const _mulNum = (t, k) => String(t || '').replace(/(\d+(?:[.,]\d+)?)\s*(km|m)\b/g, (x, n, u) => `${+String(n).replace(',', '.') * k}${u}`);
+const _mulDur = (t, k) => { let s = String(t || ''); if (/^cena$/i.test(s.trim())) return k >= 2 ? `${k} cenas` : s;
+  return s.replace(/(\d+)(d\d+)?\s*(rodadas?|turnos?|minutos?|horas?|dias?)/gi, (x, n, d, u) => `${+n * k}${d || ''} ${u}`); };
+const _maisDado = (t, k) => String(t || '').replace(/(\d+)d(\d+)(?=[^.;]{0,30}dano)/gi, (x, n, f) => `${+n + k}d${f}`);
+function buffMagia(F, r, tipo, campoTexto = 'efeito') {
+  const E = efeitosMarcas(F).filter(e => e[tipo]); if (!r || !E.length) return r; const o = { ...r }, de = [];
+  for (const e of E) { const x = e[tipo]; de.push(e._de);
+    if (x.alcance > 1) { if (o.alcance) o.alcance = _mulNum(o.alcance, x.alcance); o[campoTexto] = _mulNum(o[campoTexto], x.alcance); }
+    if (x.duracao > 1) { if (o.duracao) o.duracao = _mulDur(o.duracao, x.duracao); o[campoTexto] = _mulDur(o[campoTexto], x.duracao); }
+    if (x.dano) o[campoTexto] = _maisDado(o[campoTexto], +x.dano);
+    if (x.preparo) o.preparo = x.preparo; }
+  o.buffDe = de; o.buffNota = E.map(e => e[tipo].nota).filter(Boolean).join(' '); return o;
+}
+const bonusDasMarcas = F => efeitosMarcas(F).flatMap(e => (e.bonus || []).map(b => ({ ...b, ligado: true, auto: e._de })));
+const cargaDasMarcas = F => efeitosMarcas(F).reduce((t, e) => t * (+e.carga || 1), 1);
+const notasDasMarcas = F => efeitosMarcas(F).flatMap(e => (e.notas || []).map(n => ({ de: e._de, n })));
 const temMarcas = f => !!(classe(f?.classe)?.chakras || (f?.chakras || []).length);
 const subAtual = f => classe(f?.classe)?.subclasses?.find(s => s.nome === f?.subclasse) || null;
 const NOMES_ATR = { forca: 'FOR', destreza: 'DES', constituicao: 'CON', inteligencia: 'INT', presenca: 'PRE' };
